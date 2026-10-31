@@ -32,9 +32,11 @@ export interface AppDataDeps {
   clearTimer?: (h: unknown) => void;
 }
 
+/** Something the snackbar can undo: a store delete (token) or any action (run). */
 export interface PendingUndo {
   message: string;
-  token: UndoToken;
+  token?: UndoToken;
+  run?: () => Promise<void>;
 }
 
 export function createChangeBus() {
@@ -96,13 +98,20 @@ export function createUndoController(deps: {
       return pending;
     },
     show(message: string, token: UndoToken) {
+      this.showPending({ message, token });
+    },
+    /** Undo for an editor action (Beautify, template, AI): restores the previous document. */
+    showAction(message: string, run: () => Promise<void>) {
+      this.showPending({ message, run });
+    },
+    showPending(p: PendingUndo) {
       if (timer !== null) clearT(timer);
-      set({ message, token });
+      set(p);
       deps.bus.emit();
       timer = setT(() => {
         timer = null;
         set(null);
-        void purge(false);
+        if (p.token) void purge(false);
       }, UNDO_WINDOW_MS + 250);
     },
     async undo(): Promise<boolean> {
@@ -112,7 +121,9 @@ export function createUndoController(deps: {
       if (timer !== null) clearT(timer);
       timer = null;
       set(null);
-      const ok = await store.undo(p.token);
+      let ok = true;
+      if (p.run) await p.run();
+      else if (p.token) ok = await store.undo(p.token);
       deps.bus.emit();
       return ok;
     },

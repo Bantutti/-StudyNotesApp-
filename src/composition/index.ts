@@ -5,3 +5,4 @@ export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
 export { createTapUnlock, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
 export * from './useCases';
+export { runEditorAction, beautifyLiteAction, beautifyMessage, type ActionOutcome } from './editorActions';

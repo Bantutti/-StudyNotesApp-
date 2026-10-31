@@ -8,3 +8,13 @@ export { createLinkOpener, linkHost, type LinkOpener, type LinkOpenResult, type 
 export { expoLinkPorts } from './expoLinkPorts';
 export { PagePreview } from './PagePreview';
 export { previewHtml } from './preview';
+export {
+  createEditorActionRegistry,
+  type EditorAction,
+  type EditorActionContext,
+  type EditorActionPlacement,
+  type EditorActionReason,
+  type EditorActionRegistry,
+  type EditorActionResult,
+  type EditorHost,
+} from './actions';

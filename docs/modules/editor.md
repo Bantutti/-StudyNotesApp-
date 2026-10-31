@@ -48,3 +48,28 @@ New blocks: `blockquote`, `summary`, `qa` (`qaQuestion` + `qaAnswer`), `columns`
 `audioAnchor` (P2a's shape, used from P4). The editor keeps anchors in the JSON but never reads them
 from pasted HTML, and a split doesn't copy them. `checkDocStructure()` enforces the nesting rules for
 documents from storage, sync and AI; the TipTap content expressions (M5) must match them.
+
+## Editor action hook (P1 M7, for P3b)
+
+`src/modules/editor/actions.ts` defines `EditorAction` and `createEditorActionRegistry()`. Services
+holds the registry (`services.editorActions`), pre-loaded with Beautify Lite. Every action runs through
+`runEditorAction(action, { store, ids, host }, noteId)` in composition:
+
+1. `host.getDocument()` gives the current document (the editor flushes unsaved edits first).
+2. `action.run(ctx)` returns `{ doc, message }` or `null` (cancelled, nothing to change). The context
+   has the note id, subject, title, pack, the document, the selection's block ids (null = whole note,
+   live selection arrives with M5) and the id generator.
+3. The result is validated (`prepareDocForSave`: schema, structure, non-null unique ids, cloud caps).
+   Invalid output is rejected and nothing is saved.
+4. Unsaved host edits are stored, a version with the action's reason (`before_beautify`, `before_ai`)
+   is saved, then the new document, and `host.showDocument()` displays it.
+5. The returned `undo()` restores the exact previous document (same block ids); the screen shows it in
+   the Undo snackbar.
+
+**P3b:** register `{ id: 'ai-…', placement: 'sparkle', reason: 'before_ai', run }`. Show your consent,
+key wizard and diff preview inside `run()`, and resolve with the accepted document or `null`. Don't touch
+storage or the WebView directly. Placements: `toolbar` (shown now), `sparkle` (the toolbar's AI slot, M5),
+`menu`.
+
+**Finish in M5:** the note screen's `EditorHost` switches from the stored document to the live editor
+(`requestDoc`, selection, `load`).

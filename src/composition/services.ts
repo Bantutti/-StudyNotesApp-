@@ -38,13 +38,14 @@ import {
   type PackRegistry,
   type StylePack,
 } from '@/modules/stylepacks';
-import { createLinkOpener, expoLinkPorts, type LinkOpener, type LinkPorts } from '@/modules/editor';
+import { createEditorActionRegistry, createLinkOpener, expoLinkPorts, type EditorActionRegistry, type LinkOpener, type LinkPorts } from '@/modules/editor';
 import { deleteExpoDatabase, openExpoDriver } from '@/modules/store';
 import { createTemplateRegistry, type TemplateRegistry } from '@/modules/templates';
 import { createGroqTranscriber, fileSizeOf, type TranscriptionProvider } from '@/modules/voice';
 import { Directory, Paths } from 'expo-file-system';
 
 import type { AppDataDeps } from './appData';
+import { beautifyLiteAction } from './editorActions';
 
 import { createNoteStore, type NoteStore } from './noteStore';
 
@@ -62,6 +63,8 @@ export interface Services {
   links: LinkOpener;
   /** Built-in note templates (validated data). */
   templates: TemplateRegistry;
+  /** Editor actions (Beautify Lite now; P3b registers AI actions here). */
+  editorActions: EditorActionRegistry;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
@@ -109,6 +112,7 @@ export function createServicesWith(a: Adapters): Services {
     notes: createNoteStore(),
     links: createLinkOpener(a.linkPorts),
     templates: createTemplateRegistry(),
+    editorActions: createEditorActionRegistry([beautifyLiteAction]),
     appData: {
       ...a.database,
       wipeSecrets: () => keyVault.remove('groq'),

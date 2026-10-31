@@ -17,6 +17,8 @@ interface AppData {
   bus: ChangeBus;
   undo: UndoController;
   showUndo(message: string, token: UndoToken): void;
+  /** Snackbar with Undo for an editor action (restores the previous document). */
+  showActionUndo(message: string, run: () => Promise<void>): void;
   resetAll(): Promise<void>;
 }
 
@@ -54,6 +56,7 @@ export function AppDataProvider({ deps, children }: { deps: AppDataDeps; childre
     bus: ctl.bus,
     undo: ctl.undo,
     showUndo: (message, token) => ctl.undo.show(message, token),
+    showActionUndo: (message, run) => ctl.undo.showAction(message, run),
     resetAll: () => ctl.resetAll(),
   };
   return (
