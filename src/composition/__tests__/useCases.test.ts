@@ -5,7 +5,9 @@ import { createTemplateRegistry } from '@/modules/templates';
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
 import { isOnboarded } from '../appData';
 import {
+  applyPackToNote,
   applyTemplateToNote,
+  setSubjectPack,
   createNoteIn,
   daysUntil,
   displayTitle,
@@ -155,5 +157,26 @@ describe('templates in use cases', () => {
     expect(listBlockIds(after!.document).slice(0, listBlockIds(SAMPLE_NOTE).length)).toEqual(listBlockIds(SAMPLE_NOTE));
     expect((await s.versions.list(n.id))[0]?.reason).toBe('before_template');
     await expect(applyTemplateToNote(s, n.id, 'nope', deps())).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+describe('style (M9)', () => {
+  it('switching the look saves a version, keeps ids and content, and refuses unknown packs', async () => {
+    const s = await store();
+    const n = await createNoteIn(s, { subject: null }, { document: SAMPLE_NOTE });
+    expect(await applyPackToNote(s, n.id, 'clear-read')).toBe(true);
+    expect(await applyPackToNote(s, n.id, 'clear-read')).toBe(false); // already
+    const after = await s.notes.get(n.id);
+    expect(after).toMatchObject({ stylePackId: 'clear-read' });
+    expect(after!.document).toEqual(n.document);
+    expect((await s.versions.list(n.id)).map((v) => v.reason)).toEqual(['before_pack']);
+    await expect(applyPackToNote(s, n.id, 'dark-academia')).rejects.toMatchObject({ code: 'validation_failed' });
+  });
+
+  it('can set the look for a subject', async () => {
+    const s = await store();
+    const sub = await s.subjects.create({ name: 'Bio', color: '111111' });
+    await setSubjectPack(s, sub.id, 'clear-read');
+    expect(await packForNewNote(s, sub.id)).toBe('clear-read');
   });
 });

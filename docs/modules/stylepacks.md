@@ -21,3 +21,16 @@ Highlight (light) and Dark Academia (dark).
   `fonts.ts` (`@expo-google-fonts/<family>/<weight>`); never import a font package's index (it
   bundles every weight).
 - New component style: add a data-attribute rule to `BASE_CSS`; never let a pack carry CSS.
+
+## P1 changes (M9)
+- **Packs in the app:** `P1_PACK_IDS = ['pastel-highlight', 'clear-read']` (decision Q1). The other 11
+  packs stay in the registry for P5.
+- **Clear Read v2:** 4 highlighters with the same meanings and order as Pastel Highlight (Key idea,
+  Definition, Example, Formula), so a note's highlights keep their meaning when it switches look.
+  Colours: yellow, blue, peach and lilac (told apart by colour-blind readers), all at least 7:1 with the
+  ink (tested).
+- **Atkinson Hyperlegible** (SIL OFL 1.1) is bundled: regular, italic and bold, via
+  `@expo-google-fonts/atkinson-hyperlegible` 0.4.1 (deep imports, so only those three files ship).
+- **Style sheet** (`/style/[id]`): every look rendered on the student's own note; tap to apply
+  (`applyPackToNote` saves a "Before style change" version; content and block ids never change), use for
+  the subject, use for new notes, add a template.

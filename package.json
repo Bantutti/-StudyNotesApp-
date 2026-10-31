@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/atkinson-hyperlegible": "0.4.1",
     "@expo-google-fonts/cinzel": "0.4.2",
     "@expo-google-fonts/crimson-pro": "0.4.2",
     "@expo-google-fonts/gaegu": "0.4.1",

@@ -1,9 +1,12 @@
 /**
  * Bundled font files (SIL OFL, via @expo-google-fonts) and @font-face CSS.
- * P0 bundles the four families used by the P0 packs; others fall back to
- * system fonts and are reported as such in the UI.
+ * Bundled: the P0 packs' four families plus Atkinson Hyperlegible (P1, Clear
+ * Read). Other packs' fonts fall back to system fonts until P5 bundles them.
  */
 // Deep imports: each package's index would bundle every weight (~2 MB of TTFs).
+import { AtkinsonHyperlegible_400Regular } from '@expo-google-fonts/atkinson-hyperlegible/400Regular';
+import { AtkinsonHyperlegible_400Regular_Italic } from '@expo-google-fonts/atkinson-hyperlegible/400Regular_Italic';
+import { AtkinsonHyperlegible_700Bold } from '@expo-google-fonts/atkinson-hyperlegible/700Bold';
 import { Cinzel_400Regular } from '@expo-google-fonts/cinzel/400Regular';
 import { Cinzel_700Bold } from '@expo-google-fonts/cinzel/700Bold';
 import { CrimsonPro_400Regular } from '@expo-google-fonts/crimson-pro/400Regular';
@@ -39,6 +42,10 @@ export const BUNDLED_FACES: readonly FontFaceAsset[] = [
   { family: 'Crimson Pro', weight: 400, style: 'normal', asset: CrimsonPro_400Regular },
   { family: 'Crimson Pro', weight: 400, style: 'italic', asset: CrimsonPro_400Regular_Italic },
   { family: 'Crimson Pro', weight: 700, style: 'normal', asset: CrimsonPro_700Bold },
+  // P1: Clear Read (high-legibility pack, decision Q1)
+  { family: 'Atkinson Hyperlegible', weight: 400, style: 'normal', asset: AtkinsonHyperlegible_400Regular },
+  { family: 'Atkinson Hyperlegible', weight: 400, style: 'italic', asset: AtkinsonHyperlegible_400Regular_Italic },
+  { family: 'Atkinson Hyperlegible', weight: 700, style: 'normal', asset: AtkinsonHyperlegible_700Bold },
 ];
 
 export function facesForPack(p: StylePack): FontFaceAsset[] {

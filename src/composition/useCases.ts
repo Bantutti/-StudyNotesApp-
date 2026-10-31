@@ -240,3 +240,27 @@ export function relativeTime(ms: number, now: number): string {
   const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
   return new Date(now).getFullYear() === d.getFullYear() ? `${d.getDate()} ${month}` : `${d.getDate()} ${month} ${d.getFullYear()}`;
 }
+
+// ---------------------------------------------------------------------------
+// Style (M9)
+// ---------------------------------------------------------------------------
+
+/**
+ * Switches a note's style pack. Content and block ids are untouched (a pack
+ * is only CSS variables); a "Before style change" version is saved first.
+ * Returns false when the note already uses that pack.
+ */
+export async function applyPackToNote(store: Store, noteId: string, packId: string): Promise<boolean> {
+  if (!isP1Pack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  const note = await store.notes.get(noteId);
+  if (!note || note.deleted) throw new AppError('not_found', 'This note no longer exists.');
+  if (note.stylePackId === packId) return false;
+  await store.notes.save(noteId, { stylePackId: packId }, { before: 'before_pack' });
+  return true;
+}
+
+/** "Use for this subject": new notes in the subject start with this pack. */
+export async function setSubjectPack(store: Store, subjectId: string, packId: string): Promise<void> {
+  if (!isP1Pack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  await store.subjects.update(subjectId, { defaultPack: packId });
+}
