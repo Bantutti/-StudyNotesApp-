@@ -7,3 +7,4 @@ export { createTapUnlock, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_
 export * from './useCases';
 export { runEditorAction, beautifyLiteAction, beautifyMessage, type ActionOutcome } from './editorActions';
 export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOINT_MS } from './versions';
+export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
