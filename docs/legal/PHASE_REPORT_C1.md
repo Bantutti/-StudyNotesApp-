@@ -83,4 +83,4 @@ start web\public\index.html                # preview the site in your browser
 
 ## 9. Export
 
-Zip `StudyNotesApp-C1-compliance-20261101.zip` in `exports/`, Drive folder `StudyNotesApp/C1-compliance`. **SHA-256:** recorded in the Drive copy of this report and in the PR description (a file can't contain its own zip's checksum).
+Zip `StudyNotesApp-C1-compliance-20261101.zip` in `exports/`, Drive folder `StudyNotesApp/C1-compliance`. **SHA-256:** `bb58363603ab4884bc852abb26ae1004d3b47029e95f67bc60167a619bf28795` (92,466 bytes, 42 entries, per-file `MANIFEST.sha256` inside). Drive: folder `StudyNotesApp/C1-compliance` (id `13gI3U3p_Ql_FiGRg79eYh8kuNm14hIDQ`), zip id `1JL9KsmqvpP27qDEkSMe6VRQkDVGrudIe` (downloaded back, SHA-256 matches), PHASE_REPORT.md id `1H8ucWUWrWZk3Chzt5-C5Rheix9rqX2dA`. The copy of this report inside the zip predates the checksum (a file can't contain its own zip's checksum).
