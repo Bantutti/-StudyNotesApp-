@@ -38,6 +38,7 @@ function Navigator() {
         <Stack.Screen name="note-actions" options={{ presentation: 'formSheet', title: '', sheetAllowedDetents: [0.5, 0.9] }} />
         <Stack.Screen name="templates" options={{ presentation: 'modal', title: '' }} />
         <Stack.Screen name="history/[id]" options={{ title: 'History' }} />
+        <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
       </Stack>
