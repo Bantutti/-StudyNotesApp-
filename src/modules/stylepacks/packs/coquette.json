@@ -1,0 +1,87 @@
+{
+  "schema": 3,
+  "id": "coquette",
+  "version": 1,
+  "name": "Coquette",
+  "meta": {
+    "mood": "Romantic, pretty, a little dramatic",
+    "bestFor": "Personality pack, any subject",
+    "trend": "Coquette pink and black ink notes with bows",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "lined",
+    "color": "#FFF5F7",
+    "line": "#F4D3DC",
+    "lineGap": 28,
+    "margin": "double",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Dancing Script",
+    "body": "Mulish",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.5,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#2B2024",
+    "accent": "#B8335F",
+    "accent2": "#1F1A1C",
+    "muted": "#765A63",
+    "soft": "#FDE4EA"
+  },
+  "highlighters": [
+    {
+      "id": "baby",
+      "color": "#F7C6D3",
+      "opacity": 0.9,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "lilac",
+      "color": "#E6D3EA",
+      "opacity": 0.95,
+      "meaning": "Definition"
+    },
+    {
+      "id": "cream",
+      "color": "#F7E4BB",
+      "opacity": 0.9,
+      "meaning": "Example"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "bow-underline",
+    "divider": "hearts"
+  },
+  "blocks": {
+    "callout": "bubble",
+    "definition": "framed",
+    "bullet": "heart"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "bow",
+    "doodle": "hearts"
+  },
+  "ink": {
+    "pens": [
+      "#2B2024",
+      "#B8335F",
+      "#7A4A8C"
+    ],
+    "highlighter": "#F7C6D3"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "medium"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Study Notes (P0 Spike Lab)",
+    "slug": "study-notes-app",
+    "scheme": "studynotes",
+    "version": "0.0.1",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.reyanyan.studynotes.dev",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.reyanyan.studynotes.dev",
+      "adaptiveIcon": {
+        "backgroundColor": "#FDEEF3",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_PHONE_STATE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Study Notes records lectures only when you tap Record. Audio stays on this device unless you choose to transcribe it.",
+          "enableBackgroundRecording": true,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      "expo-asset",
+      "expo-sharing"
+    ]
+  }
+}

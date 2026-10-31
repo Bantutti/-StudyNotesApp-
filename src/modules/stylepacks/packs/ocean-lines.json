@@ -1,0 +1,75 @@
+{
+  "schema": 3,
+  "id": "ocean-lines",
+  "version": 2,
+  "name": "Ocean Lines",
+  "meta": {
+    "mood": "Fresh, classic, notebook blue",
+    "bestFor": "Everyday notes",
+    "trend": "Classic ruled notebook with a red margin",
+    "appearance": "light",
+    "tier": "extra"
+  },
+  "paper": {
+    "type": "lined",
+    "color": "#FDFEFF",
+    "line": "#D5E3F3",
+    "lineGap": 28,
+    "margin": "left",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Caveat",
+    "body": "Nunito",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.4,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#1F3A5F",
+    "accent": "#2B6CB0",
+    "accent2": "#D64545",
+    "muted": "#55667C",
+    "soft": "#EAF2FB"
+  },
+  "highlighters": [
+    {
+      "id": "yellow",
+      "color": "#FFE98A",
+      "opacity": 0.9,
+      "meaning": "Key idea"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "highlight-swipe",
+    "divider": "dots"
+  },
+  "blocks": {
+    "callout": "bubble",
+    "definition": "dashed-box",
+    "bullet": "dash"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#1F3A5F",
+      "#D64545",
+      "#2E9E6A"
+    ],
+    "highlighter": "#FFE98A"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}

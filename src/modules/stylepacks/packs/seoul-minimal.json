@@ -1,0 +1,81 @@
+{
+  "schema": 3,
+  "id": "seoul-minimal",
+  "version": 1,
+  "name": "Seoul Minimal",
+  "meta": {
+    "mood": "Calm, precise, lots of white space",
+    "bestFor": "Long focus sessions, STEM",
+    "trend": "Minimalist Korean-style grid notes with one accent",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "grid",
+    "color": "#FFFFFF",
+    "line": "#ECEEEA",
+    "lineGap": 24,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Gowun Dodum",
+    "body": "Nanum Gothic",
+    "headerWeight": 400,
+    "headerItalic": false,
+    "headerCase": "upper",
+    "headerScale": 1.6,
+    "bodySize": "s"
+  },
+  "palette": {
+    "ink": "#3A3A3A",
+    "accent": "#5E7D58",
+    "accent2": "#7D9676",
+    "muted": "#6B6B6B",
+    "soft": "#F2EFEA"
+  },
+  "highlighters": [
+    {
+      "id": "sage",
+      "color": "#D3E2CC",
+      "opacity": 1.0,
+      "meaning": "Key term"
+    },
+    {
+      "id": "stone",
+      "color": "#E7E2D8",
+      "opacity": 1.0,
+      "meaning": "Note"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "small-caps-rule",
+    "divider": "thin-rule"
+  },
+  "blocks": {
+    "callout": "bordered",
+    "definition": "framed",
+    "bullet": "dash"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#3A3A3A",
+      "#5E7D58",
+      "#9A6B4F"
+    ],
+    "highlighter": "#D3E2CC"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "wide"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "schema": 3,
+  "id": "chalkboard",
+  "version": 2,
+  "name": "Chalkboard",
+  "meta": {
+    "mood": "Classroom, focused, dark",
+    "bestFor": "Dark mode and diagrams",
+    "trend": "Chalkboard dark notes",
+    "appearance": "dark",
+    "tier": "extra"
+  },
+  "paper": {
+    "type": "dotted",
+    "color": "#24302B",
+    "line": "#33413A",
+    "lineGap": 28,
+    "margin": "none",
+    "texture": "chalk"
+  },
+  "fonts": {
+    "header": "Kalam",
+    "body": "Nunito",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.2,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#EEF3EE",
+    "accent": "#9FE3C1",
+    "accent2": "#FFD35C",
+    "muted": "#A9B7B0",
+    "soft": "#2D3A34"
+  },
+  "highlighters": [
+    {
+      "id": "chalk-yellow",
+      "color": "#FFDA66",
+      "opacity": 0.32,
+      "meaning": "Key idea"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "highlight-swipe",
+    "divider": "dots"
+  },
+  "blocks": {
+    "callout": "bubble",
+    "definition": "dashed-box",
+    "bullet": "dash"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#EEF3EE",
+      "#FFD35C",
+      "#9FE3C1"
+    ],
+    "highlighter": "#FFDA66"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}
