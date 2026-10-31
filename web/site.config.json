@@ -1,0 +1,16 @@
+{
+  "_comment": "Values for the {{PLACEHOLDERS}} in docs/legal and web/content. Leave a value empty until Rey decides it: the page then shows the placeholder itself, and `node web/build-site.mjs --release` refuses to build. See docs/store/REY_SETUP.md section 3.",
+  "status": "draft",
+  "placeholders": {
+    "APP_NAME": "Noted",
+    "DEVELOPER_LEGAL_NAME": "",
+    "CONTACT_EMAIL": "",
+    "EFFECTIVE_DATE": "",
+    "SITE_BASE_URL": ""
+  },
+  "flags": {
+    "FILE_SYNC": false,
+    "VISION_AI": false,
+    "APP_CHECK": false
+  }
+}

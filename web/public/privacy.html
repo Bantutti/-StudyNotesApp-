@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Noted Privacy Policy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">Noted</a>
+      <nav aria-label="Site">
+        <a href="index.html">Home</a>
+        <a href="privacy.html" aria-current="page">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="delete-account.html">Delete account</a>
+        <a href="support.html">Support</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <p class="notice" role="note">Draft: this page is still being reviewed and may change before the app is released.</p>
+<h1 id="noted-privacy-policy">Noted Privacy Policy</h1>
+<p><strong>Effective date:</strong> {{EFFECTIVE_DATE}}</p>
+<p>This privacy policy explains what happens to your information when you use Noted, a study notes app for Android and iPhone, and the Noted website. It is written in plain English. If anything is unclear, email us at <strong>{{CONTACT_EMAIL}}</strong>.</p>
+<h2 id="the-short-version">The short version</h2>
+<ul><li><strong>You don&#39;t need an account.</strong> You can use Noted without signing up. Your notes are saved on your phone.</li><li><strong>Sync is optional.</strong> If you turn on sync, your notes are stored in our cloud database (Google Firebase) so they appear on your other devices.</li><li><strong>AI is optional, for ages 18 and up, and uses your own key.</strong> If you add your own free key from Groq or Mistral and tap an AI action, the text you chose goes <strong>straight from your phone to that company</strong>. We never see your key or that text.</li><li><strong>No ads, no analytics, no tracking, and we don&#39;t sell your data.</strong></li><li><strong>You can delete your account and your synced data</strong> in the app, or by email if you no longer have the app.</li></ul>
+<h2 id="1-who-we-are">1. Who we are</h2>
+<p>Noted is made by <strong>{{DEVELOPER_LEGAL_NAME}}</strong>, an individual developer in the Philippines (&quot;we&quot;, &quot;us&quot;). We are responsible for your personal information under the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+<p>Contact for anything about privacy, including requests to use your rights: <strong>{{CONTACT_EMAIL}}</strong>.</p>
+<h2 id="2-what-stays-on-your-phone">2. What stays on your phone</h2>
+<p>Most of Noted works only on your phone. This information is stored <strong>on your device</strong> and does not reach us unless you turn on sync or use an AI action (sections 3 and 4):</p>
+<ul><li>your notes, subjects, folders, templates and custom looks;</li><li>your flashcards and review history;</li><li>version history (the last 20 versions of each note), which never leaves your phone;</li><li>recordings, images, drawings and PDF attachments you add;</li><li>your app settings;</li><li>your AI key, kept in your phone&#39;s secure storage (Keychain on iPhone, Keystore on Android);</li><li>the birth year you enter for AI features, which never leaves your phone;</li><li>a count of the AI requests you made each day, which contains no note text and no key.</li></ul>
+<p>The app does not add its own database encryption; it relies on your phone&#39;s built-in storage encryption. You can turn on an app lock (Face ID, fingerprint or your device PIN); the app only learns whether unlocking succeeded.</p>
+<p><strong>Backups.</strong> On Android, the app turns off automatic Android backups of its data. On iPhone, your phone&#39;s own iCloud or computer backup may include app data, depending on your phone&#39;s settings.</p>
+<p><strong>Deleting on your phone.</strong> When you delete a note, you have a few seconds to undo; after that its text is wiped from the app. Deleting the app removes everything stored on your phone.</p>
+<h2 id="3-if-you-turn-on-sync-optional">3. If you turn on sync (optional)</h2>
+<p>Sync is off until you choose to turn it on and sign in with email, Google or Apple. When it&#39;s on:</p>
+<ul><li><strong>Your account.</strong> Firebase Authentication (a Google service) stores your email address, a user ID, and how you sign in. If you sign in with Google or Apple, it may also store the name and profile photo link that Google or Apple provides.</li><li><strong>Security logs.</strong> Firebase Authentication records the IP address and device type of sign-in requests to protect accounts from abuse, and keeps those logs for a few weeks.</li><li><strong>Your synced study data.</strong> Cloud Firestore (a Google service) stores copies of your notes, subjects, folders, flashcards, review history and settings. Your review history includes a random label for each device you review on, so reviews from two devices can be merged.</li><li><strong>Files stay on your phone.</strong> Recordings, images, drawings and PDF attachments are not synced in this version of the app.</li></ul>
+<p>Only you can read or change your synced data: our database rules allow access only to the signed-in owner. Your data travels over encrypted connections (HTTPS). Google processes this data for us as our service provider, under its Firebase data processing terms. Firebase Authentication runs in the United States, and other Firebase services may process data in other countries where Google has facilities, so your data may be stored outside the Philippines.</p>
+<p>We do not read your notes. Because synced data is not end-to-end encrypted, we could technically access it as the operator of the database; we will only do so to answer a request from you, to fix a problem you asked us to fix, or when the law requires it.</p>
+<p>When you delete a note with sync on, the app also removes its contents from the cloud.</p>
+<p><strong>Why we use this information:</strong> to provide the sync service you asked for when you turned it on, and to keep accounts secure. You can stop at any time by turning off sync or deleting your account.</p>
+<h2 id="4-ai-features-optional-ages-18-and-up">4. AI features (optional, ages 18 and up)</h2>
+<p>AI actions such as summarize, make flashcards or tidy up are <strong>optional</strong>, and the app is fully usable without them. They are only for people aged <strong>18 or older</strong>, because the AI companies we support only allow adults to use their services. The first time you open an AI feature, the app asks for your birth year. If you are under 18, AI features stay off and you can keep using the on-device &quot;Beautify Lite&quot; and rule-based flashcards, which never leave your phone.</p>
+<p><strong>How it works:</strong></p>
+<ol><li>You create your own free account and key at <strong>Groq</strong> or <strong>Mistral</strong> and paste the key into the app. The key is kept only in your phone&#39;s secure storage. <strong>It is never sent to us.</strong></li><li>When you tap an AI action, the app shows you which company will receive your text. The first time you use each company, it asks for your permission.</li><li>The text you chose (for example, the selected note) is sent <strong>directly from your phone to that company</strong> over an encrypted connection. It does not pass through our servers, and we do not keep a copy.</li><li>The answer comes back to your phone and is shown to you before anything in your note changes.</li></ol>
+<p>If you ask for a <strong>transcript of a recording</strong>, the recording, its language and your subject&#39;s glossary words are sent directly from your phone to <strong>Groq</strong> in the same way.</p>
+<p>Because you use your own account, <strong>that company&#39;s own terms and privacy policy apply</strong> to what you send:</p>
+<ul><li><strong>Groq</strong> says it does not keep your requests by default, but may log inputs and outputs for up to 30 days to troubleshoot problems or investigate abuse, unless you turn on Zero Data Retention in your Groq account&#39;s Data Controls. Groq stores data in the United States. Groq&#39;s terms require users to be 18 or older.</li><li><strong>Mistral</strong> says that in its free mode it may use your inputs and outputs to train its AI models unless you opt out. To opt out, open Mistral&#39;s <strong>Admin panel → Privacy</strong> and turn off <strong>&quot;Anonymous improvement data&quot;</strong>. Mistral&#39;s terms do not allow minors without a parent&#39;s or guardian&#39;s consent.</li></ul>
+<p><strong>Why:</strong> we send your text to an AI company only because you asked for that action and agreed on the permission screen. You can withdraw that permission at any time by removing your key or turning AI off.</p>
+<p>Please don&#39;t send highly sensitive information to an AI service. You can choose which notes you send, and you can turn AI off for a whole subject. AI answers can be wrong; see our <a href="terms.html">Terms of Use</a>.</p>
+<h2 id="5-our-website-and-emails">5. Our website and emails</h2>
+<ul><li><strong>Website.</strong> Our website (privacy policy, terms, account deletion and support pages) is hosted on GitHub Pages. GitHub logs visitors&#39; IP addresses for security. Our pages use no cookies, no analytics and no scripts.</li><li><strong>Emails.</strong> If you email us, we use your email address and message only to answer you. We delete support emails when they are no longer needed. For account deletion requests we keep a short record (the date and that the deletion was done, with no notes) for 12 months, to show that we handled the request.</li></ul>
+<h2 id="6-what-we-dont-do">6. What we don&#39;t do</h2>
+<ul><li>We don&#39;t show ads and don&#39;t use advertising IDs.</li><li>We don&#39;t use analytics or crash-reporting tools.</li><li>We don&#39;t sell, rent or trade your personal information, and we don&#39;t share it with data brokers.</li><li>We don&#39;t track you across other apps or websites.</li><li>We don&#39;t collect your location, contacts or phone number.</li></ul>
+<h2 id="7-who-receives-your-information">7. Who receives your information</h2>
+<p>We only share your information in these cases:</p>
+<ul><li><strong>Google (Firebase)</strong>, as our service provider for sync (section 3).</li><li><strong>Groq or Mistral</strong>, only when you send something to them yourself with your own key (section 4).</li><li><strong>GitHub</strong>, which hosts our website (section 5).</li><li><strong>When the law requires it</strong>, for example a valid court order, or to protect someone&#39;s safety.</li></ul>
+<h2 id="8-how-long-we-keep-information">8. How long we keep information</h2>
+<div class="table-wrap"><table><thead><tr><th scope="col">Information</th><th scope="col">How long</th></tr></thead><tbody><tr><td>Data on your phone</td><td>Until you delete it or delete the app</td></tr><tr><td>Your account and synced data</td><td>Until you delete it or delete your account</td></tr><tr><td>After you delete your account</td><td>Removed from our live database right away. Google removes deleted accounts from its backup systems within 180 days. We have not turned on extra database backups</td></tr><tr><td>Sign-in security logs (IP address)</td><td>A few weeks (kept by Firebase Authentication)</td></tr><tr><td>Text or audio you sent to an AI company</td><td>Set by that company (section 4); we can&#39;t delete it for you</td></tr><tr><td>Support emails</td><td>Until your question is answered and no longer needed</td></tr><tr><td>Record of a deletion request</td><td>12 months</td></tr></tbody></table></div>
+<h2 id="9-deleting-your-account">9. Deleting your account</h2>
+<p>You can delete your account <strong>in the app</strong> (in the Me tab, under Account), or, if you no longer have the app, by following the steps on our <a href="delete-account.html">account deletion page</a>. We complete email requests within 7 days.</p>
+<p>Deleting your account removes your account, your synced notes, flashcards, review history and settings, and any synced files. It does not delete data that is only on your phone (delete the app or use &quot;Delete local data&quot; for that), or anything you sent to an AI company (contact that company).</p>
+<h2 id="10-your-rights">10. Your rights</h2>
+<p>Under the Data Privacy Act you have the right to be informed about how your personal information is used, to access it, to object to its processing, to have wrong information corrected, to have it erased or blocked, to get a copy in a commonly used format (data portability), to be compensated for damages, and to file a complaint with the National Privacy Commission (privacy.gov.ph).</p>
+<p>Most of these you can do yourself in the app: view, edit and delete your notes, export your data, and delete your account. For anything else, email <strong>{{CONTACT_EMAIL}}</strong>. We may ask you to confirm the request from the email address on your account so that nobody else can make requests about your data. We will answer within a reasonable time.</p>
+<h2 id="11-children-and-teens">11. Children and teens</h2>
+<p>Noted is meant for people aged <strong>13 and older</strong> and is not designed for children under 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has created an account, email us and we will delete it. AI features are only for people aged 18 and older (section 4).</p>
+<h2 id="12-security">12. Security</h2>
+<p>We protect your information with encrypted connections (HTTPS), database rules that let only the owner reach their data, secure storage for AI keys on your phone, and an optional app lock. No method is perfectly secure; if we learn of a data breach that affects you, we will tell you and the National Privacy Commission when the law requires it.</p>
+<h2 id="13-changes-to-this-policy">13. Changes to this policy</h2>
+<p>If we change this policy, we will update the effective date at the top of this page. If the changes are important, we will also tell you in the app or on this page before they take effect.</p>
+<h2 id="14-contact-us">14. Contact us</h2>
+<p><strong>{{DEVELOPER_LEGAL_NAME}}</strong><br>Email: <strong>{{CONTACT_EMAIL}}</strong></p>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap">This site uses no cookies, no analytics and no scripts.</div>
+  </footer>
+</body>
+</html>
