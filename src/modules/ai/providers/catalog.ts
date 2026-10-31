@@ -11,7 +11,8 @@
  * - Q1 = A: AI is an 18+ feature. Every provider here requires 18+ in its
  *   terms, so `minAge` is 18 and the wizard asks "I'm 18 or older".
  * - Q2 = A: Mistral is provider #2, and the wizard tells users to turn off
- *   training in Mistral's privacy settings (Admin panel, API, Privacy).
+ *   training. Path updated per the Lead (Nov 1): Admin panel -> Privacy ->
+ *   "Anonymous improvement data" (Mistral Help Center article dated 2026-09-03).
  * - Q3 = A: Groq uses gpt-oss-120b, falling back to gpt-oss-20b (limits are
  *   counted per model, so the fallback doubles the daily allowance).
  */
@@ -45,6 +46,27 @@ export interface ProviderInfo {
     summary: string;
     /** What the user should do to protect their notes, or null when nothing is needed. */
     privacyStep: string | null;
+    /** Where privacyStep comes from (official page and its date), for the wizard's "Learn more". */
+    privacyStepSource: { url: string; dated: string } | null;
+  };
+  /**
+   * Consent-screen data (Plan F5 "the first send to each provider shows a
+   * consent screen"; Apple App Review Guideline 5.1.2(i): disclose where
+   * personal data goes, including third-party AI, and get explicit permission).
+   * The engine refuses to send until the gate reports a "yes" for THIS
+   * provider AND THIS version (AiGatePort.hasConsent(provider, version)).
+   */
+  consent: {
+    /** Always true: an explicit per-provider "yes" is required before the first send. */
+    required: true;
+    /** Bump whenever recipient/dataSent/purpose/dataUse wording changes; older "yes" answers stop counting. */
+    version: number;
+    /** Who receives the data, as named on the screen. */
+    recipient: string;
+    /** Exactly what leaves the device. */
+    dataSent: string;
+    /** Why it is sent. */
+    purpose: string;
   };
   capabilities: {
     text: boolean;
@@ -89,6 +111,14 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
       summary:
         "Groq doesn't keep your requests by default. It may keep them for up to 30 days only to fix outages or check for abuse.",
       privacyStep: "Optional: turn on Zero Data Retention in Groq's Data Controls settings.",
+      privacyStepSource: { url: 'https://console.groq.com/docs/your-data', dated: '2026-11-01' },
+    },
+    consent: {
+      required: true,
+      version: 1,
+      recipient: 'Groq (GroqCloud, servers in the United States)',
+      dataSent: 'The text of the note blocks you chose (your selection or the whole note) and your Groq API key. Nothing else from the app.',
+      purpose: 'To run the AI action you picked and send the result back to this phone for you to review.',
     },
     capabilities: { text: true, structuredOutput: 'strict', vision: false, transcription: true },
     models: { primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'] },
@@ -119,7 +149,22 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
     dataUse: {
       mayTrainOnFreeTier: true,
       summary: 'On the free plan, Mistral may use what you send to train its models unless you turn this off.',
-      privacyStep: "Turn off training: in Mistral's Admin panel, open API, then Privacy, and switch off the data-usage (training) toggle.",
+      // Path per Mistral Help Center, "Can I opt out of my input or output data
+      // being used for training?" (dated 2026-09-03, re-checked 2026-11-01).
+      // The API toggle is separate from the one for Mistral's Vibe product.
+      privacyStep:
+        "Turn off training: in Mistral's Admin panel, open Privacy in the left-hand menu and switch off \"Anonymous improvement data\". This is separate from the Vibe training toggle, so turning off one does not turn off the other.",
+      privacyStepSource: {
+        url: 'https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training',
+        dated: '2026-09-03',
+      },
+    },
+    consent: {
+      required: true,
+      version: 1,
+      recipient: 'Mistral AI',
+      dataSent: 'The text of the note blocks you chose (your selection or the whole note) and your Mistral API key. Nothing else from the app.',
+      purpose: 'To run the AI action you picked and send the result back to this phone for you to review.',
     },
     capabilities: { text: true, structuredOutput: 'schema', vision: false, transcription: false },
     models: { primary: 'mistral-small-latest', fallbacks: [] },

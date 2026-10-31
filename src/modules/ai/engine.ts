@@ -56,8 +56,12 @@ const MAX_SELECTED = 5_000;
 export interface AiGatePort {
   /** The student confirmed "I'm 18 or older" in the key wizard. */
   isAdultConfirmed(): Promise<boolean>;
-  /** The student accepted the first-send consent screen for this provider. */
-  hasConsent(provider: Provider): Promise<boolean>;
+  /**
+   * The student explicitly said "yes" on the consent screen for this provider
+   * and this consent version (PROVIDER_CATALOG[p].consent.version). Apple
+   * guideline 5.1.2(i): a stored "yes" for an older version must return false.
+   */
+  hasConsent(provider: Provider, consentVersion: number): Promise<boolean>;
 }
 
 export interface AiEngineDeps {
@@ -170,7 +174,7 @@ export function createAiEngine(deps: AiEngineDeps): AiEngine {
 
     if (req.aiAllowed !== true) throw new AiError('blocked', label);
     if (!(await deps.gate.isAdultConfirmed())) throw new AiError('age_required', label);
-    if (!(await deps.gate.hasConsent(req.provider))) throw new AiError('consent_required', label);
+    if (!(await deps.gate.hasConsent(req.provider, info.consent.version))) throw new AiError('consent_required', label);
     if (!(await deps.keyVault.has(req.provider))) throw new AiError('missing_key', label);
     if (deps.isOnline && !(await deps.isOnline())) throw new AiError('offline', label);
 

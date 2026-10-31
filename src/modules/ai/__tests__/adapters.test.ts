@@ -92,9 +92,23 @@ describe('keys', () => {
     expect(PROVIDER_CATALOG.groq.minAge).toBe(18);
     expect(PROVIDER_CATALOG.mistral.minAge).toBe(18);
     expect(PROVIDER_CATALOG.mistral.dataUse.mayTrainOnFreeTier).toBe(true);
-    expect(PROVIDER_CATALOG.mistral.dataUse.privacyStep).toMatch(/Admin panel, open API, then Privacy/);
+    // New path (Mistral Help Center, dated 2026-09-03): Admin panel -> Privacy -> "Anonymous improvement data".
+    expect(PROVIDER_CATALOG.mistral.dataUse.privacyStep).toMatch(/Admin panel, open Privacy.*"Anonymous improvement data"/);
+    expect(PROVIDER_CATALOG.mistral.dataUse.privacyStep).toMatch(/separate from the Vibe/);
+    expect(PROVIDER_CATALOG.mistral.dataUse.privacyStep).not.toMatch(/open API/);
+    expect(PROVIDER_CATALOG.mistral.dataUse.privacyStepSource).toEqual({
+      url: 'https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training',
+      dated: '2026-09-03',
+    });
     expect(PROVIDER_CATALOG.groq.models).toEqual({ primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'] });
-    for (const p of Object.values(PROVIDER_CATALOG)) expect(p.apiBase.startsWith('https://')).toBe(true);
+    for (const p of Object.values(PROVIDER_CATALOG)) {
+      expect(p.apiBase.startsWith('https://')).toBe(true);
+      // Apple 5.1.2(i): every provider needs an explicit, versioned, per-provider "yes" with full disclosure.
+      expect(p.consent.required).toBe(true);
+      expect(Number.isInteger(p.consent.version) && p.consent.version >= 1).toBe(true);
+      for (const field of [p.consent.recipient, p.consent.dataSent, p.consent.purpose]) expect(field.trim().length).toBeGreaterThan(0);
+      expect(p.consent.dataSent).toMatch(/API key/);
+    }
   });
 });
 

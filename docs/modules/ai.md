@@ -16,14 +16,23 @@ Maths and algorithms: [`src/modules/ai/ALGORITHMS.md`](../../src/modules/ai/ALGO
 | Cost | **Free plan, $0, no card.** Only the Developer plan (pay per token) costs money | **Free mode, no card.** Only pay-as-you-go usage beyond the included amount costs money |
 | Models | `openai/gpt-oss-120b`, falls back to `openai/gpt-oss-20b` when rate limited | `mistral-small-latest` |
 | Free limits | Per model: 30 requests/min, 1,000/day, 8,000 tokens/min, 200,000 tokens/day | Not published; see your Mistral Limits page |
-| Your notes | Not kept by default; may be kept up to 30 days for abuse or outage checks; Zero Data Retention available | **May be used for training on free mode unless you turn it off**: Admin panel → API → Privacy |
+| Your notes | Not kept by default; may be kept up to 30 days for abuse or outage checks; Zero Data Retention available | **May be used for training on free mode unless you turn it off**: Admin panel → Privacy → "Anonymous improvement data" (see below) |
 | Age | 18+ in Groq's terms | Business use; minors only with a parent's or guardian's consent |
 | Key page | console.groq.com/keys | console.mistral.ai |
+
+**Turning off Mistral training.** Admin panel → **Privacy** (left-hand menu) → switch off **"Anonymous improvement data"**. This is a separate toggle from Mistral's Vibe product, so turning off one does not turn off the other. Source: Mistral Help Center, "Can I opt out of my input or output data being used for training?", dated Sep 3, 2026 (https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training). This path replaced the older "Admin panel → API → Privacy" one; the catalog's `dataUse.privacyStep` and `dataUse.privacyStepSource` carry the new path and the article's URL and date.
 
 **AI is an 18+ feature in this app** (Rey, Nov 1, Q1 = A). The key wizard (P3b) shows each
 provider's `ageRule` and `dataUse` from `PROVIDER_CATALOG` and asks "I'm 18 or older".
 Under-18s keep Beautify Lite and rule-based cards. Free limits are stored with `checkedOn` and must
 be re-checked in P7.
+
+**Consent (Plan F5; Apple App Review Guideline 5.1.2(i)).** Each provider has a `consent` block:
+`required: true`, a `version`, the `recipient`, exactly what is sent (`dataSent`) and why (`purpose`).
+P3b's consent screen shows these plus `dataUse`, and stores an explicit per-provider "yes" together
+with the version. The engine calls `gate.hasConsent(provider, consent.version)` before every run
+and refuses to send (`consent_required`) without it. Bump `consent.version` whenever any of that
+wording changes, so students are asked again.
 
 ## Public interface (`@/modules/ai`)
 
@@ -37,7 +46,7 @@ The slots are `ai.groq.apiKey` (unchanged from P0, shared with voice/Whisper) an
 ```ts
 const ai = createAiEngine({
   keyVault, fetchFn: fetch, logger, ids, usageFile,   // usageFile: TextFilePort, e.g. expoTextFile('ai', 'usage.json')
-  gate: { isAdultConfirmed, hasConsent },             // answered by P3b's key wizard and consent screen
+  gate: { isAdultConfirmed, hasConsent },             // hasConsent(provider, consentVersion): P3b's consent screen
   isOnline,                                           // optional
 });
 

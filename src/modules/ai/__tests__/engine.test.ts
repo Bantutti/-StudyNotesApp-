@@ -210,7 +210,21 @@ describe('gates and input checks (before anything is sent)', () => {
     await noKey.vault.remove('groq');
     await expect(run(noKey.engine, 'beautify')).rejects.toMatchObject({ kind: 'missing_key' });
 
-    for (const s of [blocked, minor, noConsent, noKey]) expect(s.fake.calls.length + s.mistral.calls.length).toBe(0);
+    // A "yes" given for an older consent version no longer counts (text changed -> ask again).
+    const asked: [string, number][] = [];
+    const oldYes = await setup([{ json: { units: [] } }], {
+      gate: {
+        isAdultConfirmed: async () => true,
+        hasConsent: async (p, v) => {
+          asked.push([p, v]);
+          return v < 1; // only an outdated version was ever accepted
+        },
+      },
+    });
+    await expect(run(oldYes.engine, 'beautify')).rejects.toMatchObject({ kind: 'consent_required', message: 'Allow sending this note to Groq first.' });
+    expect(asked).toEqual([['groq', 1]]);
+
+    for (const s of [blocked, minor, noConsent, noKey, oldYes]) expect(s.fake.calls.length + s.mistral.calls.length).toBe(0);
   });
 
   it('rejects bad documents, ids, scopes and actions', async () => {
