@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# Expo / build output
+.expo/
+dist/
+dist-check/
+web-build/
+editor-web/dist/
+expo-env.d.ts
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# phase exports (zips live here, never in git)
+exports/
+
+# secrets: never commit
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.pem
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+*-firebase-adminsdk-*.json
+credentials.json
+
+# logs and OS files
+npm-debug.*
+*.log
+.DS_Store
+Thumbs.db
+coverage/
