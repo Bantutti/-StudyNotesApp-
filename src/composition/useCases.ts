@@ -4,9 +4,10 @@
  */
 import * as z from 'zod';
 
-import { AppError, firstLine, SAMPLE_NOTE, SAMPLE_NOTE_TITLE, t, type NoteDoc } from '@/core';
-import type { Note, NoteListItem, Store, Subject } from '@/modules/store';
+import { AppError, firstLine, SAMPLE_NOTE, SAMPLE_NOTE_TITLE, t, type IdGenerator, type NoteDoc } from '@/core';
+import type { Note, NoteListItem, SaveResult, Store, Subject } from '@/modules/store';
 import { DEFAULT_PACK_ID, P1_PACK_IDS } from '@/modules/stylepacks';
+import { applyTemplateTo, formatTemplateDate, instantiateTemplate, type TemplateRegistry } from '@/modules/templates';
 
 import { KEY_LAST_NOTE, KEY_ONBOARDED, KV_APP } from './appData';
 
@@ -81,19 +82,52 @@ export function createSampleNote(store: Store, subjectId: string | null, packId:
 // Notes
 // ---------------------------------------------------------------------------
 
+export interface TemplateDeps {
+  templates: TemplateRegistry;
+  ids: IdGenerator;
+  now?: () => number;
+}
+
+/**
+ * Creates a note in a subject/folder (or the Inbox) with the subject's
+ * default pack. With template deps, a subject's default template is used
+ * when no explicit document or template is given (plan Flow 2).
+ */
 export async function createNoteIn(
   store: Store,
   where: { subject: string | null; folder?: string | null },
   extra: { document?: NoteDoc; templateId?: string | null; title?: string } = {},
+  deps?: TemplateDeps,
 ): Promise<Note> {
+  let document = extra.document;
+  let templateId = extra.templateId ?? null;
+  if (deps && !document) {
+    if (templateId === null && where.subject) templateId = (await store.subjects.get(where.subject))?.defaultTemplate ?? null;
+    const t = templateId ? deps.templates.get(templateId) : undefined;
+    if (t) document = instantiateTemplate(t, { ids: deps.ids, dateText: formatTemplateDate((deps.now ?? Date.now)()) });
+    else templateId = null;
+  }
   return store.notes.create({
     subject: where.subject,
     folder: where.folder ?? null,
     stylePackId: await packForNewNote(store, where.subject),
-    document: extra.document,
-    templateId: extra.templateId ?? null,
+    document,
+    templateId,
     title: extra.title,
   });
+}
+
+/**
+ * Applies a template to an existing note. Saves a "Before template" version
+ * first; existing blocks keep their ids, new sections get fresh ones.
+ */
+export async function applyTemplateToNote(store: Store, noteId: string, templateId: string, deps: TemplateDeps): Promise<SaveResult> {
+  const t = deps.templates.get(templateId);
+  if (!t) throw new AppError('not_found', 'That template is not available.');
+  const note = await store.notes.get(noteId);
+  if (!note || note.deleted) throw new AppError('not_found', 'This note no longer exists.');
+  const doc = applyTemplateTo(note.document, t, { ids: deps.ids, dateText: formatTemplateDate((deps.now ?? Date.now)()) });
+  return store.notes.save(noteId, { document: doc, templateId: t.id }, { before: 'before_template' });
 }
 
 export const rememberOpenedNote = (store: Store, noteId: string) => store.kv.set(KV_APP, KEY_LAST_NOTE, noteId);

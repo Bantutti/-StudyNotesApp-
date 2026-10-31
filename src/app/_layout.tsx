@@ -36,6 +36,7 @@ function Navigator() {
         <Stack.Screen name="subject-form" options={{ presentation: 'modal', title: '' }} />
         <Stack.Screen name="folder-form" options={{ presentation: 'modal', title: '' }} />
         <Stack.Screen name="note-actions" options={{ presentation: 'formSheet', title: '', sheetAllowedDetents: [0.5, 0.9] }} />
+        <Stack.Screen name="templates" options={{ presentation: 'modal', title: '' }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
       </Stack>
     </>

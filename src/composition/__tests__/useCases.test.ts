@@ -1,9 +1,11 @@
 import { createLogger, createSeqIdGenerator, listBlockIds, memorySink, SAMPLE_NOTE } from '@/core';
 import { openStore } from '@/modules/store';
+import { createTemplateRegistry } from '@/modules/templates';
 
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
 import { isOnboarded } from '../appData';
 import {
+  applyTemplateToNote,
   createNoteIn,
   daysUntil,
   displayTitle,
@@ -128,5 +130,30 @@ describe('formatting and parsing', () => {
     expect(relativeTime(at(2026, 10, 31, 20), NOW)).toBe('Yesterday');
     expect(relativeTime(at(2026, 10, 3), NOW)).toBe('3 Oct');
     expect(relativeTime(at(2025, 10, 3), NOW)).toBe('3 Oct 2025');
+  });
+});
+
+describe('templates in use cases', () => {
+  const deps = () => ({ templates: createTemplateRegistry(), ids: createSeqIdGenerator(), now: () => NOW });
+
+  it("a new note in a subject uses the subject's default template", async () => {
+    const s = await store();
+    const sub = await s.subjects.create({ name: 'Bio', color: '111111', defaultTemplate: 'cornell' });
+    const n = await createNoteIn(s, { subject: sub.id }, {}, deps());
+    expect(n.templateId).toBe('cornell');
+    expect(n.document.content.some((b) => b.type === 'columns')).toBe(true);
+    const plain = await createNoteIn(s, { subject: null }, {}, deps());
+    expect(plain.templateId).toBeNull();
+  });
+
+  it('applying a template saves a version first and keeps existing ids', async () => {
+    const s = await store();
+    const n = await createNoteIn(s, { subject: null }, { document: SAMPLE_NOTE });
+    const r = await applyTemplateToNote(s, n.id, 'outline', deps());
+    expect(r.note.templateId).toBe('outline');
+    const after = await s.notes.get(n.id);
+    expect(listBlockIds(after!.document).slice(0, listBlockIds(SAMPLE_NOTE).length)).toEqual(listBlockIds(SAMPLE_NOTE));
+    expect((await s.versions.list(n.id))[0]?.reason).toBe('before_template');
+    await expect(applyTemplateToNote(s, n.id, 'nope', deps())).rejects.toMatchObject({ code: 'not_found' });
   });
 });

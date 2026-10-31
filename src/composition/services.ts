@@ -40,6 +40,7 @@ import {
 } from '@/modules/stylepacks';
 import { createLinkOpener, expoLinkPorts, type LinkOpener, type LinkPorts } from '@/modules/editor';
 import { deleteExpoDatabase, openExpoDriver } from '@/modules/store';
+import { createTemplateRegistry, type TemplateRegistry } from '@/modules/templates';
 import { createGroqTranscriber, fileSizeOf, type TranscriptionProvider } from '@/modules/voice';
 import { Directory, Paths } from 'expo-file-system';
 
@@ -59,6 +60,8 @@ export interface Services {
   notes: NoteStore;
   /** Opens note links OUTSIDE the app after a confirm (Apple age-rating rule). */
   links: LinkOpener;
+  /** Built-in note templates (validated data). */
+  templates: TemplateRegistry;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
@@ -105,6 +108,7 @@ export function createServicesWith(a: Adapters): Services {
     share: a.share,
     notes: createNoteStore(),
     links: createLinkOpener(a.linkPorts),
+    templates: createTemplateRegistry(),
     appData: {
       ...a.database,
       wipeSecrets: () => keyVault.remove('groq'),

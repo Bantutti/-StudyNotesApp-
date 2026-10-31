@@ -6,7 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { createNoteIn, SAMPLE_TAG, useAppData, useDataVersion } from '@/composition';
+import { createNoteIn, SAMPLE_TAG, useAppData, useDataVersion, useTemplateDeps } from '@/composition';
 import { t, tCount, userMessage } from '@/core';
 import { AppButton, AppScreen, EmptyState, ListRow, SectionHeader, useTheme } from '@/core/ui';
 import type { Folder, NoteListItem, NoteSort } from '@/modules/store';
@@ -28,6 +28,7 @@ const SORTS: { key: NoteSort; label: string }[] = [
 export function NoteBrowser({ subjectId, folderId }: NoteBrowserProps) {
   const th = useTheme();
   const { store, showUndo } = useAppData();
+  const templateDeps = useTemplateDeps();
   const version = useDataVersion();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -59,7 +60,7 @@ export function NoteBrowser({ subjectId, folderId }: NoteBrowserProps) {
 
   const newNote = async () => {
     try {
-      const n = await createNoteIn(store, { subject: subjectId, folder: folderId ?? null });
+      const n = await createNoteIn(store, { subject: subjectId, folder: folderId ?? null }, {}, templateDeps);
       router.push({ pathname: '/note/[id]', params: { id: n.id } });
     } catch (e) {
       Alert.alert(t('notes.new'), userMessage(e));
@@ -123,8 +124,14 @@ export function NoteBrowser({ subjectId, folderId }: NoteBrowserProps) {
 
       <SectionHeader>{tCount('subjects.noteCount', notes.length)}</SectionHeader>
       {notes.length === 0 ? (
-        <EmptyState title={t('subjects.empty')} body={tag ? `No notes tagged #${tag}.` : 'Start with a blank page.'}>
+        <EmptyState title={t('subjects.empty')} body={tag ? `No notes tagged #${tag}.` : 'Start with a blank page or a template.'}>
           <AppButton label={t('notes.new')} icon="add" onPress={newNote} />
+          <AppButton
+            kind="secondary"
+            label={t('notes.fromTemplate')}
+            icon="copy-outline"
+            onPress={() => router.push({ pathname: '/templates', params: { mode: 'new', subject: subjectId ?? '', folder: folderId ?? '' } })}
+          />
         </EmptyState>
       ) : (
         notes.map((n) => (
