@@ -2,3 +2,6 @@ export { ServicesProvider, useServices } from './ServicesContext';
 export { createServices, createServicesWith, type Services, type Adapters } from './services';
 export { usePackFaces } from './hooks';
 export type { NoteStore } from './noteStore';
+export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
+export { createTapUnlock, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
+export * from './useCases';

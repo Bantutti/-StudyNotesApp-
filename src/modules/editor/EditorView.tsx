@@ -30,6 +30,8 @@ export interface EditorEvents {
   onChange?: (doc: NoteDoc) => void;
   onMetric?: (name: Extract<ToNative, { type: 'metric' }>['name'], ms: number) => void;
   onBridgeError?: (code: string) => void;
+  /** A link was tapped in the note. Wire to a LinkOpener (opens outside the app). */
+  onOpenLink?: (href: string) => void;
 }
 
 interface Props extends EditorEvents {
@@ -93,6 +95,9 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
       case 'error':
         log.warn('editor_error', { code: msg.code });
         props.onBridgeError?.(msg.code);
+        return;
+      case 'openLink':
+        props.onOpenLink?.(msg.href);
         return;
       case 'pong':
         settle(msg.reqId, Date.now() - msg.sentAt);

@@ -9,10 +9,10 @@ import { stripDangerousHtml } from '../src/sanitize';
 let counter = 0;
 const random = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 13 + counter++) & 0xff);
 
-function mount() {
+function mount(onLinkTap?: (href: string) => void) {
   const el = document.createElement('div');
   document.body.appendChild(el);
-  return createEditor({ element: el, random });
+  return createEditor({ element: el, random, onLinkTap });
 }
 
 describe('TipTap editor with our schema', () => {
@@ -67,6 +67,45 @@ describe('TipTap editor with our schema', () => {
     const json = JSON.stringify(ed.getJSON());
     expect(json).not.toContain('javascript:');
     expect(json).toContain('https://ok.example');
+    ed.destroy();
+  });
+});
+
+describe('links (open outside the app)', () => {
+  it('a tap on a link cancels navigation and reports the href', () => {
+    const taps: string[] = [];
+    const ed = mount((h) => taps.push(h));
+    ed.commands.setContent('<p>see <a href="https://example.com/x">this</a> and <a href="mailto:prof@school.edu">mail</a></p>');
+    const links = ed.view.dom.querySelectorAll('a');
+    expect(links).toHaveLength(2);
+    for (const a of Array.from(links)) {
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+      a.dispatchEvent(ev);
+      expect(ev.defaultPrevented).toBe(true);
+    }
+    expect(taps).toEqual(['https://example.com/x', 'mailto:prof@school.edu']);
+    ed.destroy();
+  });
+
+  it('clicks elsewhere are not reported', () => {
+    const taps: string[] = [];
+    const ed = mount((h) => taps.push(h));
+    ed.commands.setContent('<p>plain text</p>');
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    ed.view.dom.querySelector('p')?.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+    expect(taps).toEqual([]);
+    ed.destroy();
+  });
+
+  it('keeps audio anchors in the JSON but never takes them from HTML', () => {
+    const ed = mount();
+    const anchor = { recordingId: 'rec_0000000000000001', startMs: 5, endMs: 9 };
+    ed.commands.setContent({ type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'b_anchored00001', audioAnchor: anchor }, content: [{ type: 'text', text: 'x' }] }] });
+    expect(JSON.stringify(ed.getJSON())).toContain('"startMs":5');
+    expect(validateNoteDoc(ed.getJSON()).ok).toBe(true);
+    ed.commands.setContent('<p data-block-id="b_anchored00002" audioanchor="x" data-audio-anchor="{}">pasted</p>');
+    expect(JSON.stringify(ed.getJSON())).toContain('"audioAnchor":null');
     ed.destroy();
   });
 });

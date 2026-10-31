@@ -46,6 +46,15 @@ export const BlockId = Extension.create<{ newId: () => string }>({
             renderHTML: (attrs: Record<string, unknown>) =>
               typeof attrs.blockId === 'string' ? { 'data-block-id': attrs.blockId } : {},
           },
+          // Audio anchor (P4). Kept in the JSON and never read from or written to
+          // HTML, so pasted HTML can't carry an anchor from another note. Not
+          // copied to the new half when a block is split.
+          audioAnchor: {
+            default: null,
+            keepOnSplit: false,
+            parseHTML: () => null,
+            renderHTML: () => ({}),
+          },
         },
       },
     ];

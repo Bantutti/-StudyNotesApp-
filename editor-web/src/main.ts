@@ -57,6 +57,8 @@ const editor: Editor = createEditor({
     if (changeTimer) clearTimeout(changeTimer);
     changeTimer = setTimeout(() => post({ v: 1, type: 'doc', reqId: null, reason: 'change', doc: editor.getJSON() }), CHANGE_DEBOUNCE_MS);
   },
+  // Links open outside the app, never in this WebView (Apple age-rating rule).
+  onLinkTap: (href) => post({ v: 1, type: 'openLink', href: href.slice(0, 2_000) }),
 });
 
 function handle(msg: ToWeb): void {

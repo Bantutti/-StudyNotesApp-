@@ -19,8 +19,12 @@ module.exports = {
       moduleNameMapper: {
         ...shared.moduleNameMapper,
         '^expo-audio$': '<rootDir>/test/mocks/expo-audio.ts',
+        '^react-native-webview$': '<rootDir>/test/mocks/react-native-webview.tsx',
+        // P2a's firebase/src uses NodeNext ".js" import specifiers for .ts files.
+        '^(\\.{1,2}/.*)\\.js$': '$1',
       },
       roots: ['<rootDir>/src', '<rootDir>/scripts'],
+      modulePathIgnorePatterns: ['<rootDir>/firebase/node_modules'],
       transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@shopify/react-native-skia|ts-fsrs|docx|zod)',
       ],

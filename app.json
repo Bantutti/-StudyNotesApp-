@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Study Notes (P0 Spike Lab)",
+    "name": "Study Notes",
     "slug": "study-notes-app",
     "scheme": "studynotes",
     "version": "0.0.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.reyanyan.studynotes.dev",
@@ -44,7 +44,8 @@
       "expo-secure-store",
       "expo-font",
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-sqlite"
     ]
   }
 }

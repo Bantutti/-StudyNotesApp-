@@ -21,7 +21,11 @@ import {
   Packer,
   Paragraph,
   ShadingType,
+  Table,
+  TableCell,
+  TableRow,
   TextRun,
+  WidthType,
   type IBorderOptions,
   type IParagraphOptions,
   type IRunOptions,
@@ -82,8 +86,15 @@ function border(color: string, style: IBorderOptions['style'], size = 8): IParag
   return { top: b, bottom: b, left: b, right: b };
 }
 
-function blockParagraphs(nodes: readonly DocNode[], ctx: Ctx, extra: Partial<IParagraphOptions> = {}, level = 0): Paragraph[] {
-  const out: Paragraph[] = [];
+type Block = Paragraph | Table;
+
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'auto' } as const;
+
+/** Word table cells must hold at least one paragraph. */
+const cellChildren = (blocks: Block[]): Block[] => (blocks.length ? blocks : [new Paragraph({ children: [] })]);
+
+function blockParagraphs(nodes: readonly DocNode[], ctx: Ctx, extra: Partial<IParagraphOptions> = {}, level = 0): Block[] {
+  const out: Block[] = [];
   const { pack } = ctx;
   const headerFont = pack.fonts.header;
   const accent = hexNoHash(pack.palette.accent);
@@ -171,6 +182,93 @@ function blockParagraphs(nodes: readonly DocNode[], ctx: Ctx, extra: Partial<IPa
           }),
         );
         break;
+      case 'blockquote': {
+        const side = { style: BorderStyle.SINGLE, size: 18, color: hexNoHash(pack.palette.accent2), space: 8 };
+        out.push(...blockParagraphs(n.content, ctx, { ...extra, border: { left: side }, indent: { left: 360 } }, level));
+        break;
+      }
+      case 'summary': {
+        const shade = { type: ShadingType.CLEAR, color: 'auto', fill: hexNoHash(pack.palette.soft) } as const;
+        const box = { ...extra, shading: shade, border: border(pack.palette.accent, BorderStyle.SINGLE, 8) };
+        out.push(
+          new Paragraph({
+            ...box,
+            spacing: { before: 120 },
+            children: [new TextRun({ text: 'SUMMARY', bold: true, size: Math.round(ctx.body * 0.62), color: accent, characterSpacing: 40 })],
+          }),
+          ...blockParagraphs(n.content, ctx, box, level),
+        );
+        break;
+      }
+      case 'qa': {
+        const box = { ...extra, border: border(pack.palette.accent2, BorderStyle.DASHED, 8) };
+        for (const part of n.content) {
+          if (part.type === 'qaQuestion') {
+            out.push(
+              new Paragraph({
+                ...box,
+                spacing: { before: 120 },
+                children: [new TextRun({ text: 'Q  ', bold: true, color: accent, font: headerFont }), ...runsFor(part.content, ctx, { bold: true })],
+              }),
+            );
+          } else if (part.type === 'qaAnswer') {
+            out.push(
+              new Paragraph({ ...box, children: [new TextRun({ text: 'A', bold: true, color: hexNoHash(pack.palette.accent2), font: headerFont })] }),
+              ...blockParagraphs(part.content, ctx, box, level),
+            );
+          }
+        }
+        break;
+      }
+      case 'columns': {
+        // Plan section 16: Cornell and two-column layouts become a borderless two-cell table.
+        const cornell = n.attrs?.layout === 'cornell';
+        const widths = cornell ? [30, 70] : [50, 50];
+        const divider = { style: BorderStyle.SINGLE, size: 8, color: hexNoHash(pack.palette.accent2) };
+        out.push(
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: n.content.map(
+                  (col, i) =>
+                    new TableCell({
+                      width: { size: widths[i] ?? 50, type: WidthType.PERCENTAGE },
+                      borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: cornell && i === 0 ? divider : NO_BORDER },
+                      children: cellChildren(blockParagraphs('content' in col ? col.content ?? [] : [], ctx, {}, 0)),
+                    }),
+                ),
+              }),
+            ],
+          }),
+        );
+        break;
+      }
+      case 'table': {
+        const line = { style: BorderStyle.SINGLE, size: 6, color: hexNoHash(pack.palette.accent2) };
+        out.push(
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: n.content.map(
+              (row) =>
+                new TableRow({
+                  children: ('content' in row ? row.content ?? [] : []).map(
+                    (cell) =>
+                      new TableCell({
+                        borders: { top: line, bottom: line, left: line, right: line },
+                        shading:
+                          cell.type === 'tableHeader'
+                            ? { type: ShadingType.CLEAR, color: 'auto', fill: hexNoHash(pack.palette.soft) }
+                            : undefined,
+                        children: cellChildren(blockParagraphs('content' in cell ? cell.content ?? [] : [], ctx, {}, 0)),
+                      }),
+                  ),
+                }),
+            ),
+          }),
+        );
+        break;
+      }
       default:
         break;
     }

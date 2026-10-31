@@ -23,6 +23,9 @@ export const DEFAULT_PACK_ID = 'pastel-highlight';
 /** Packs the P0 spikes switch between (one light, one dark). */
 export const P0_PACK_IDS = ['pastel-highlight', 'dark-academia'] as const;
 
+/** Packs offered in the P1 app (decision Q1): the default plus the high-legibility pack. */
+export const P1_PACK_IDS = ['pastel-highlight', 'clear-read'] as const;
+
 const RAW: readonly unknown[] = [
   pastelHighlight, colorCode, seoulMinimal, lightAcademia, darkAcademia, blackoutGel,
   cottagecore, coquette, kawaiiPop, clearRead, oceanLines, peachGrid, chalkboard,

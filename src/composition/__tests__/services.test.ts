@@ -17,6 +17,8 @@ function adapters(over: Partial<Adapters> = {}): Adapters {
     randomBytes: (n) => new Uint8Array(n).fill(7),
     device: { os: 'android', osVersion: '15', model: 'Test', runtime: 'expo-go', isTablet: false },
     isDev: false,
+    linkPorts: { openExternal: async () => undefined, confirm: async () => false },
+    database: { openDriver: async () => { throw new Error('unused'); }, deleteDatabase: async () => undefined, wipeFiles: async () => undefined },
     ...over,
   };
 }

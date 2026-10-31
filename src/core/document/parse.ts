@@ -1,6 +1,6 @@
 import { AppError } from '../errors';
 import { fail, ok, utf8Length, type Result } from '../validation';
-import { checkDocLimits, DOC_LIMITS, noteDocSchema, type NoteDoc } from './schema';
+import { checkDocLimits, checkDocStructure, DOC_LIMITS, noteDocSchema, type NoteDoc } from './schema';
 
 /**
  * Parses an untrusted serialized document (string) into a validated NoteDoc.
@@ -25,5 +25,6 @@ export function validateNoteDoc(raw: unknown): Result<NoteDoc> {
   if (!parsed.success) return fail(new AppError('validation_failed', 'The note data is not valid.'));
   const limits = checkDocLimits(parsed.data);
   if (!limits.ok) return fail(new AppError('too_large', 'This note is too large or too deeply nested.'));
+  if (checkDocStructure(parsed.data) !== null) return fail(new AppError('validation_failed', 'The note data is not valid.'));
   return ok(parsed.data);
 }

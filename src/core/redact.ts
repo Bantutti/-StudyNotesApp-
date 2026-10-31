@@ -7,7 +7,7 @@
  */
 
 const SENSITIVE_FIELD =
-  /(key|token|secret|passw|auth|cookie|session|text|content|body|transcript|note|html|prompt|email|phone|name|uri|url|path)/i;
+  /(key|token|secret|passw|auth|cookie|session|text|content|body|transcript|note|html|prompt|email|phone|name|uri|url|path|title|term|query|search|snippet|preview|tag|href|link|question|answer|front|back|label|caption)/i;
 
 const SECRET_SHAPES: readonly RegExp[] = [
   /gsk_[A-Za-z0-9]{8,}/g, // Groq
