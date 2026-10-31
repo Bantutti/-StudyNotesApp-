@@ -1,0 +1,99 @@
+{
+  "schema": 3,
+  "id": "color-code",
+  "version": 1,
+  "name": "Color Code",
+  "meta": {
+    "mood": "Organized, purposeful, exam-ready",
+    "bestFor": "Revision and cramming",
+    "trend": "Color-coded notes with a highlight key",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "dotted",
+    "color": "#FFFFFF",
+    "line": "#CBD0D8",
+    "lineGap": 28,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Itim",
+    "body": "Lexend",
+    "headerWeight": 400,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.1,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#24272E",
+    "accent": "#2D5BD7",
+    "accent2": "#C2410C",
+    "muted": "#5B616C",
+    "soft": "#F1F4FA"
+  },
+  "highlighters": [
+    {
+      "id": "term",
+      "color": "#FDF284",
+      "opacity": 0.9,
+      "meaning": "Key term"
+    },
+    {
+      "id": "def",
+      "color": "#FFB6D9",
+      "opacity": 0.8,
+      "meaning": "Definition"
+    },
+    {
+      "id": "ex",
+      "color": "#A2D9F0",
+      "opacity": 0.85,
+      "meaning": "Example"
+    },
+    {
+      "id": "formula",
+      "color": "#B9E3A0",
+      "opacity": 0.85,
+      "meaning": "Formula or rule"
+    },
+    {
+      "id": "date",
+      "color": "#FFC99A",
+      "opacity": 0.85,
+      "meaning": "Date or name"
+    }
+  ],
+  "highlightKey": {
+    "show": true,
+    "position": "top"
+  },
+  "header": {
+    "style": "tab-label",
+    "divider": "dashed"
+  },
+  "blocks": {
+    "callout": "side-bar",
+    "definition": "tab-box",
+    "bullet": "square"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#24272E",
+      "#2D5BD7",
+      "#C2410C"
+    ],
+    "highlighter": "#FDF284"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "medium"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "schema": 3,
+  "id": "clear-read",
+  "version": 1,
+  "name": "Clear Read",
+  "meta": {
+    "mood": "Plain, high-contrast, easy on the eyes",
+    "bestFor": "Low vision, dyslexia, tired eyes",
+    "trend": "Accessibility pack (plan v0.2 F3), not a Pinterest trend",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "plain",
+    "color": "#FFFDF8",
+    "line": "#E8E4DA",
+    "lineGap": 32,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Atkinson Hyperlegible",
+    "body": "Atkinson Hyperlegible",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 1.8,
+    "bodySize": "l"
+  },
+  "palette": {
+    "ink": "#1A1A1A",
+    "accent": "#1F4FBF",
+    "accent2": "#9A3412",
+    "muted": "#4A4A4A",
+    "soft": "#F2F0EA"
+  },
+  "highlighters": [
+    {
+      "id": "yellow",
+      "color": "#FFE45C",
+      "opacity": 1.0,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "blue",
+      "color": "#BFE0FF",
+      "opacity": 1.0,
+      "meaning": "Definition"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "bold-block",
+    "divider": "thin-rule"
+  },
+  "blocks": {
+    "callout": "side-bar",
+    "definition": "boxed",
+    "bullet": "dot"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#1A1A1A",
+      "#1F4FBF",
+      "#9A3412"
+    ],
+    "highlighter": "#FFE45C"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "wide"
+  }
+}

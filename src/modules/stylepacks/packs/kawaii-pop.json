@@ -1,0 +1,93 @@
+{
+  "schema": 3,
+  "id": "kawaii-pop",
+  "version": 1,
+  "name": "Kawaii Pop",
+  "meta": {
+    "mood": "Bright, bubbly, energising",
+    "bestFor": "Short drills and flashcard sprints",
+    "trend": "Kawaii and Y2K bright notes with sticker labels",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "grid",
+    "color": "#FFFFFF",
+    "line": "#E3EEF7",
+    "lineGap": 26,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Mochiy Pop One",
+    "body": "Zen Maru Gothic",
+    "headerWeight": 400,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 1.9,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#2C2A4A",
+    "accent": "#6A4CF0",
+    "accent2": "#D93A74",
+    "muted": "#646283",
+    "soft": "#F3EEFF"
+  },
+  "highlighters": [
+    {
+      "id": "sky",
+      "color": "#8ED8F8",
+      "opacity": 0.75,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "bubble",
+      "color": "#FFB3D1",
+      "opacity": 0.8,
+      "meaning": "Definition"
+    },
+    {
+      "id": "lemon",
+      "color": "#FFF07A",
+      "opacity": 0.9,
+      "meaning": "Example"
+    },
+    {
+      "id": "mint",
+      "color": "#A8F0D1",
+      "opacity": 0.9,
+      "meaning": "Formula"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "sticker-label",
+    "divider": "sparkle"
+  },
+  "blocks": {
+    "callout": "sticky-note",
+    "definition": "tab-box",
+    "bullet": "star"
+  },
+  "decor": {
+    "washi": "dots",
+    "corner": "star",
+    "doodle": "sparkles"
+  },
+  "ink": {
+    "pens": [
+      "#2C2A4A",
+      "#6A4CF0",
+      "#D93A74"
+    ],
+    "highlighter": "#8ED8F8"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}

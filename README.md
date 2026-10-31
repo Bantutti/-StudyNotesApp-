@@ -1,10 +1,13 @@
-# StudyNotesApp
+# Study Notes App
 
-Private repo for the Study Notes App (iPhone + Android): Expo + TypeScript, local-first SQLite, Firebase sync.
+Cross-platform (Android + iPhone) study notes app with an aesthetic handwritten-notes look.
+Expo + TypeScript, local-first. **Current phase: P0 (prototype spike lab).**
 
-`main` holds only reviewed, merged work. Code arrives through pull requests:
+All documentation lives in [`docs/`](docs/README.md):
 
-- `phase/p0-prototype`: P0 spike lab (Worker A, Core track)
-- `p2a-backend`: P2a Firebase rules, tests and data layout (Worker B, Backend track)
+- [docs/README.md](docs/README.md): what the app is, setup, run, test
+- [docs/TESTING_ON_DEVICE.md](docs/TESTING_ON_DEVICE.md): step-by-step phone and tablet testing
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/CHANGELOG.md](docs/CHANGELOG.md)
+- [docs/phases/P0/PHASE_REPORT.md](docs/phases/P0/PHASE_REPORT.md)
 
-Only the Lead merges into `main`, after install, typecheck, lint and tests pass.
+No licence has been chosen yet: all rights reserved by the project owner.

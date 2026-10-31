@@ -1,0 +1,93 @@
+{
+  "schema": 3,
+  "id": "pastel-highlight",
+  "version": 1,
+  "name": "Pastel Highlight",
+  "meta": {
+    "mood": "Soft, cheerful, classic studygram",
+    "bestFor": "Everyday notes in any subject",
+    "trend": "Pastel highlighter notes on lined paper",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "lined",
+    "color": "#FFFFFF",
+    "line": "#DCE3F0",
+    "lineGap": 28,
+    "margin": "left",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Gaegu",
+    "body": "Nunito",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.3,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#2F3448",
+    "accent": "#B8476F",
+    "accent2": "#3E8E7E",
+    "muted": "#5E6375",
+    "soft": "#FDEEF3"
+  },
+  "highlighters": [
+    {
+      "id": "pink",
+      "color": "#FFB6D9",
+      "opacity": 0.85,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "mint",
+      "color": "#BFE6D2",
+      "opacity": 0.9,
+      "meaning": "Definition"
+    },
+    {
+      "id": "lemon",
+      "color": "#F6F09A",
+      "opacity": 0.9,
+      "meaning": "Example"
+    },
+    {
+      "id": "sky",
+      "color": "#A9D9EA",
+      "opacity": 0.85,
+      "meaning": "Formula"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "highlight-swipe",
+    "divider": "squiggle"
+  },
+  "blocks": {
+    "callout": "bubble",
+    "definition": "dashed-box",
+    "bullet": "dot"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "sparkle",
+    "doodle": "stars"
+  },
+  "ink": {
+    "pens": [
+      "#2F3448",
+      "#B8476F",
+      "#3E8E7E"
+    ],
+    "highlighter": "#FFB6D9"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}

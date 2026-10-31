@@ -1,0 +1,75 @@
+{
+  "schema": 3,
+  "id": "peach-grid",
+  "version": 2,
+  "name": "Peach Grid",
+  "meta": {
+    "mood": "Warm, sunny, friendly",
+    "bestFor": "Planning and problem sets",
+    "trend": "Peach graph-paper notes",
+    "appearance": "light",
+    "tier": "extra"
+  },
+  "paper": {
+    "type": "grid",
+    "color": "#FFFAF5",
+    "line": "#F3DFD1",
+    "lineGap": 22,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Patrick Hand",
+    "body": "Quicksand",
+    "headerWeight": 400,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.2,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#5A3A2E",
+    "accent": "#BF5236",
+    "accent2": "#4F7CF7",
+    "muted": "#86655A",
+    "soft": "#FDEBE1"
+  },
+  "highlighters": [
+    {
+      "id": "peach",
+      "color": "#FFD3C2",
+      "opacity": 0.9,
+      "meaning": "Key idea"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "underline-swipe",
+    "divider": "dots"
+  },
+  "blocks": {
+    "callout": "bubble",
+    "definition": "dashed-box",
+    "bullet": "dot"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "none",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#5A3A2E",
+      "#BF5236",
+      "#4F7CF7"
+    ],
+    "highlighter": "#FFD3C2"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}

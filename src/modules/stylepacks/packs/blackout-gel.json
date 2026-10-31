@@ -1,0 +1,93 @@
+{
+  "schema": 3,
+  "id": "blackout-gel",
+  "version": 1,
+  "name": "Blackout Gel",
+  "meta": {
+    "mood": "Bold, playful, glowing",
+    "bestFor": "Fun notes and dark mode",
+    "trend": "Blackout journal with white and bright gel pens",
+    "appearance": "dark",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "dotted",
+    "color": "#141416",
+    "line": "#34343C",
+    "lineGap": 28,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Fredoka",
+    "body": "Patrick Hand",
+    "headerWeight": 600,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.3,
+    "bodySize": "l"
+  },
+  "palette": {
+    "ink": "#F4F4F6",
+    "accent": "#FF8FC7",
+    "accent2": "#7FE3FF",
+    "muted": "#A6A6B0",
+    "soft": "#212127"
+  },
+  "highlighters": [
+    {
+      "id": "pink",
+      "color": "#FF6FA5",
+      "opacity": 0.35,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "cyan",
+      "color": "#3FD3F5",
+      "opacity": 0.32,
+      "meaning": "Definition"
+    },
+    {
+      "id": "lime",
+      "color": "#C6F45A",
+      "opacity": 0.28,
+      "meaning": "Example"
+    },
+    {
+      "id": "violet",
+      "color": "#A88BFF",
+      "opacity": 0.35,
+      "meaning": "Formula"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "bubble-outline",
+    "divider": "stars"
+  },
+  "blocks": {
+    "callout": "ticket",
+    "definition": "dashed-box",
+    "bullet": "star"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "sparkle",
+    "doodle": "stars"
+  },
+  "ink": {
+    "pens": [
+      "#F4F4F6",
+      "#FF8FC7",
+      "#7FE3FF"
+    ],
+    "highlighter": "#FF6FA5"
+  },
+  "layout": {
+    "columns": 2,
+    "margin": "medium"
+  }
+}

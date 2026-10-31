@@ -1,0 +1,87 @@
+{
+  "schema": 3,
+  "id": "light-academia",
+  "version": 1,
+  "name": "Light Academia",
+  "meta": {
+    "mood": "Warm, literary, optimistic",
+    "bestFor": "Humanities and reading notes",
+    "trend": "Light academia: parchment, walnut ink, brass",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "plain",
+    "color": "#F7F1E6",
+    "line": "#E6DAC3",
+    "lineGap": 30,
+    "margin": "none",
+    "texture": "grain"
+  },
+  "fonts": {
+    "header": "Cormorant Garamond",
+    "body": "EB Garamond",
+    "headerWeight": 700,
+    "headerItalic": true,
+    "headerCase": "normal",
+    "headerScale": 2.5,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#2E2A24",
+    "accent": "#6E4C2E",
+    "accent2": "#9C7A36",
+    "muted": "#6A5E4F",
+    "soft": "#EFE5D2"
+  },
+  "highlighters": [
+    {
+      "id": "oat",
+      "color": "#E8D3A8",
+      "opacity": 0.85,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "sage",
+      "color": "#CFD8B8",
+      "opacity": 0.9,
+      "meaning": "Quote"
+    },
+    {
+      "id": "rose",
+      "color": "#E9C6BE",
+      "opacity": 0.9,
+      "meaning": "Question"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "ribbon-banner",
+    "divider": "fleuron"
+  },
+  "blocks": {
+    "callout": "scroll",
+    "definition": "index-card",
+    "bullet": "arrow"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "tape",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#2E2A24",
+      "#6E4C2E",
+      "#7C3A2E"
+    ],
+    "highlighter": "#E8D3A8"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "wide"
+  }
+}

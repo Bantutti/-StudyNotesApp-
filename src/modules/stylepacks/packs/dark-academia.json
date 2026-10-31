@@ -1,0 +1,87 @@
+{
+  "schema": 3,
+  "id": "dark-academia",
+  "version": 1,
+  "name": "Dark Academia",
+  "meta": {
+    "mood": "Moody, scholarly, lamplit",
+    "bestFor": "Late-night study in dark mode",
+    "trend": "Dark academia: ivy black, aged brass, oxblood",
+    "appearance": "dark",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "plain",
+    "color": "#1E211C",
+    "line": "#2C3129",
+    "lineGap": 30,
+    "margin": "none",
+    "texture": "grain"
+  },
+  "fonts": {
+    "header": "Cinzel",
+    "body": "Crimson Pro",
+    "headerWeight": 700,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 1.9,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#E9E2D0",
+    "accent": "#C7A24B",
+    "accent2": "#C97A72",
+    "muted": "#A79F8C",
+    "soft": "#2A2F27"
+  },
+  "highlighters": [
+    {
+      "id": "brass",
+      "color": "#C7A24B",
+      "opacity": 0.32,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "oxblood",
+      "color": "#9A4040",
+      "opacity": 0.45,
+      "meaning": "Warning"
+    },
+    {
+      "id": "ivy",
+      "color": "#5A7A4E",
+      "opacity": 0.45,
+      "meaning": "Definition"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "gold-underline",
+    "divider": "double-rule"
+  },
+  "blocks": {
+    "callout": "bordered",
+    "definition": "framed",
+    "bullet": "seal"
+  },
+  "decor": {
+    "washi": "none",
+    "corner": "seal",
+    "doodle": "none"
+  },
+  "ink": {
+    "pens": [
+      "#E9E2D0",
+      "#C7A24B",
+      "#C97A72"
+    ],
+    "highlighter": "#C7A24B"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "wide"
+  }
+}

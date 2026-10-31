@@ -1,0 +1,87 @@
+{
+  "schema": 3,
+  "id": "cottagecore",
+  "version": 1,
+  "name": "Cottagecore",
+  "meta": {
+    "mood": "Cosy, botanical, low-pressure",
+    "bestFor": "Tough subjects and burnt-out weeks",
+    "trend": "Cottagecore: buttermilk, herbs, honey, pressed flowers",
+    "appearance": "light",
+    "tier": "launch"
+  },
+  "paper": {
+    "type": "lined",
+    "color": "#FBF6E9",
+    "line": "#E9DFC4",
+    "lineGap": 28,
+    "margin": "none",
+    "texture": "none"
+  },
+  "fonts": {
+    "header": "Delius Swash Caps",
+    "body": "Delius",
+    "headerWeight": 400,
+    "headerItalic": false,
+    "headerCase": "normal",
+    "headerScale": 2.2,
+    "bodySize": "m"
+  },
+  "palette": {
+    "ink": "#4A3F31",
+    "accent": "#5B7539",
+    "accent2": "#A0701F",
+    "muted": "#6E604D",
+    "soft": "#F1EBD6"
+  },
+  "highlighters": [
+    {
+      "id": "herb",
+      "color": "#CFDDB3",
+      "opacity": 0.9,
+      "meaning": "Key idea"
+    },
+    {
+      "id": "honey",
+      "color": "#F4D48A",
+      "opacity": 0.85,
+      "meaning": "Definition"
+    },
+    {
+      "id": "blush",
+      "color": "#F2C9C0",
+      "opacity": 0.9,
+      "meaning": "Example"
+    }
+  ],
+  "highlightKey": {
+    "show": false,
+    "position": "top"
+  },
+  "header": {
+    "style": "washi-tape",
+    "divider": "leaf-vine"
+  },
+  "blocks": {
+    "callout": "sticky-note",
+    "definition": "index-card",
+    "bullet": "leaf"
+  },
+  "decor": {
+    "washi": "gingham",
+    "corner": "leaf",
+    "doodle": "flowers"
+  },
+  "ink": {
+    "pens": [
+      "#4A3F31",
+      "#5B7539",
+      "#A0701F"
+    ],
+    "highlighter": "#CFDDB3"
+  },
+  "layout": {
+    "columns": 1,
+    "margin": "medium"
+  }
+}
