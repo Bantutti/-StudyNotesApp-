@@ -76,18 +76,18 @@ export default function Me() {
 
       <SectionHeader>Your data</SectionHeader>
       <Surface>
-        <BodyText muted>
-          Your notes are saved on this phone only. Nothing is uploaded: there is no account yet, and AI and sync are
-          not turned on.
-        </BodyText>
+        <BodyText muted>{t('me.dataAi')}</BodyText>
       </Surface>
+      <ListRow icon="sparkles-outline" title={t('me.ai')} subtitle={t('me.aiRow')} onPress={() => router.push('/ai/settings')} testID="me-ai" />
       <ListRow icon="trash-outline" title={t('me.deleteAll')} destructive onPress={confirmDeleteAll} testID="me-delete-all" />
 
       <SectionHeader>About</SectionHeader>
       <ListRow icon="information-circle-outline" title={`${t('app.name')} ${version}`} subtitle="P1 core app (beta)" onPress={tapVersion} testID="me-version" />
-      <ListRow icon="document-text-outline" title="Font licences" subtitle="22 fonts, SIL Open Font License 1.1" onPress={() => router.push('/font-licenses')} testID="me-font-licences" />
       <Surface>
-        <Caption>Style pack art is original.</Caption>
+        <Caption>
+          Fonts: Gaegu, Nunito, Cinzel, Crimson Pro and Atkinson Hyperlegible, each under the SIL Open Font License
+          1.1. Style pack art is original.
+        </Caption>
       </Surface>
       {devMenu ? <ListRow icon="construct-outline" title="Developer menu (P0 spike lab)" onPress={() => router.push('/dev')} testID="me-dev" /> : null}
     </AppScreen>

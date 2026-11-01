@@ -38,6 +38,15 @@ typing diagnostics (developer menu). **New adversaries considered:** a lost or s
 content crafted to break the editor or the database (injection, oversized or malformed documents), and a
 note link that leads to a phishing site.
 
+### Additions in P3b (AI screens)
+
+**New assets:** the age result, per-provider consent and local AI reports (`documents/ai/gate.json`,
+`reports.json`); a second key slot in use (Mistral). **New entry points:** the birth-year field, the key
+paste field and clipboard, the AI modal, Me → AI settings. **New adversaries considered:** an under-18 user
+reaching AI by another path (key wizard, settings, replace key); a note sent before consent; a rejected key
+replacing a working one; a key left in the clipboard; AI text rendered as markup; a leftover key or answer
+after Delete all data.
+
 **P2a (backend) and P3a (AI) threat model rows:** see `docs/backend/SECURITY_REVIEW.md` §S.1 (another
 user's data, sync integrity, account deletion, cost and abuse, Storage, secrets) and these AI rows: prompt
 injection through note content; AI output tampering with block ids; key leakage via logs or error bodies;
@@ -100,6 +109,12 @@ free-tier training on notes (Mistral opt-out, Gemini not used).
   `Authorization` header. It is never sent to us, never written to files, analytics or logs, and the
   UI shows only `gsk_…abcd`.
 - Key input field: `secureTextEntry`, autocorrect, autofill and spell-check off.
+- P3b: the Mistral key uses the same storage (`ai.mistral.apiKey`). A pasted key is **tested as a
+  candidate before it's stored** (`engine.testKey(p, signal, candidate)`), so a rejected key never
+  replaces a working one. After saving, the app clears the clipboard if it still holds the key. It can't
+  clear a keyboard app's own clipboard history, and TESTING_ON_DEVICE says so.
+- P3b: Delete all data removes **every** provider key (P1 removed only Groq's) and the whole
+  `documents/ai/` folder, and drops the in-memory copies.
 - The project contains **no secrets**. `.env` is gitignored and unused in P0; `.env.example` has no
   values. Firebase config arrives in P2 (public web config only; never service-account keys in the app).
 
@@ -197,7 +212,7 @@ test that fails on the code before it (checked by running the new tests against 
 | P1-S20 | L3 | Low | A keyboard that splits a block itself (skipping our Enter shortcut) left the id on the new empty line. | **Fixed:** fallback in the id pass moves the id with the text (also when the DOM copies the id into both halves). |
 | P1-S21 | L4 | Low | editor-web's relative imports of app code were an undocumented exception to the module rules. | **Fixed:** ARCHITECTURE module rule 6 and an ESLint rule allow only `src/core/document`, `src/modules/editor/protocol` and `src/modules/stylepacks/web`; a test runs ESLint on probe imports. |
 | P1-S22 | L5 | Low | Purged note text could stay readable in the `-wal` file until SQLite's next automatic checkpoint. | **Fixed:** a purge that wiped anything runs `PRAGMA wal_checkpoint(TRUNCATE)`; test reads the database and WAL files. |
-| P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **P5 follow-up (done):** Gaegu, Gowun Dodum, Mochiy Pop One and Zen Maru Gothic ship as Latin subsets (52-98 KB as base64) and the cap is back to 3,000,000 (largest face: Nanum Gothic Bold, 2,763,184 chars; a test fails if any face exceeds the cap). |
+| P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **TODO(P5):** Latin subsets, then lower the cap. |
 | P1-S23 | L6 | Low | Undo after deleting a note stored as the empty document did nothing (the empty doc doubled as the "wiped" marker), and an empty note with a title was never wiped. | **Fixed:** Undo needs the note untouched since its deletion time; a purge bumps `updated`, so a wiped note never comes back. Purge wipes anything left (text, title, tags, ink, versions). |
 
 ## 4c. Findings from P2a and P3a (merged)
@@ -220,6 +235,26 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 | P3a-S6 | Info | Free tiers may train on prompts. | P3b shows data use and the Mistral opt-out in the key wizard and consent screen. |
 | P3a-S7 | Info | `testKey` skips the 18+/consent gates (sends only the key). | Accepted; the wizard asks the age question first. |
 
+## 4d. Findings and fixes (P3b)
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P3b-S1 | Medium | P1's Delete all data removed only the Groq key: a **Mistral key survived** in the Keychain/Keystore. | **Fixed:** `wipeSecrets` removes every provider in `PROVIDERS`; test `aiWiring.test.ts`. |
+| P3b-S2 | Low | Delete all data left `documents/ai/usage.json` (counts only) and kept the in-memory AI caches until restart. | **Fixed:** `APP_FOLDERS` includes `ai`; `aiui.forget()` after the wipe drops gate, reports and usage caches; test. |
+| P3b-S3 | Medium | The 18+ gate is self-declared (a birth year typed by the user), not verified. | **Accepted (Rey's decision, Nov 1):** neutral prompt with no default and no hint of the cut-off; only the result is stored; the free-or-low-cost legal review before production (C1) covers it. |
+| P3b-S4 | Medium | A user who wasn't age-checked, or was under 18, could add and test a key from Me → AI or "Replace key" (testing sends the key to the provider's 18+ service). | **Fixed:** key management in settings needs an adult answer; `flow.openKey` runs the age gate first; tests. |
+| P3b-S5 | Low | A pasted key can stay in the clipboard or in a keyboard app's clipboard history. | **Mitigated:** the app clears its clipboard after saving a pasted key; keyboard history can't be cleared by apps (documented in TESTING_ON_DEVICE §7). |
+| P3b-S6 | Low | AI text shown in the preview could carry markup. | **Fixed by design:** plain `<Text>` only, no HTML or WebView in aiui (static test); `applyProposal` + `prepareDocForSave` validate before saving. |
+| P3b-S7 | Low | Reports could leak note content. | **Fixed by design:** strict schema with metadata only (no note or AI text); optional comment of at most 200 characters, local only, never logged; tests. |
+| P3b-S8 | Low | Demo AI (fake answers) shipping in release. | **Fixed:** the demo engine is created only when `isDev`; the switch is ignored otherwise; DEMO label on every screen; test. |
+| P3b-S9 | Info | `gate.json` can be edited on a rooted phone. | **Accepted:** the gate protects the user and honours the providers' terms; there is no server to trust, and the engine re-checks the same gate. |
+| P3b-S10 | Info | The subject "Never send to AI" lookup could fail. | **Fixed:** fail closed (blocked) on a read error; test. |
+| P3b-S11 | Medium | P1 bug (found in P1's review): the editor can hand over an **empty document** when the live one fails validation, and `runEditorAction` would save it, wiping the note. | **Guarded in P3b** until P1's fix lands: the AI action refuses to run when the handed-in doc has no text while the stored note has text (fail closed if the stored note can't be read); Apply refuses any result that would remove all the text; tests. P1 fixes the root cause. |
+| P3b-S12 | Medium | Groq could be reached outside the AI gate: the P0 developer screens (AI key, timestamps) call the Groq transcriber directly. | **Fixed:** in release builds the transcriber gets **no key** (`transcriptionAllowed` returns false outside dev builds) until P4 adds an `audio` consent kind; P1 also locks the developer menu to dev builds; tests. |
+| P3b-S13 | Medium | One consent covered every data type, so a "yes" for note text would also have covered photos (P5's vision pass) or audio. | **Fixed:** consent is per provider, per **data kind** (`text`, `image`) and per version, with separate catalog wording (`imageConsent`). `checkCanSend` takes the kind; the engine asks for `text`; unknown kinds are refused; old v1 files migrate as text only. **Photos go to Groq only** (Rey, Nov 1): Mistral has no image consent block, so `giveConsent` refuses it, `hasConsent` is false even for a forged file, and `checkCanSend` returns `kind_not_supported`; tests. |
+
+No high-severity findings are open.
+
 ## 5. OWASP MASVS check
 
 | Group | Status (P1) |
@@ -231,7 +266,7 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 | MASVS-PLATFORM | WebViews hardened (section 2), previews with JavaScript off; links open only in the OS browser after a confirm; deep links validated by route params and the developer menu is gated; minimal permissions. |
 | MASVS-CODE | Pinned deps, lockfile, audits, input validation at every boundary (documents, bridge, templates, search, synced text), parameterized SQL, no dynamic code in the WebView. |
 | MASVS-RESILIENCE | P7 (release hardening). |
-| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. |
+| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. P3b: explicit per-provider, versioned consent before any note is sent; 18+ result-only storage; per-subject "Never send to AI"; local-only reports. |
 
 ## 6. Per-phase security gate
 

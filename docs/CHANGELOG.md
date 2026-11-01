@@ -2,21 +2,32 @@
 
 All notable changes, one section per phase.
 
-## P5: style packs and Match a look (in progress)
+## P3b: AI screens (2026-11-01)
 
 ### Added
-- M1: all 13 v1 packs in the app (Pick your look, Style sheet, subject default), a native PackPicker with
-  one live preview, custom pack support in the registry (validated on load), Latin font subsets
-  (`npm run build:fonts` / `check:fonts`), 14 more OFL font packages, Me > Font licences.
-- M2-M5: **Match a look** (+ sheet, Style sheet). Reference photos are cleaned (caps, re-encode, Exif/GPS
-  strip) and analysed on the phone (OKLab palette, paper pattern, colour roles, up to 3 photos), turned
-  into a validated custom pack (nearest built-in pack, contrast repair), and tweaked with chips and an
-  11-step slider. Saved locally (`store.stylePacks`, synced by P2b) and re-validated on load. Your looks:
-  rename or delete. `MATCH_MATH.md` documents the maths.
+- **aiui module:** the AI modal over the note (action sheet, scope Selection/Whole note, provider chip,
+  usage "N of 1,000 today"), the 18+ age check (birth year with no default; month only in the boundary
+  year; day only in the birth month; result-only storage; re-check after a year), key wizard (catalog
+  badges, open key page outside the app, paste, Test then save, clipboard cleared), per-provider consent
+  (Apple 5.1.2(i)), run progress with Cancel, errors with one next step (Plan 9.6), diff preview (word
+  diff, per-block toggles, stale lock, Accept all, Discard), Apply through `runEditorAction` ("Before AI
+  change" version, exact 8-second Undo), "Report this AI result" (local only), Me → AI settings (age,
+  masked keys, Test/Replace/Remove, consent Withdraw, usage, default provider, "Never send to AI" per
+  subject, reports), Demo AI for development builds.
+- **ai module:** `testKey(provider, signal, candidateKey)` and `usage.reload()`.
+- Flashcards and Quiz me stay hidden (`AI_CARDS_ENABLED = false`); P4c turns them on with its screens.
+- Consent per data kind: `text` and `image` (catalog `imageConsent`), `checkCanSend`, `ConsentStep kind`,
+  gate file v2 (v1 migrates as text only).
+- Guards: the AI won't run on an empty hand-over or apply a result that removes all text; release builds
+  never reach Groq outside the gate.
 
 ### Fixed
-- The default pack's Gaegu header font was never loaded (its files exceeded the 3M-character base64 cap);
-  it now ships as a 52 KB / 98 KB Latin subset.
+- Delete all data now removes the Mistral key and the `ai/` folder (usage, gate, reports) and drops cached
+  AI state (P3b-S1, P3b-S2).
+- Closing an editor action with Cancel no longer shows an error alert on the note screen.
+
+### Dependencies
+- None added (component tests use P1's `test-renderer`).
 
 ## P1: core app (2026-11-01)
 

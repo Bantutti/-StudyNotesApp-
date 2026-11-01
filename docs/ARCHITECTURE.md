@@ -18,7 +18,7 @@ and the rules every later phase follows.
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL): the 22 families of the 13 v1 packs (P5) | Bundled, licence allows embedding in PDF/DOCX. The four large Korean/Japanese families without Reserved Font Names (Gaegu, Gowun Dodum, Mochiy Pop One, Zen Maru Gothic) ship as generated Latin subsets (`npm run build:fonts`), so `MAX_FONT_BASE64` is back to 3 M (largest face: Nanum Gothic Bold, 2.76 M). Fonts still cross the bridge one face per message (P1 PR #9) |
+| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX. Gaegu (Pastel Highlight's header, ~3 MB per weight, full Korean set) is why `MAX_FONT_BASE64` is 4.5 M and fonts cross the bridge one face per message; P5 replaces it with a Latin subset |
 
 ## Modules
 
@@ -27,11 +27,11 @@ and the rules every later phase follows.
                 │   src/screens (shared screen pieces: NoteCard, NoteBrowser, EditorToolbar, sheets)
                 ▼   useServices() · useAppData() · use cases
           src/composition ── the ONLY place adapters are chosen; app use cases live here
-   ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬────┐
-   ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼    ▼
- store  editor  templates  beautify  stylepacks  export   review   voice   ink    ai
-   │      │                                                                       │
- SQLite  editor-web (TipTap page inside the WebView)                    provider HTTPS
+   ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬──────┬────┐
+   ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼      ▼
+ store  editor  templates  beautify  stylepacks  export   review   voice   ink   aiui ─► ai
+   │      │                                                                       │      │
+ SQLite  editor-web (TipTap page inside the WebView)                  AI screens  provider HTTPS
    │
    └── tables mirror firebase/src/schemas (P2a); P2b syncs them      all modules depend on src/core
 ```
@@ -49,6 +49,7 @@ and the rules every later phase follows.
 | `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
 | `ink` | Skia ink surface, palm-rejection policy, smoothness stats (P4b builds on it) | [modules/ink.md](modules/ink.md) |
 | `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
+| `aiui` | AI screens (P3b): the 18+ birth-year check, key wizard (test before save), consent per provider and version, action sheet, run progress with Cancel, diff preview with per-block toggles, local reports, Me → AI settings, Demo AI (dev builds only). One `ai` editor action in the sparkle slot; the flow is a modal state machine. | [modules/aiui.md](modules/aiui.md) |
 | `auth`, `sync` | **Planned for P2b.** Not created yet. | |
 
 **Composition** (`src/composition`) also holds the app's use cases, all unit-tested on real SQLite:
@@ -122,8 +123,15 @@ and leave), running the 10-minute version rule first. One transaction stores the
 The keyboard toolbar sends commands; the page reports toolbar state. Links go to the native "Open link?"
 dialog, then the OS browser.
 
-**Editor actions (P3b hook).** Beautify Lite (and later AI) run through `runEditorAction`: current
+**Editor actions (P3b hook).** Beautify Lite and the AI run through `runEditorAction`: current
 document from the page, `action.run()`, schema check, "Before …" version, save, show, exact Undo.
+
+**AI (P3b).** `composition/aiWiring.tsx` (mounted once under AppDataProvider) registers the `ai` action
+in the sparkle slot and renders `AiFlowHost`, a React Native Modal. `run()` calls `flow.start(ctx,
+subjectAiAllowed)`: action sheet, then (only as needed) age check, key wizard and consent, then
+`engine.run()`, the diff preview, and `applyProposal()`. It resolves with the new document, and
+`runEditorAction` saves "Before AI change". Closing the modal is a cancel (`AppError('cancelled')`, no
+message). Age, consent and reports live in `documents/ai/*.json`; keys live only in secure storage.
 
 **Search.** `createSearchController` debounces input into `store.search()`, which turns the text into safe
 quoted prefix terms, ranks titles and terms above text, and returns plain-text snippet parts grouped by
@@ -195,6 +203,8 @@ frame-interval histogram; the screen polls stats every 500 ms.
 | Editor actions as one registry and one run path (P1) | Beautify Lite and P3b's AI share validation, versions and exact Undo; P3b touches no editor internals | AI screens calling the store directly |
 | Slash menu inside the page, toolbar native (P1) | Pack-accurate previews without per-keystroke bridge traffic; toolbar is fast and accessible | All-native menus |
 | Conservative IME handling plus Typing diagnostics (P1) | Android keyboards are unverified; data from real phones instead of guesses | Custom key handling for shortcuts |
+| AI screens as a modal over the note, not pushed routes (P3b) | The note keeps its editing session (no "left the note" save, no reload), and no note text or key ever goes into navigation params | Expo Router routes for each AI step |
+| The 18+ gate is a birth-year question with only the result stored (P3b, Rey Nov 1) | Neutral prompt (no hint of the cut-off), month or day asked only when needed, nothing identifying kept | An "I'm 18 or older" checkbox; storing the birth date |
 | AI edits are proposals, never direct writes (P3a) | The AI sees block aliases, not ids; output is schema data with five inline marks, so no links or HTML can come from the AI. Undo is exact only while the note is unchanged; otherwise use version history | Letting the AI return documents |
 
 ## Known structural limits (to revisit)
