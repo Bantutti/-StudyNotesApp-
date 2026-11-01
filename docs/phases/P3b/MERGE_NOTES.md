@@ -30,8 +30,11 @@ For the Lead when merging PR #7 (P3b AI screens).
   add `'audio'` to `CONSENT_KINDS` and an `audioConsent` block to each catalog entry (in `consentBlock`),
   show `ConsentStep kind="audio"`, then replace `transcriptionAllowed` with
   `checkCanSend(gate, { provider: 'groq', kind: 'audio' })`.
-- **P5 (style packs, vision pass behind a flag):** before sending a reference photo, call
-  `checkCanSend(services.aiui.gate, { provider, kind: 'image' })` from `@/modules/aiui`. If it reports
+- **P5 (style packs, "Match a look", approved by Rey Nov 1):** photos go to **Groq only** (`providersFor('image')`
+  is `['groq']`; Mistral is refused with `kind_not_supported`). Before sending a reference photo, call
+  `checkCanSend(services.aiui.gate, { provider: 'groq', kind: 'image' })` from `@/modules/aiui`. Groq's catalog
+  entry still lists `vision: false` and text models only: P5 adds the vision model, its limits and a
+  `capabilities.vision` update in the catalog (Track B file). If it reports
   `consent_required`, show `<ConsentStep provider={p} kind="image" … />` and store a yes with
   `gate.giveConsent(p, consentBlock(p, 'image').version, 'image')`. If it reports `age_required`, the
   student hasn't passed the 18+ check (send them through the AI panel, or reuse `AgeForm`). A text consent

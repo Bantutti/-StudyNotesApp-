@@ -28,6 +28,10 @@ export function ConsentStep(props: {
   const info = PROVIDER_CATALOG[props.provider];
   const kind = props.kind ?? 'text';
   const block = consentBlock(props.provider, kind);
+  if (!block) {
+    // This provider is never sent this kind (photos: Groq only). No "yes" can be given here.
+    return <Notice tone="warn">{ta('ai.consent.notSupported', { provider: info.label })}</Notice>;
+  }
   return (
     <View style={{ gap: th.space.l }}>
       <Title>{ta(kind === 'image' ? 'ai.consent.titleImage' : 'ai.consent.title', { provider: info.label })}</Title>

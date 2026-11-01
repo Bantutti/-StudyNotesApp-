@@ -17,7 +17,7 @@
 import * as z from 'zod';
 
 import type { Logger, TextFilePort } from '@/core';
-import { CONSENT_KINDS, PROVIDERS, type AiGatePort, type ConsentKind, type Provider } from '@/modules/ai';
+import { CONSENT_KINDS, consentBlock, PROVIDERS, type AiGatePort, type ConsentKind, type Provider } from '@/modules/ai';
 
 import { recheckDueAt } from './ageRule';
 
@@ -132,7 +132,9 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
   return {
     // --- AiGatePort (read by the engine before every run) ------------------
     isAdultConfirmed: () => read((f) => f.age?.adult === true),
-    hasConsent: (provider, version, kind) => read((f) => isKind(kind) && f.consents[kind]?.[provider]?.version === version),
+    hasConsent: (provider, version, kind) =>
+      // A provider that never receives this kind (Mistral + image) can never have consent for it.
+      read((f) => isKind(kind) && consentBlock(provider, kind) !== null && f.consents[kind]?.[provider]?.version === version),
 
     // --- Age ----------------------------------------------------------------
     ageStatus: () =>
@@ -161,6 +163,7 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
     giveConsent: async (provider, version, kind) => {
       if (!Number.isInteger(version) || version < 1) throw new Error('bad_consent_version');
       if (!isKind(kind)) throw new Error('bad_consent_kind');
+      if (consentBlock(provider, kind) === null) throw new Error('kind_not_supported'); // e.g. photos to Mistral
       await update((f) => {
         (f.consents[kind] ??= {})[provider] = { version, at: now() };
       });

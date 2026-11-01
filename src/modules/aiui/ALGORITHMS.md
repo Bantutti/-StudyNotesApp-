@@ -195,7 +195,9 @@ consent.
   "no age, no consent". The student is asked again, and nothing is sent in the meantime.
 - **Consent is per provider, per data kind and per version.** `hasConsent(p, v, k)` is true only when
   `consents[k][p].version === v`. The kinds are `text` (note blocks) and `image` (P5's reference photos);
-  each has its own catalog wording (`consent`, `imageConsent`) and its own version. **A "yes" for one kind
+  each has its own catalog wording (`consent`, `imageConsent`) and its own version. **Photos go to Groq only**
+  (Rey, Nov 1): Mistral's `imageConsent` is `null`, so no image consent can be given to it, and none counts even
+  if a file says otherwise. **A "yes" for one kind
   never counts for another.** An unknown kind is refused at runtime. When the catalog bumps a version, the
   old "yes" stops counting.
 
@@ -204,6 +206,7 @@ consent.
 Every send to a provider, for any kind, passes the same ordered check:
 
 ```
+consentBlock(p, k) === null (photos to Mistral)            -> invalid_input (kind_not_supported)
 aiAllowed === false (when the data belongs to a subject)  -> blocked
 not adult (unknown or minor)                              -> age_required
 !hasConsent(p, consentBlock(p, k).version, k)             -> consent_required

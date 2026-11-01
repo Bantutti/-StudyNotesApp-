@@ -3,7 +3,8 @@
  * (ALGORITHMS §5.1). The note-text flow uses it through the engine's gate;
  * P5's optional vision pass calls it with kind 'image' before sending a photo.
  *
- *   subject switch (when given) -> 18+ answer -> consent for THIS provider,
+ *   provider accepts this kind (photos: Groq only) -> subject switch (when
+ *   given) -> 18+ answer -> consent for THIS provider,
  *   THIS kind and the catalog's CURRENT version for that kind
  *
  * A text consent never authorises images, and an older version never counts.
@@ -24,9 +25,12 @@ export type SendCheck = { ok: true; consentVersion: number } | { ok: false; erro
 
 export async function checkCanSend(gate: GateStore, req: SendRequest): Promise<SendCheck> {
   const label = { providerLabel: PROVIDER_CATALOG[req.provider].label };
+  // Photos go to Groq only (Rey, Nov 1): a provider without a block for this kind is never sent it.
+  const block = consentBlock(req.provider, req.kind);
+  if (!block) return { ok: false, error: new AiError('invalid_input', { ...label, reason: 'kind_not_supported' }) };
   if (req.aiAllowed === false) return { ok: false, error: new AiError('blocked', label) };
   if (!(await gate.isAdultConfirmed())) return { ok: false, error: new AiError('age_required', label) };
-  const version = consentBlock(req.provider, req.kind).version;
+  const version = block.version;
   if (!(await gate.hasConsent(req.provider, version, req.kind))) return { ok: false, error: new AiError('consent_required', label) };
   return { ok: true, consentVersion: version };
 }

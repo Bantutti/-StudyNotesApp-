@@ -39,7 +39,7 @@ EditorToolbar sparkle slot (P1)
 | `AiSettingsScreen({ aiui, keyVault, ports, subjects, isDev })` | Me → AI (route `src/app/ai/settings.tsx`). |
 | `createAiFlow`, `visibleActions`, `AI_CARDS_ENABLED` | The controller (testable without React). Flashcards and Quiz me stay hidden until P4c (Q5 = B). |
 | `createGateStore` → `GateStore` | `ai/gate.json`: age result, consent **per provider, per data kind (`text`, `image`) and per version**, default provider, Demo AI switch. Implements the engine's `AiGatePort`. |
-| `checkCanSend(gate, { provider, kind, aiAllowed? })`, `assertCanSend` | The one send check for any kind (§5.1): subject switch, 18+, consent for that kind at the catalog's current version. **P5 calls it with `kind: 'image'`** before its vision pass. |
+| `checkCanSend(gate, { provider, kind, aiAllowed? })`, `assertCanSend` | The one send check for any kind (§5.1): provider accepts the kind (**photos: Groq only**), subject switch, 18+, consent for that kind at the catalog's current version. **P5 calls it with `kind: 'image'`** before its "Match a look" vision pass (approved by Rey, Nov 1). |
 | `ConsentStep({ provider, kind, ... })` | The consent screen. `kind="image"` shows the catalog's `imageConsent` wording ("Send photos to Groq?"). P5 shows it and stores the answer with `gate.giveConsent(p, version, 'image')`. |
 | `createReportsStore` | `ai/reports.json`: local reports, metadata only, at most 50. |
 | `checkYear`, `checkMonth`, `checkDay`, `recheckDueAt` | The §1 age rule, exported so **P4 (Groq Whisper, also 18+) uses the same gate**. |

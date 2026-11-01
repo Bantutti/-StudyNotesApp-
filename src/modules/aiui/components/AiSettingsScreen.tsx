@@ -202,8 +202,10 @@ export function AiSettingsScreen(props: { aiui: AiUi; keyVault: KeyVault; ports:
                 testID={`ai-settings-withdraw-${r.id}`}
               />
             ) : null}
-            <BodyText>{r.imageConsentVersion === info.imageConsent.version ? ta('ai.settings.consentImageYes') : ta('ai.settings.consentImageNo')}</BodyText>
-            {r.imageConsentVersion !== null ? (
+            {info.imageConsent ? (
+              <BodyText>{r.imageConsentVersion === info.imageConsent.version ? ta('ai.settings.consentImageYes') : ta('ai.settings.consentImageNo')}</BodyText>
+            ) : null}
+            {info.imageConsent && r.imageConsentVersion !== null ? (
               <AppButton
                 kind="secondary"
                 label={ta('ai.settings.withdrawImage')}

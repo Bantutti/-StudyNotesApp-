@@ -31,6 +31,7 @@ export {
   PROVIDER_CATALOG,
   CONSENT_KINDS,
   consentBlock,
+  providersFor,
   providerInfo,
   providerModels,
   type ProviderInfo,
