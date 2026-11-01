@@ -32,12 +32,14 @@ export interface RoleGuess {
 }
 
 /** Clusters smaller than this are noise (a stray pixel colour), §4. */
-const MIN_WEIGHT = 0.004;
+const MIN_WEIGHT = 0.003;
 /** Chroma above which a colour counts as "coloured" rather than grey (§1.4). */
 const COLOURED = 0.05;
 /** A highlighter's lightness is within this of the paper's (§4.3): it tints the paper, it doesn't cover it like ink. */
 const HL_MAX_DL = 0.22;
-/** Two highlighters must differ by at least this (§1.3) to both be kept. */
+/** A highlighter is at least this much more chromatic than the paper (§4.3). */
+const HL_MIN_EXTRA_CHROMA = 0.025;
+/** Two highlighters (and a highlighter and the paper) must differ by at least this (§1.3). */
 const HL_MIN_APART = 0.06;
 /** Highlighter opacity we solve for first (§4.3); packs use 0.25..1. */
 const HL_OPACITY = 0.6;
@@ -68,9 +70,37 @@ const hueGap = (x: Lab, y: Lab) => {
   return d > 180 ? 360 - d : d;
 };
 
-export function assignRoles(clustersIn: readonly Cluster[]): RoleGuess {
-  const clusters = clustersIn.filter((c) => c.weight >= MIN_WEIGHT);
-  if (clusters.length === 0) throw new Error('no_colours');
+/** Clusters this close (§1.3) to a known pattern or margin colour are that pattern, not a role (§4.5). */
+const EXCLUDE_WITHIN = 0.05;
+/** Pattern colours differ from the paper by less than this in L (§4.5). */
+const PATTERN_MAX_DL = 0.3;
+
+/**
+ * §4. `exclude` holds colours the pattern pass already explained (ruling,
+ * dots, margin rule, §5.7): a pale blue ruled line is not a highlighter,
+ * and a red margin rule is not the header colour.
+ */
+export interface Exclusions {
+  /** Faint printed pattern (ruling, grid, dots): excluded only when it is close to the paper in L. */
+  pattern?: string | null;
+  /** Margin rule: excluded whatever its strength (margin rules are deliberately strong colours). */
+  margin?: string | null;
+}
+
+export function assignRoles(clustersIn: readonly Cluster[], exclude: Exclusions = {}): RoleGuess {
+  const pat = exclude.pattern ? rgbToLabHex(exclude.pattern) : null;
+  const mar = exclude.margin ? rgbToLabHex(exclude.margin) : null;
+  const all = clustersIn.filter((c) => c.weight >= MIN_WEIGHT);
+  if (all.length === 0) throw new Error('no_colours');
+  // The paper (largest cluster) is never excluded, and neither is a colour that stands far from
+  // the paper in lightness: printed patterns are faint, so a strong colour is ink, not a pattern.
+  const paperL0 = (all[0] as Cluster).center.L;
+  const clusters = all.filter((c, i) => {
+    if (i === 0) return true;
+    if (mar && deltaE(mar, c.center) < EXCLUDE_WITHIN) return false;
+    if (pat && Math.abs(c.center.L - paperL0) < PATTERN_MAX_DL && deltaE(pat, c.center) < EXCLUDE_WITHIN) return false;
+    return true;
+  });
 
   // §4.1 paper: the biggest cluster. Note pages are mostly paper, and the
   // lighting was flattened (§2.2), so the paper is one big cluster.
@@ -88,8 +118,15 @@ export function assignRoles(clustersIn: readonly Cluster[]): RoleGuess {
   const ink: Lab = inkC?.center ?? (appearance === 'light' ? { L: 0.2, a: 0, b: 0 } : { L: 0.93, a: 0, b: 0 });
 
   // §4.3 highlighters: coloured, close to the paper in lightness, not the ink.
+  // Relative to the paper: a highlighter is clearly more colourful than the paper and visibly different (§4.3).
   const hlCandidates = rest
-    .filter((c) => c !== inkC && chroma(c.center) >= COLOURED && Math.abs(c.center.L - paper.L) <= HL_MAX_DL)
+    .filter(
+      (c) =>
+        c !== inkC &&
+        chroma(c.center) >= chroma(paper) + HL_MIN_EXTRA_CHROMA &&
+        deltaE(c.center, paper) >= HL_MIN_APART &&
+        Math.abs(c.center.L - paper.L) <= HL_MAX_DL,
+    )
     .sort((x, y) => y.weight - x.weight);
   const highlighters: HighlighterGuess[] = [];
   const paperHex = labToHex(paper);

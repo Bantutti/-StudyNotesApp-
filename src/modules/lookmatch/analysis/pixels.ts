@@ -8,7 +8,7 @@
  *      photo with a shadow in one corner still gives one paper colour,
  *   3. pick an evenly spaced subset of pixels for k-means (§2.3).
  */
-import { rgbToLab } from '../color/oklab';
+import { rgbaToLabInto } from '../color/oklab';
 
 /** Decoded, non-premultiplied RGBA pixels, row by row (4 bytes per pixel). */
 export interface RgbaImage {
@@ -42,12 +42,26 @@ export function assertRgba(img: RgbaImage): void {
   if (img.data.length !== img.width * img.height * 4) throw new Error('rgba_size_mismatch');
 }
 
+/** Median of a typed array, sorted IN PLACE (numeric sort, no comparator call per element). */
+export function medianTyped(a: Float64Array): number {
+  if (a.length === 0) return 0;
+  a.sort();
+  const mid = a.length >> 1;
+  return a.length % 2 ? (a[mid] as number) : ((a[mid - 1] as number) + (a[mid] as number)) / 2;
+}
+
 /** Median of a small numeric array (copies, does not reorder the input). */
 export function median(values: ArrayLike<number>): number {
   const a = Array.from(values).sort((x, y) => x - y);
   if (a.length === 0) return 0;
   const mid = a.length >> 1;
   return a.length % 2 ? (a[mid] as number) : ((a[mid - 1] as number) + (a[mid] as number)) / 2;
+}
+
+/** q-quantile (0..1) of a numeric array, nearest-rank. */
+export function percentile(values: readonly number[], q: number): number {
+  const a = [...values].sort((x, y) => x - y);
+  return (a[Math.min(a.length - 1, Math.max(0, Math.round(q * (a.length - 1))))] as number) ?? 0;
 }
 
 /**
@@ -64,36 +78,33 @@ export function toLabImage(img: RgbaImage): LabImage {
   assertRgba(img);
   const { width: w, height: h, data } = img;
   const lab = new Float64Array(w * h * 3);
+  rgbaToLabInto(data, w * h, lab);
   const opaque = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const c = rgbToLab(data[i * 4] as number, data[i * 4 + 1] as number, data[i * 4 + 2] as number);
-    lab[i * 3] = c.L;
-    lab[i * 3 + 1] = c.a;
-    lab[i * 3 + 2] = c.b;
-    opaque[i] = (data[i * 4 + 3] as number) >= MIN_ALPHA ? 1 : 0;
-  }
+  for (let i = 0; i < w * h; i++) opaque[i] = (data[i * 4 + 3] as number) >= MIN_ALPHA ? 1 : 0;
 
   // Tile medians.
   const tx = Math.max(1, Math.ceil(w / BLOCK));
   const ty = Math.max(1, Math.ceil(h / BLOCK));
   const tile = new Float64Array(tx * ty);
   const all: number[] = [];
+  const scratch = new Float64Array(BLOCK * BLOCK);
   for (let j = 0; j < ty; j++) {
     for (let i = 0; i < tx; i++) {
-      const vals: number[] = [];
+      let n = 0;
       for (let y = j * BLOCK; y < Math.min(h, (j + 1) * BLOCK); y++) {
         for (let x = i * BLOCK; x < Math.min(w, (i + 1) * BLOCK); x++) {
           const p = y * w + x;
-          if (opaque[p]) vals.push(lab[p * 3] as number);
+          if (opaque[p]) scratch[n++] = lab[p * 3] as number;
         }
       }
-      const m = vals.length ? median(vals) : NaN;
+      const m = n ? medianTyped(scratch.subarray(0, n)) : NaN;
       tile[j * tx + i] = m;
       if (!Number.isNaN(m)) all.push(m);
     }
   }
-  // Global paper lightness: the median of tile medians (robust to a dark corner).
-  const paperL = all.length ? median(all) : 0.5;
+  // Global paper lightness: the 90th percentile of tile medians, i.e. the best-lit part of the page.
+  // A shadow only ever darkens, so the lit tiles show the paper's real colour (§2.2).
+  const paperL = all.length ? percentile(all, 0.9) : 0.5;
   // Fully transparent tiles take the global value.
   for (let t = 0; t < tile.length; t++) if (Number.isNaN(tile[t])) tile[t] = paperL;
 

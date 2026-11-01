@@ -20,3 +20,6 @@ export { stripJpegMetadata, metadataMarkers, isJpeg, JpegError } from './image/j
 export * as IMAGE_LIMITS from './image/limits';
 export { expoImagePorts, pickFromLibrary, takePhoto, type PickOutcome } from './image/expoImageAdapters';
 export type { RgbaImage } from './analysis/pixels';
+export { analyzeImages, analyzeImagesAsync, type LookAnalysis, type AnalyzeProgress } from './analysis/analyze';
+export type { HighlighterGuess } from './analysis/roles';
+export type { PaperType, PaperMargin, Texture } from './analysis/pattern';

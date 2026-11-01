@@ -69,6 +69,25 @@ const LINEAR_TABLE: Float64Array = (() => {
 
 // --- §1.2 linear sRGB <-> OKLab ----------------------------------------------
 
+/**
+ * Hot path for image analysis: converts n RGBA pixels into `out` (3 floats
+ * per pixel) without allocating an object per pixel. Same maths as
+ * rgbToLab (§1.2); `data` holds 8-bit channels, so the lookup table applies.
+ */
+export function rgbaToLabInto(data: ArrayLike<number>, n: number, out: Float64Array): void {
+  for (let i = 0; i < n; i++) {
+    const lr = LINEAR_TABLE[data[i * 4] as number] as number;
+    const lg = LINEAR_TABLE[data[i * 4 + 1] as number] as number;
+    const lb = LINEAR_TABLE[data[i * 4 + 2] as number] as number;
+    const l3 = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+    const m3 = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+    const s3 = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+    out[i * 3] = 0.2104542553 * l3 + 0.793617785 * m3 - 0.0040720468 * s3;
+    out[i * 3 + 1] = 1.9779984951 * l3 - 2.428592205 * m3 + 0.4505937099 * s3;
+    out[i * 3 + 2] = 0.0259040371 * l3 + 0.7827717662 * m3 - 0.808675766 * s3;
+  }
+}
+
 /** sRGB 0..255 -> OKLab (§1.2: M1, cube root, M2). Integer inputs use the lookup table. */
 export function rgbToLab(r: number, g: number, b: number): Lab {
   const lr = Number.isInteger(r) && r >= 0 && r <= 255 ? (LINEAR_TABLE[r] as number) : srgbToLinear(r);

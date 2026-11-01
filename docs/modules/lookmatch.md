@@ -5,7 +5,7 @@ style pack (schema v3), shown as matched chips with a slider toward the nearest 
 then saved as a custom pack. The output is always pack DATA that `validatePack` accepts; never CSS,
 HTML or URLs. Maths with derivations: `src/modules/lookmatch/MATCH_MATH.md` (code comments cite §X.Y).
 
-Status: P5 in progress. M2 (image intake) is done; M3 to M6 are coming.
+Status: P5 in progress. M2 (image intake) and M3 (on-device analysis) are done; M4 to M6 are coming.
 
 ## Public interface (so far)
 - `intakeImages(picked, ports, { vision })`: checks, re-encodes, strips metadata, decodes, and
@@ -15,6 +15,27 @@ Status: P5 in progress. M2 (image intake) is done; M3 to M6 are coming.
 - `stripJpegMetadata`, `metadataMarkers`, `isJpeg`, `JpegError`.
 - `IMAGE_LIMITS` (all caps, see below).
 - Expo adapters: `pickFromLibrary(max)`, `takePhoto()`, `expoImagePorts`.
+- `analyzeImages(rgba[])` and `analyzeImagesAsync(rgba[], { onProgress, signal })`: the on-device pass
+  (no key, no network). Returns a `LookAnalysis`: light or dark; paper colour, pattern (lined, grid,
+  dotted or plain), line gap, pattern colour, margin (none, left or double) and texture; ink;
+  accent and accent2; up to 4 highlighters (pen colour and opacity, plus what the photo shows); every
+  palette swatch; and confidence (pattern strength, agreement between photos).
+
+## On-device analysis (M3, MATCH_MATH.md §2-§6)
+1. OKLab conversion and lighting flattened by tile medians (§2).
+2. k-means (k = 14, fixed seed) on 6,000 samples per photo, pooled with equal weight per photo (§3, §6.1).
+3. Roles: paper, ink, highlighters (un-blended to pen colour plus opacity), accent; the margin and
+   pattern colours are excluded (§4).
+4. Paper pattern from row and column medians and means, autocorrelation, a margin-strip test and a
+   square-lattice test for dots (§5). Line gap is mapped relatively onto 22-34 (§5.4).
+5. Votes across photos (§6.2).
+
+**Measured on SYNTHETIC pages** (generated from the 13 packs with an 8% shadow and noise; not
+photos): paper type and line gap 13/13 (gap within ±1), margin 13/13, light/dark 13/13, paper colour
+within ΔE 0.02, ink within ΔE 0.04, pattern colour within ΔE 0.03, accent within ΔE 0.08 on at
+least 10/13, highlighters found on 8/13. Very pale highlighters blend into the paper (known limit;
+§4.3). Dense handwriting on plain paper stays plain. **Real photos are UNVERIFIED until Rey's device
+test**, as is the speed on Hermes (budget: under 2 s for 3 photos).
 
 ## Image handling (P5 security: images are untrusted)
 | Step | What | Why |
