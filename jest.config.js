@@ -20,6 +20,10 @@ module.exports = {
         ...shared.moduleNameMapper,
         '^expo-audio$': '<rootDir>/test/mocks/expo-audio.ts',
         '^react-native-webview$': '<rootDir>/test/mocks/react-native-webview.tsx',
+        // P4b: Skia needs native JSI bindings; ink logic is tested directly, drawing on devices.
+        '^@shopify/react-native-skia$': '<rootDir>/test/mocks/react-native-skia.tsx',
+        // P4b: Reanimated 4 boots native worklets (even its own mock does); a small stub instead.
+        '^react-native-reanimated$': '<rootDir>/test/mocks/react-native-reanimated.ts',
         // P2a's firebase/src uses NodeNext ".js" import specifiers for .ts files.
         '^(\\.{1,2}/.*)\\.js$': '$1',
       },
