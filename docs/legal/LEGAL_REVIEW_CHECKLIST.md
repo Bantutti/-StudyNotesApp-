@@ -41,7 +41,7 @@
 | V-2 | The AI key never reaches our backend, Firestore, analytics or logs | P3a's "key never in logs" test; network capture | P7 |
 | V-3 | Android auto-backup is off for app data; iOS backup behaviour matches the policy | `app.json` / manifest (`allowBackup`), iOS settings | P7 |
 | V-4 | The birth year stays on the device and is not in synced `settings` | Inspect a synced `users/{uid}.settings` | P7 |
-| V-5 | Whether Firebase Auth stores the Google/Apple display name and photo URL; ideally P2b clears them | Firebase console, user record after a Google sign-in | P2b / P7 |
+| V-5 | **No name or photo is stored for Google/Apple sign-ins**, in either the top-level fields or `providerData`. If any is found, declare Name on both stores (`DATA_INVENTORY.md` Note 3) | On a real build, sign in with a **new** Google account and a **new** Apple ID (Apple sends the name only on first authorization). Then read the user record with the Admin SDK (`getUser(uid)`) or the Firebase console and check `displayName`, `photoURL` and every `providerData[i].displayName` / `photoURL`. Also confirm the requested scopes in the sign-in code (Google `openid email` only; Apple `email` only) | P2b / P7 |
 | V-6 | The review log `device` label is a random per-install id, not a hardware id | P4c code | P7 |
 | V-7 | Deleting a note with sync on erases its content from the cloud (tombstones carry no content, or are hard-deleted promptly) | Delete a note, read the Firestore doc | **P2b must build**, P7 checks |
 | V-8 | Files are not synced while `FILE_SYNC` is false | Network capture; no Storage uploads | P7 |
@@ -64,7 +64,8 @@
 | To | Change | Why |
 |---|---|---|
 | P2b | Erase note content when tombstoning, or hard-delete tombstones promptly | Needed for the "deleted from the cloud" claims (`V-7`); Play's partial-deletion answer depends on it |
-| P2b | Clear Firebase Auth `displayName` and `photoURL` after Google/Apple sign-in (or decide to declare Name) | Data minimization (`V-5`) |
+| P2b | Request only the email scope from Google and Apple, and clear the top-level `displayName`/`photoURL` after every sign-in. **Planned by P2b (Nov 1).** Note: `providerData` can't be cleared by the app, so the scope is what keeps names out | Data minimization; decides the Name answer (`V-5`) |
+| P2b | Bundle in-app copies of the legal texts from `web/app-docs/` (generated), **not** the raw `docs/legal/` files, which hold internal review notes and build markers | `web/README.md` §5 |
 | P2b | Revoke Sign in with Apple tokens on account deletion | Apple requirement (already passed on by the Lead) |
 | P2b | Links to the privacy policy, terms and deletion page on the Me screen | Both stores require an in-app privacy policy link (already passed on) |
 | P3b | Birth-year prompt with no default; neutral wording; birth year stored only on the device | Decision Q6 A; Google's neutral age screen guidance (`V-4`) |

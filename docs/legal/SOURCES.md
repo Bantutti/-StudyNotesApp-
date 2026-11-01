@@ -53,6 +53,15 @@ Every fact about Google Play, Apple, Groq, Mistral, Firebase, GitHub and the Phi
 | Can children use Mistral? (13+, parental permission for minors) | https://help.mistral.ai/en/articles/347631-can-children-use-mistral-products-and-services |
 | Legal center | https://mistral.ai/terms |
 
+## Sign-in providers
+
+| Topic | Page |
+|---|---|
+| Google OpenID Connect (basic scope `openid email`; name and picture need `profile`) | https://developers.google.com/identity/openid-connect/openid-connect |
+| Sign in with Apple on the web (name only if requested, only on first authorization) | https://developer.apple.com/documentation/signinwithapple/configuring-your-webpage-for-sign-in-with-apple |
+| WWDC22 "Enhance your Sign in with Apple experience" (ask for fullName only if needed) | https://developer.apple.com/videos/play/wwdc2022/10122/ |
+| Firebase: manage users (`updateProfile` for display name and photo URL) | https://firebase.google.com/docs/auth/web/manage-users |
+
 ## Firebase (Google)
 
 | Topic | Page |

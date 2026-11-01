@@ -37,6 +37,10 @@ Track C touches **only** `docs/legal/`, `docs/store/` and `web/`. No shared file
 
 See `LEGAL_REVIEW_CHECKLIST.md` §3 (P2b tombstone content erasure, Auth display name, P3b birth-year prompt, P4c device label, and the items already passed on).
 
+## Note for P2b (in-app legal texts)
+
+Bundle `web/app-docs/privacy.md`, `terms.md` and `delete-account.md` (generated, self-contained). Don't bundle `docs/legal/*.md` directly. Details: `web/README.md` §5.
+
 ## CI suggestion (optional)
 
 Add to the Lead's checks: `node --test web/test/build-site.test.mjs` and `node web/build-site.mjs --check`. Both need only Node 24, no npm install.

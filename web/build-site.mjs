@@ -19,6 +19,8 @@
  *   5. Converts a small, strict subset of Markdown to HTML                         (§2.5)
  *   6. Rewrites links between the docs (PRIVACY_POLICY.md -> privacy.html)         (§2.6)
  *   7. Wraps the result in one HTML template with a strict Content-Security-Policy (§2.7)
+ *   8. Also writes clean, self-contained Markdown copies of the three legal texts
+ *      into web/app-docs/ for the app's Me screen (P2b bundles these)            (§2.8)
  *
  * USAGE (Windows PowerShell or any terminal, from the repo root; needs Node 24, no npm install)
  *   node web/build-site.mjs            build into web/public/
@@ -45,6 +47,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const WEB_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(WEB_DIR, '..');
 const OUT_DIR = join(WEB_DIR, 'public');
+const APP_DOCS_DIR = join(WEB_DIR, 'app-docs');
 
 /**
  * The pages of the site: source Markdown -> output HTML file name.
@@ -58,6 +61,19 @@ export const PAGES = [
   { src: 'docs/legal/ACCOUNT_DELETION_PAGE.md', out: 'delete-account.html' },
   { src: 'web/content/support.md', out: 'support.html' },
 ];
+
+/**
+ * §2.8 The legal texts the app shows in its Me screen, and their in-app file names.
+ * Support and Home stay web-only.
+ */
+export const APP_DOCS = [
+  { src: 'docs/legal/PRIVACY_POLICY.md', out: 'privacy.md' },
+  { src: 'docs/legal/TERMS_OF_USE.md', out: 'terms.md' },
+  { src: 'docs/legal/ACCOUNT_DELETION_PAGE.md', out: 'delete-account.md' },
+];
+
+/** Source Markdown name -> in-app Markdown name (§2.8). */
+export const APP_LINK_MAP = Object.fromEntries(APP_DOCS.map((d) => [d.src.split('/').pop(), d.out]));
 
 /** Markdown file name (as written in links) -> public HTML file name (§2.6). */
 export const LINK_MAP = Object.fromEntries(
@@ -393,6 +409,42 @@ export function buildPage(markdown, config, outFile) {
   return { html, unfilled };
 }
 
+// ---------------------------------------------------------------------------
+// §2.8 In-app Markdown copies
+// ---------------------------------------------------------------------------
+
+/**
+ * Produces a self-contained Markdown copy of one legal text for the app:
+ * the same steps §2.1–§2.4 as the web page (internal notes removed, flags
+ * applied, review markers removed, placeholders filled), then links to the
+ * other legal texts rewritten to their in-app names (privacy.md, terms.md,
+ * delete-account.md). The result has no HTML comments, no build directives
+ * and no links to files that aren't bundled, so the app can render it as is.
+ * A draft notice is added at the top while status is "draft".
+ *
+ * @returns {{ markdown: string, unfilled: string[] }}
+ */
+export function buildAppMarkdown(markdown, config, outFile) {
+  let text = stripInternal(markdown);
+  text = applyConditionals(text, config.flags);
+  text = stripReviewMarkers(text);
+  if (text.includes('<!--')) throw new Error(`Leftover HTML comment in the source of ${outFile}`);
+  const { text: filled, unfilled } = fillPlaceholders(text, config.placeholders);
+  // Rewrite links between the legal texts; any other local .md link is an error,
+  // because the app bundles only these three files.
+  const linked = filled.replace(/\]\(([A-Za-z0-9_.-]+\.md)(#[A-Za-z0-9_-]+)?\)/g, (_, file, anchor = '') => {
+    const target = APP_LINK_MAP[file];
+    if (!target) throw new Error(`${outFile} links to ${file}, which isn't bundled in the app`);
+    return `](${target}${anchor})`;
+  });
+  // Tidy: no runs of 3+ blank lines left behind by removed blocks; one final newline.
+  const tidy = linked.replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  const notice = config.status === 'draft'
+    ? '> **Draft:** this text is still being reviewed and may change before the app is released.\n\n'
+    : '';
+  return { markdown: notice + tidy, unfilled };
+}
+
 /** Reads and validates web/site.config.json. */
 export function loadConfig(path = join(WEB_DIR, 'site.config.json')) {
   const config = JSON.parse(readFileSync(path, 'utf8'));
@@ -424,14 +476,34 @@ export function buildSite(config, readSource = (p) => readFileSync(join(REPO_ROO
       if (!files.has(target)) throw new Error(`${name} links to missing page ${target}`);
     }
   }
-  return { files, unfilled: [...unfilled].sort() };
+  // §2.8 in-app Markdown copies.
+  const appFiles = new Map();
+  for (const doc of APP_DOCS) {
+    const { markdown, unfilled: missing } = buildAppMarkdown(readSource(doc.src), config, doc.out);
+    missing.forEach((m) => unfilled.add(m));
+    appFiles.set(doc.out, markdown);
+  }
+  return { files, appFiles, unfilled: [...unfilled].sort() };
+}
+
+/** Lists files in `dir` that are stale or missing compared with `files`, plus extra files. */
+function compareDir(dir, files) {
+  const stale = [];
+  for (const [name, content] of files) {
+    const path = join(dir, name);
+    if (!existsSync(path) || readFileSync(path, 'utf8') !== content) stale.push(name);
+  }
+  const extra = existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true }).filter((d) => d.isFile() && !files.has(d.name)).map((d) => d.name)
+    : [];
+  return { stale, extra };
 }
 
 function main(argv) {
   const check = argv.includes('--check');
   const release = argv.includes('--release');
   const config = loadConfig();
-  const { files, unfilled } = buildSite(config);
+  const { files, appFiles, unfilled } = buildSite(config);
 
   if (release) {
     const problems = [];
@@ -444,26 +516,26 @@ function main(argv) {
   }
 
   if (check) {
-    // Compare with what is committed in web/public/.
-    const stale = [];
-    for (const [name, content] of files) {
-      const path = join(OUT_DIR, name);
-      if (!existsSync(path) || readFileSync(path, 'utf8') !== content) stale.push(name);
-    }
-    const extra = existsSync(OUT_DIR)
-      ? readdirSync(OUT_DIR, { withFileTypes: true }).filter((d) => d.isFile() && !files.has(d.name)).map((d) => d.name)
-      : [];
-    if (stale.length || extra.length) {
-      console.error(`web/public is out of date. Stale: ${stale.join(', ') || 'none'}. Extra: ${extra.join(', ') || 'none'}.\nRun: node web/build-site.mjs`);
+    // Compare with what is committed in web/public/ and web/app-docs/.
+    const pub = compareDir(OUT_DIR, files);
+    const app = compareDir(APP_DOCS_DIR, appFiles);
+    const problems = [
+      ...pub.stale.map((n) => `public/${n} stale`), ...pub.extra.map((n) => `public/${n} extra`),
+      ...app.stale.map((n) => `app-docs/${n} stale`), ...app.extra.map((n) => `app-docs/${n} extra`),
+    ];
+    if (problems.length) {
+      console.error(`Generated files are out of date: ${problems.join(', ')}.\nRun: node web/build-site.mjs`);
       process.exit(1);
     }
-    console.log(`web/public is up to date (${files.size} files). Unfilled placeholders: ${unfilled.join(', ') || 'none'}.`);
+    console.log(`web/public (${files.size} files) and web/app-docs (${appFiles.size} files) are up to date. Unfilled placeholders: ${unfilled.join(', ') || 'none'}.`);
     return;
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
   for (const [name, content] of files) writeFileSync(join(OUT_DIR, name), content);
-  console.log(`Built ${files.size} files into web/public. Status: ${config.status}. Unfilled placeholders: ${unfilled.join(', ') || 'none'}.`);
+  mkdirSync(APP_DOCS_DIR, { recursive: true });
+  for (const [name, content] of appFiles) writeFileSync(join(APP_DOCS_DIR, name), content);
+  console.log(`Built ${files.size} files into web/public and ${appFiles.size} into web/app-docs. Status: ${config.status}. Unfilled placeholders: ${unfilled.join(', ') || 'none'}.`);
 }
 
 // Run main() only when started directly (not when imported by the tests).

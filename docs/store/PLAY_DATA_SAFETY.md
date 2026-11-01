@@ -36,7 +36,7 @@ Tick only the rows marked **Tick** for the build being submitted.
 |---|---|---|---|
 | Personal info → **Email address** | Tick | D8 | P2b |
 | Personal info → **User IDs** | Tick | D8 (Firebase user ID) | P2b |
-| Personal info → **Name** | Tick **only if** Firebase Auth keeps the Google/Apple display name (`V-5`). Recommended: P2b clears it after sign-in, then don't tick | D8 | P2b |
+| Personal info → **Name** | **Don't tick**, provided the P7 check passes. P2b requests only the email scope and clears the top-level name. **Tick it** if P7 finds a name in any user's `providerData` (inventory Note 3, `V-5`): the provider's stored copy still counts as collected | D8 | P2b |
 | App activity → **Other user-generated content** | Tick | D10 (synced notes, subjects, cards, review history, settings), D12 (note text sent to AI), drawings if `FILE_SYNC` | P2b, P3 |
 | Audio → **Voice or sound recordings** | Tick once P4 ships | D13 (sent to Groq for transcripts); D11b if `FILE_SYNC` | P4 |
 | Photos and videos → **Photos** | Tick **only if** `FILE_SYNC` (synced images) or `VISION_AI` (D14) | D11b, D14 | P2b+, P5 |

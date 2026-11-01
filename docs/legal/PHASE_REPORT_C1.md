@@ -63,7 +63,7 @@ start web\public\index.html                # preview the site in your browser
 1. **App name: NotedPo** (Rey, Nov 1, 2:45 PM). "Noted" and "Notee" were dropped for strong store clashes; "notedpo" has no exact match on either store (`STORE_LISTING.md` §1). Proposed package name `io.github.bantutti.notedpo` (not set; permanent at the first Play upload).
 2. **Tombstoned notes keep their content in Firestore** (P2a design). P2b should erase content on tombstone so "deleted from the cloud" is true (`V-7`).
 3. **The review log `device` field is a synced device identifier**, so both store forms declare it (Play "Device or other IDs", Apple "Device ID").
-4. **Firebase Auth may store Google/Apple display names and photo URLs**; P2b should clear them or we declare Name (`V-5`).
+4. **Names from Google/Apple sign-in:** P2b requests only the email scope and clears the top-level name and photo, so the forms don't declare Name. The provider's own record (`providerData`) can't be cleared by the app, so P7 checks real user records and declares Name if any appears (`V-5`, inventory Note 3).
 5. **Groq's "not for consumer use" term and Mistral's business-only API** are the top legal questions (`L-14`, `L-20`).
 6. Play Console accounts need the owner to be 18+, and personal accounts need **device verification** with the Play Console mobile app. Play review of production access usually takes **seven days or less** (official page).
 

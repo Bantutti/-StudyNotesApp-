@@ -23,7 +23,7 @@
 | Apple category → type | Select? | Data IDs | Phase |
 |---|---|---|---|
 | Contact Info → **Email Address** | Yes | D8 | P2b |
-| Contact Info → **Name** | **Only if** Firebase Auth keeps the Google/Apple display name (`V-5`). Recommended: P2b clears it, then don't select | D8 | P2b |
+| Contact Info → **Name** | **Don't select**, provided the P7 check passes (email-only scopes; Apple never sends a photo). **Select it** (App Functionality, linked, not tracking) if P7 finds a name in any user's `providerData` (inventory Note 3, `V-5`) | D8 | P2b |
 | Identifiers → **User ID** | Yes | D8 (Firebase user ID) | P2b |
 | Identifiers → **Device ID** | Yes | D2/D10: the review log's `device` label (inventory Note 1) | P4c |
 | User Content → **Other User Content** | Yes | D10 (notes, cards, review history, settings, drawings), D12 (text sent to AI) | P2b, P3 |

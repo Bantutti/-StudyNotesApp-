@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {
   stripInternal, applyConditionals, stripReviewMarkers, fillPlaceholders,
   escapeHtml, safeHref, renderInline, markdownToHtml, buildPage, buildSite, loadConfig, PAGES,
+  buildAppMarkdown, APP_DOCS,
 } from '../build-site.mjs';
 
 const baseConfig = {
@@ -136,4 +137,25 @@ test('FILE_SYNC switches the privacy policy text', () => {
   assert.match(off, /Files stay on your phone/);
   assert.match(on, /Cloud Storage for Firebase stores copies/);
   assert.equal(on.includes('Files stay on your phone'), false);
+});
+
+// §2.8 -----------------------------------------------------------------------
+test('§2.8 in-app Markdown is self-contained: no comments, markers or unbundled links', () => {
+  const src = '<!-- internal -->\nnote\n<!-- /internal -->\n# T\n\nSee [terms](TERMS_OF_USE.md#3-ai-features) [LAWYER L-1]\n<!-- if FILE_SYNC -->\nsynced\n<!-- endif -->\nBy {{APP_NAME}}';
+  const { markdown } = buildAppMarkdown(src, baseConfig, 'privacy.md');
+  assert.equal(/<!--|LAWYER|VERIFY-AT-P7|note|synced/.test(markdown), false);
+  assert.match(markdown, /\]\(terms\.md#3-ai-features\)/);
+  assert.match(markdown, /By NotedPo/);
+  assert.match(markdown, /^> \*\*Draft:\*\*/);
+  assert.throws(() => buildAppMarkdown('[x](DATA_INVENTORY.md)', baseConfig, 'privacy.md'), /isn't bundled/);
+  const final = buildAppMarkdown('# T', { ...baseConfig, status: 'final' }, 'terms.md').markdown;
+  assert.equal(final, '# T\n');
+});
+
+test('§2.8 the real legal texts produce three clean in-app files', () => {
+  const { appFiles } = buildSite(loadConfig());
+  assert.deepEqual([...appFiles.keys()], APP_DOCS.map((d) => d.out));
+  for (const [name, md] of appFiles) {
+    assert.equal(/<!--|LAWYER|VERIFY-AT-P7|DRAFT for review|\]\([A-Z_]+\.md/.test(md), false, `${name} not clean`);
+  }
 });

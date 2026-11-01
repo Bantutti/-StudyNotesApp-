@@ -16,6 +16,7 @@
 | Write the store listing | `../store/STORE_LISTING.md` (includes the name check) |
 | Know what Rey must do (free vs paid) | `../store/REY_SETUP.md` |
 | Know what C1 delivered | `PHASE_REPORT_C1.md` |
+| Show the legal texts inside the app (P2b) | `../../web/app-docs/` (generated; see `web/README.md` §5) |
 
 ## Conventions
 

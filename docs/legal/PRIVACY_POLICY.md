@@ -45,7 +45,7 @@ The app does not add its own database encryption; it relies on your phone's buil
 
 Sync is off until you choose to turn it on and sign in with email, Google or Apple. When it's on:
 
-- **Your account.** Firebase Authentication (a Google service) stores your email address, a user ID, and how you sign in. If you sign in with Google or Apple, it may also store the name and profile photo link that Google or Apple provides. [VERIFY-AT-P7 V-5]
+- **Your account.** Firebase Authentication (a Google service) stores your email address, a user ID, and how you sign in. If you sign in with Google or Apple, we ask them only for your email address, not your name or profile photo, and the app doesn't keep a name or photo on your account. [VERIFY-AT-P7 V-5]
 - **Security logs.** Firebase Authentication records the IP address and device type of sign-in requests to protect accounts from abuse, and keeps those logs for a few weeks.
 - **Your synced study data.** Cloud Firestore (a Google service) stores copies of your notes, subjects, folders, flashcards, review history and settings. Your review history includes a random label for each device you review on, so reviews from two devices can be merged. [VERIFY-AT-P7 V-6]
 <!-- if FILE_SYNC -->
