@@ -131,6 +131,9 @@ export function AiSettingsScreen(props: { aiui: AiUi; keyVault: KeyVault; ports:
         {age?.kind === 'adult' ? <BodyText>{ta('ai.settings.ageAdult', { date: shortDate(age.checkedAt) })}</BodyText> : null}
         {age?.kind === 'minor' ? <BodyText>{ta('ai.settings.ageMinor', { date: shortDate(age.checkedAt) })}</BodyText> : null}
         {age?.kind === 'unknown' ? <BodyText>{ta('ai.settings.ageUnknown')}</BodyText> : null}
+        {age?.kind === 'unknown' && !checkingAge ? (
+          <AppButton kind="secondary" label={ta('ai.settings.checkNow')} onPress={() => setCheckingAge(true)} testID="ai-settings-check-age" />
+        ) : null}
         {age?.kind === 'minor' && age.recheckAvailable && !checkingAge ? (
           <AppButton
             kind="secondary"
@@ -165,7 +168,10 @@ export function AiSettingsScreen(props: { aiui: AiUi; keyVault: KeyVault; ports:
             <Caption>{r.usage}</Caption>
             <Caption>{ta('ai.settings.tokens', { n: r.tokens.toLocaleString('en-US'), date: info.freeTier.checkedOn })}</Caption>
             <AppButton kind="plain" label={ta('ai.settings.limitsPage', { provider: info.label })} onPress={() => props.ports.openLink(info.limitsUrl)} />
-            {editing === r.id ? (
+            {age?.kind !== 'adult' ? (
+              // Stricter option (security review P3b-S8): no key can be added or tested before the 18+ check.
+              <Caption>{ta('ai.settings.keysNeedAge')}</Caption>
+            ) : editing === r.id ? (
               <KeyForm
                 provider={r.id}
                 clipboard={props.ports.clipboard}

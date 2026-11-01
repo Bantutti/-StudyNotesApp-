@@ -22,8 +22,10 @@ Maths and algorithms: [`src/modules/ai/ALGORITHMS.md`](../../src/modules/ai/ALGO
 
 **Turning off Mistral training.** Admin panel → **Privacy** (left-hand menu) → switch off **"Anonymous improvement data"**. This is a separate toggle from Mistral's Vibe product, so turning off one does not turn off the other. Source: Mistral Help Center, "Can I opt out of my input or output data being used for training?", dated Sep 3, 2026 (https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training). This path replaced the older "Admin panel → API → Privacy" one; the catalog's `dataUse.privacyStep` and `dataUse.privacyStepSource` carry the new path and the article's URL and date.
 
-**AI is an 18+ feature in this app** (Rey, Nov 1, Q1 = A). The key wizard (P3b) shows each
-provider's `ageRule` and `dataUse` from `PROVIDER_CATALOG` and asks "I'm 18 or older".
+**AI is an 18+ feature in this app** (Rey, Nov 1, Q1 = A). P3b asks for the **birth year** (no default,
+a neutral prompt; changed from "I'm 18 or older" on Nov 1, 3:00 AM) and stores only yes/no plus the date
+(`docs/modules/aiui.md`). The key wizard and consent screen show each provider's `ageRule` and `dataUse`
+from `PROVIDER_CATALOG`.
 Under-18s keep Beautify Lite and rule-based cards. Free limits are stored with `checkedOn` and must
 be re-checked in P7.
 
@@ -55,6 +57,8 @@ const proposal = await ai.run(
   { signal, onProgress },                             // Cancel button + "part 2 of 3", "waiting 4 s"
 );
 await ai.testKey('mistral');                          // { ok: true } | { ok: false, reason: 'invalid_key' | 'missing_key' }
+await ai.testKey('groq', signal, pasted);             // P3b: tests a NEW key without storing it
+ai.usage.reload();                                    // P3b: drop the cached file after Delete all data
 await ai.usage.today('groq');                         // requests, tokens, failures, limits + checkedOn
 ai.providers;                                         // ProviderInfo[]: labels, URLs, minAge, dataUse, free tier
 ```

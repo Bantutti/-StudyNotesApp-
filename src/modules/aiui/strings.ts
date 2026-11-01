@@ -168,6 +168,8 @@ export const AI_EN = {
   'ai.settings.ageAdult': 'AI is available to you (checked on {date}).',
   'ai.settings.ageMinor': 'AI isn’t available to you (checked on {date}). Beautify Lite still works.',
   'ai.settings.ageUnknown': 'Not checked yet. You’ll be asked the first time you use AI.',
+  'ai.settings.checkNow': 'Answer it now',
+  'ai.settings.keysNeedAge': 'Keys can be added after the age check, and only if AI is available to you.',
   'ai.settings.providers': 'Providers',
   'ai.settings.default': 'Default',
   'ai.settings.keyMasked': 'Key: {masked}',

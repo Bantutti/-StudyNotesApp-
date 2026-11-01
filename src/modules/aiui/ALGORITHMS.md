@@ -134,6 +134,9 @@ no consent for this provider+version?-> step 'consent'      (explicit yes, Apple
 apply                                -> resolve(doc)        (P1 runEditorAction saves "Before AI change")
 ```
 
+The key wizard opened any other way (the "Replace key" row, an error's next step, Me → AI) also runs the
+age step first, and key management in settings needs an adult answer (security review P3b-S4).
+
 The engine checks the same gates again on its own (defence in depth): if any of them fails, it throws
 `blocked`, `age_required`, `consent_required` or `missing_key` and sends nothing. The controller then
 routes that error back to the matching step.

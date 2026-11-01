@@ -92,7 +92,7 @@ export interface AiFlow {
   /** Minor panel: start the age check again once re-check is available (§1.4). */
   recheckAge(): Promise<void>;
   /** Opens the key wizard for a provider (from the provider chip or an error). */
-  openKey(p: Provider, replacing: boolean): void;
+  openKey(p: Provider, replacing: boolean): Promise<void>;
   /** Tests then stores a pasted key. `force` saves without a check (offline case). */
   saveKey(p: Provider, raw: string, force?: boolean): Promise<SaveKeyResult>;
   answerConsent(yes: boolean): Promise<void>;
@@ -355,9 +355,13 @@ export function createAiFlow(deps: AiFlowDeps): AiFlow {
       if (await deps.gate.clearAgeForRecheck()) go({ name: 'age' });
     },
 
-    openKey(p, replacing) {
+    async openKey(p, replacing) {
       if (!pending) return;
       set({ provider: p });
+      // The key wizard always comes after the 18+ check (security review P3b-S8).
+      const age = await deps.gate.ageStatus();
+      if (age.kind === 'unknown') return go({ name: 'age' });
+      if (age.kind === 'minor') return go({ name: 'minor', recheckAvailable: age.recheckAvailable });
       go({ name: 'key', provider: p, replacing });
     },
 

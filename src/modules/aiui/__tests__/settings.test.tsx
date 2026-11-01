@@ -31,6 +31,24 @@ function subjectsPort() {
 }
 
 describe('AI settings', () => {
+  it('no key can be added or tested before the age check, or for under-18s', async () => {
+    for (const adult of [null, false] as const) {
+      const w = await flowWorld({ adult });
+      const root = await render(<AiSettingsScreen aiui={w.ui} keyVault={w.vault} ports={{ openLink: jest.fn() }} subjects={subjectsPort().port} isDev={false} />);
+      await settle();
+      expect(byTestId(root, 'ai-settings-edit-groq')).toHaveLength(0);
+      expect(allText(root)).toContain('Keys can be added after the age check');
+      if (adult === null) {
+        await fire(one(root, 'ai-settings-check-age'), 'onPress');
+        await fire(one(root, 'ai-age-year'), 'onChangeText', '1990');
+        await fire(one(root, 'ai-age-next'), 'onPress');
+        await settle();
+        expect(byTestId(root, 'ai-settings-edit-groq')).toHaveLength(1);
+      }
+      await unmount(root);
+    }
+  });
+
   it('shows the key masked only, never in full', async () => {
     const w = await flowWorld({ adult: true, consent: true, groqKey: true });
     const { port } = subjectsPort();

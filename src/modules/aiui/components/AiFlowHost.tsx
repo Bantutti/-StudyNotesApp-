@@ -49,7 +49,7 @@ function Body({ flow, snap, ports }: { flow: AiFlow; snap: FlowSnapshot; ports: 
           onAction={(id) => void flow.chooseAction(id)}
           onScope={(sc) => flow.setScope(sc)}
           onProvider={(p) => void flow.setProvider(p)}
-          onKey={(p) => flow.openKey(p, true)}
+          onKey={(p) => void flow.openKey(p, true)}
         />
       );
     case 'age':

@@ -123,11 +123,25 @@ describe('gates that stop before anything is sent', () => {
 });
 
 describe('key wizard', () => {
+  it('opening the wizard before the age check asks the age first', async () => {
+    const w = await flowWorld();
+    const { p } = open(w);
+    await flush();
+    await w.ui.flow.openKey('groq', false);
+    expect(step(w).name).toBe('age');
+    await w.ui.flow.answerAge(false);
+    expect(step(w).name).toBe('minor');
+    await w.ui.flow.openKey('groq', false);
+    expect(step(w).name).toBe('minor');
+    w.ui.flow.close();
+    await p;
+  });
+
   it('a rejected key never replaces a working one', async () => {
     const w = await flowWorld({ adult: true, groqKey: true });
     const { p } = open(w);
     await flush();
-    w.ui.flow.openKey('groq', true);
+    await w.ui.flow.openKey('groq', true);
     w.groq.keyTest = { ok: false, reason: 'invalid_key' };
     const r = await w.ui.flow.saveKey('groq', 'gsk_' + 'X'.repeat(40));
     expect(r).toEqual({ kind: 'rejected' });
@@ -140,7 +154,7 @@ describe('key wizard', () => {
     const w = await flowWorld({ adult: true });
     const { p } = open(w);
     await flush();
-    w.ui.flow.openKey('groq', false);
+    await w.ui.flow.openKey('groq', false);
     const r = await w.ui.flow.saveKey('groq', 'https://console.groq.com/keys');
     expect(r.kind).toBe('bad_format');
     expect(await w.vault.has('groq')).toBe(false);
@@ -152,7 +166,7 @@ describe('key wizard', () => {
     const w = await flowWorld({ adult: true });
     const { p } = open(w);
     await flush();
-    w.ui.flow.openKey('mistral', false);
+    await w.ui.flow.openKey('mistral', false);
     w.mistral.keyTest = new AiError('offline', { providerLabel: 'Mistral' });
     const r = await w.ui.flow.saveKey('mistral', MISTRAL_KEY);
     expect(r.kind).toBe('unchecked');
@@ -386,7 +400,7 @@ describe('secrets never reach the logs', () => {
     const w = await flowWorld({ adult: true, consent: true });
     const { p } = open(w);
     await flush();
-    w.ui.flow.openKey('groq', false);
+    await w.ui.flow.openKey('groq', false);
     w.groq.keyTest = { ok: false, reason: 'invalid_key' };
     await w.ui.flow.saveKey('groq', GROQ_KEY);
     w.groq.keyTest = { ok: true };
