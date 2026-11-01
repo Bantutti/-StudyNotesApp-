@@ -45,7 +45,15 @@
       "expo-font",
       "expo-asset",
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": "NotedPo uses the camera only when you tap Take a photo in Match a look. The photo is used on this phone to find a matching look and is not kept.",
+          "microphonePermission": "NotedPo records lectures only when you tap Record. Audio stays on this device unless you choose to transcribe it."
+        }
+      ]
     ]
   }
 }
