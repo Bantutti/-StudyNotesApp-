@@ -47,3 +47,24 @@ row-to-cloud mapping. It is checked against P2a's zod schemas whenever `firebase
 Add a migration with the next version number, a repository function that takes a `SqlExecutor`,
 and a transaction-wrapped method on the `Store` facade. Tests run on Node's built-in SQLite
 (`test/nodeSqlite.ts`).
+
+## Assets (P4b)
+
+`store.assets` manages the `assets` table (P2a's assets doc plus the local-only
+`localPath`):
+
+| Call | What it does |
+|---|---|
+| `get(id)`, `list(type)` | Read rows (`list` returns live rows only) |
+| `createInkLayer(noteId, { id, localPath, size })` | Creates the note's ink asset **and** sets `notes.inkLayerRef` in one transaction. Refuses a second live layer. Returns the note's new `updated` |
+| `update(id, { size?, localPath? })` | New size after the file was rewritten (bumps `updated`: a synced change) |
+| `setLocalPath(id, path)` | Records where a downloaded file lives. **Doesn't** bump `updated`, because `localPath` never syncs |
+| `remove(id)` | Tombstone (`deleted = 1`, `localPath` cleared). P2b deletes the cloud file |
+| `inkOrphans()` | Live ink assets that no note points at (after P1's purge cleared `inkLayerRef`) |
+
+Rules:
+* `localPath` is relative to the documents folder and must match
+  `LOCAL_PATH` (no `..`, no leading `/`).
+* `size` is capped per type, the same as P2a's STORAGE caps.
+* `cloudPath` and `owner` are only ever written by P2b's sync.
+

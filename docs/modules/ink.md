@@ -1,10 +1,11 @@
 # Module: ink (P4b, drawing on notes)
 
-**Status:** being built in P4b (branch `phase/p4b-ink`). M1 (model and
-geometry), M2 (storage and service), M3 (finished ink on the editor page),
-M4 (Draw mode: live stroke, input routing, scroll and zoom), M5 (tools) and
-M6 (toolbars) are done. Sketch block, sync hand-off and the diagnostics
-screen follow in M7 to M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
+**Status:** built in P4b (branch `phase/p4b-ink`, PR #8): model and
+geometry, storage and service, finished ink on the editor page, Draw mode
+(live stroke, input routing, scroll and zoom), tools, toolbars, the sketch
+block, the sync hand-off and the hidden Ink diagnostics screen. Behaviour on
+real phones and tablets is **UNVERIFIED** until Rey's device test
+(TESTING_ON_DEVICE §5 and §8 P4b). The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
 §X.Y.
 
 ## Purpose
@@ -231,6 +232,66 @@ column (decision Q3), so ink looks the same in portrait and landscape.
 * **Two devices:** P2b calls the ink merger (`registerAssetMerger('ink', …)`,
   being added by P2b) when an ink upload is rejected as stale or a newer copy
   is pulled. The merge is the union in §10. *(M8)*
+
+## Sketch block (M7)
+
+`{ type: 'sketch', attrs: { blockId, height } }` is a leaf block (height 120
+to 2400 CSS px, default 400). It's allowed at the top level and inside
+columns, but not inside callouts, lists or other simple-block containers (the
+same rules in core `checkDocStructure` and editor-web `COLUMN_FLOW`).
+
+* **Insert:** slash menu → Sketch. To make it taller, select it and use ⋯ →
+  "Make the selected sketch taller" (+200 px).
+* **Ink:** strokes drawn on it anchor to its block id like any block. The page
+  clips them to the frame (its SVG gets a viewBox the height of the block and
+  `overflow: hidden`).
+* **Export:** HTML gets an empty frame of the same height, and DOCX a spacer.
+  P6 adds the drawing.
+* **Cloud:** P2a's content check is structural, so sketch notes sync with
+  **no `firebase/` change**. A contract test proves it.
+
+## Sync hand-off (M8)
+
+P2b owns Storage uploads and downloads. Ink plugs in through
+`src/modules/ink/sync.ts`:
+
+* **`inkAssetMerger(localText, remoteText)`** parses both copies as untrusted
+  (size first, strict schema, same note id), takes the union with tombstones
+  (§10) and returns the merged file text. It returns `null` when a side is
+  damaged, tampered or from another note, or when the union passes the caps;
+  P2b then keeps the local copy.
+* **`registerInkMerger(registry)`** registers that merger for type `ink`
+  with P2b's `registerAssetMerger`. Call it once from the composition root
+  after P2b merges.
+* **Download on open:** `inkServiceFor(store, { download })` takes P2b's
+  download port. A device that has the note but not its ink file downloads
+  it when the note opens. The download is validated before it's stored, and
+  `store.assets.setLocalPath` records where it lives without bumping
+  `updated` (a local fact must not look like a synced change). A tampered
+  cloud copy is never stored: the note opens with its last good copy and a
+  "damaged" banner.
+
+Until P2b merges, both ports are tested with fakes, including a two-device
+simulation in `src/composition/__tests__/inkSync.test.ts`.
+
+## Ink diagnostics (M9)
+
+Developer menu → **6. Ink diagnostics** (dev builds only, P1 r2's gate) has
+three parts:
+
+1. **Live drawing:** the P0 canvas with frame p50/p95/max, dropped frames,
+   samples per second, pen vs finger strokes, pressure range and rejected palm
+   touches, plus a palm-test script.
+2. **Latency clock:** a millisecond clock to film at 240 fps.
+3. **Engine bench on SYNTHETIC strokes** (labelled in the UI): 5,000
+   generated strokes are built, saved, opened, rendered, erased, lassoed and
+   merged.
+
+"Save result" stores metrics only. Reference run on Linux/Node (**not** a
+device): 5,000 strokes and 80,616 points in 1.23 MB; open 382 ms, render
+1,060 ms, eraser scan 19 ms, lasso 29 ms, merge 22 ms. Because rendering a
+full layer took about 1 s, `createNoteInk` shows layers in batches of 500
+strokes.
 
 ## Privacy
 
