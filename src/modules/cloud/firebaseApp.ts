@@ -14,7 +14,7 @@
  */
 import { deleteApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, inMemoryPersistence, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
-import { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, type Firestore } from 'firebase/firestore';
+import { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, setLogLevel, type Firestore } from 'firebase/firestore';
 import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 
 import type { CloudConfig } from './config';
@@ -33,9 +33,14 @@ export interface CreateCloudOptions {
   name?: string;
   persistence?: Persistence;
   forceLongPolling?: boolean;
+  /** Firestore SDK console logging (default silent). */
+  sdkLogLevel?: 'debug' | 'error' | 'silent';
 }
 
 export function createCloudServices(config: CloudConfig, opts: CreateCloudOptions = {}): CloudServices {
+  // The SDK's own console logs can include document paths and server
+  // messages; the app logs content-free codes itself (rule 1).
+  setLogLevel(opts.sdkLogLevel ?? 'silent');
   const app = initializeApp(
     {
       projectId: config.projectId,

@@ -7,3 +7,4 @@ export { readCloudConfig, buildEnv, cloudConfigSchema, type CloudConfig, type Cl
 export { createCloudServices, type CloudServices, type CreateCloudOptions } from './firebaseApp';
 export { createFirestoreRemote, toRemoteError, toSdkValue } from './firestoreRemote';
 export { createStorageBlobs } from './storageBlobs';
+export { reactNativePersistence, type KeyValueStorage } from './device';

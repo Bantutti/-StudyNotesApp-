@@ -52,6 +52,14 @@ A stale asset-doc write takes the server's doc (resolveStale) and the pass then 
 
 **For P4b:** `registerAssetMerger('ink', merger)` at start-up (`merger(localBytes, remoteBytes) => mergedBytes`, pure and deterministic). Files of assets made on another device are downloaded on demand: `engine.ensureLocalFile(assetId)` returns a local path. Deleted assets: the Storage file is removed, then the erased tombstone syncs.
 
+## Scheduling (decision Q3)
+
+`createSyncScheduler` (scheduler.ts): sync on start and whenever the app comes to the foreground, then every 2 minutes while it stays open; at most one sync per 30 s while a note is being edited; at once when a note is left or the app goes to the background. When a note is opened, `refreshOne` re-reads just that note (1 read), which cuts conflicts. Free-tier cost: one pull is at least 10 reads, so about 2,400 reads per person per 8 open hours (limit 50,000 a day).
+
+## In the app (composition)
+
+`src/composition/syncController.ts` gives screens one view model: `off` (no Firebase config in this build), `signedOut`, `unverified`, `otherAccount` (phone bound to another account, Q7), `readyToTurnOn` (with the upload counts for the confirm screen), `on` (engine status) and `accountGone`. `turnOn({ onProgress })` binds the database, turns sync on and runs the first sync with progress. `signOut()` uploads the last edits, then stops sync and keeps notes and the binding. When the account was deleted on another device, the phone signs out and its notes become guest notes again (`store.sync.resetToGuest`). `SyncBridge` re-attaches the controller when the store reopens and passes app foreground/background to the scheduler. `cloudRuntime.ts` builds Firebase only when `EXPO_PUBLIC_FIREBASE_*` is valid; otherwise `services.cloud` is null and the app is local-only.
+
 ## Tests
 
 - `store/__tests__/sync.test.ts`: triggers, applying pulled rows, bookkeeping, conflicts, binding, resets.
@@ -59,3 +67,4 @@ A stale asset-doc write takes the server's doc (resolveStale) and the pass then 
 - `sync/__tests__/convergence.test.ts`: seeded random runs (2 and 3 devices). `SYNC_SEEDS=300 npx jest convergence` runs 300 seeds.
 - `sync/__tests__/assets.test.ts`: the asset pass with a fake union merger (pull path and stale-upload path), Storage rule mirror.
 - `sync/__e2e__/sync.e2e.test.ts`: two devices on the REAL Firebase JS SDK and rules (emulators). Run `npm run test:sync-e2e` (needs `cd firebase && npm ci` once and Java 21+). Not part of `npm test`.
+- `composition/__tests__/syncController.test.ts` and `composition/__e2e__/turnOn.e2e.test.ts`: plan Flow 8 (guest notes, sign-up, verification gate, Turn on sync with counts and progress, a second phone signing in).

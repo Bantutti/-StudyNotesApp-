@@ -193,7 +193,7 @@ async function classify(ctx: SyncContext, p: Prepared, report: PushReport): Prom
   ctx.logger.warn('sync.push_rejected', { tbl });
 }
 
-async function commit(ctx: SyncContext, batch: Prepared[], report: PushReport): Promise<void> {
+async function commit(ctx: SyncContext, batch: Prepared[], report: PushReport, opts: PushOptions = {}): Promise<void> {
   if (batch.length === 0) return;
   await ctx.local.run(async (s) => {
     for (const p of batch) await s.markSent(p.item.tbl, p.item.id, { seq: p.item.seq, rev: p.plan.sentRev, hash: p.hash });
@@ -205,8 +205,8 @@ async function commit(ctx: SyncContext, batch: Prepared[], report: PushReport): 
     if (e instanceof RemoteError && e.code === 'unauthenticated') throw e;
     if (batch.length > 1) {
       const mid = Math.ceil(batch.length / 2);
-      await commit(ctx, batch.slice(0, mid), report);
-      await commit(ctx, batch.slice(mid), report);
+      await commit(ctx, batch.slice(0, mid), report, opts);
+      await commit(ctx, batch.slice(mid), report, opts);
       return;
     }
     await classify(ctx, batch[0] as Prepared, report);
@@ -219,11 +219,14 @@ async function commit(ctx: SyncContext, batch: Prepared[], report: PushReport): 
     }
   });
   report.uploaded += batch.length;
+  opts.onUploaded?.(report.uploaded);
 }
 
 export interface PushOptions {
   /** Only upload items this returns true for (the asset pass uses it). */
   filter?: (item: OutboxItem) => boolean | Promise<boolean>;
+  /** Called with the running total after each accepted batch (progress view). */
+  onUploaded?: (total: number) => void;
 }
 
 export async function push(ctx: SyncContext, opts: PushOptions = {}): Promise<PushReport> {
@@ -249,9 +252,9 @@ export async function push(ctx: SyncContext, opts: PushOptions = {}): Promise<Pu
     // The profile goes alone, first: the rules check it exists for every other write.
     const users = ready.filter((p) => p.item.tbl === 'users');
     const rest = ready.filter((p) => p.item.tbl !== 'users');
-    await commit(ctx, users, report);
+    await commit(ctx, users, report, opts);
     if (users.length > 0 && (await ctx.local.getOutbox('users', 'local'))?.state === 'quarantined') break;
-    await commit(ctx, rest, report);
+    await commit(ctx, rest, report, opts);
   }
   return report;
 }

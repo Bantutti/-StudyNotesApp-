@@ -10,3 +10,6 @@ export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOIN
 export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
 export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
 export { createNoteSession, type NoteSession } from './noteSession';
+export { createSyncController, type SyncController, type SyncView, type UploadCounts } from './syncController';
+export { createCloudRuntime, type CloudRuntime, type CloudParts } from './cloudRuntime';
+export { SyncBridge } from './SyncBridge';

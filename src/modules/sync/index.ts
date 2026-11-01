@@ -2,7 +2,7 @@
  * sync: local SQLite <-> Firestore (P2b). Public interface only.
  * See docs/modules/sync.md.
  */
-export { createSyncEngine, type SyncEngine, type SyncEngineOptions, type SyncPhase, type SyncStatus, type SyncRunResult } from './engine';
+export { createSyncEngine, type SyncEngine, type SyncEngineOptions, type SyncPhase, type SyncProgress, type SyncStatus, type SyncRunResult } from './engine';
 export {
   registerAssetMerger,
   createAssetMergerRegistry,
@@ -34,3 +34,5 @@ export { listConflicts, resolveConflict, copyTitle, COPY_SUFFIX, type ConflictCh
 export { RESOLVER_TABLES } from './resolve';
 export { toCloudDoc, fromCloudDoc, eraseRow, planWrite } from './mapping';
 export { createFakeCloud, type FakeCloud, type FakeAuth, type FakeClientControls } from './fakeRemote';
+export { createSyncScheduler, SCHEDULE, type SyncScheduler, type SchedulerTimers } from './scheduler';
+export { ensureLocalFile, syncAssetFiles, hasUnsyncedFile } from './assets';

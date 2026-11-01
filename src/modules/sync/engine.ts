@@ -41,8 +41,16 @@ export interface SyncRunResult {
   status: SyncStatus;
 }
 
+export interface SyncProgress {
+  step: 'upload' | 'download' | 'files' | 'done';
+  /** Uploads accepted so far / queued when the run started (upload step). */
+  done: number;
+  total: number;
+}
+
 export interface SyncEngine {
-  syncNow(): Promise<SyncRunResult>;
+  /** One sync (push, pull, files). Concurrent calls share the running one. */
+  syncNow(opts?: { onProgress?: (p: SyncProgress) => void }): Promise<SyncRunResult>;
   /** Re-reads one note from the server (when a note is opened; cuts conflicts). */
   refreshOne(tbl: SyncTable, id: string): Promise<void>;
   resolve(tbl: SyncTable, id: string, choice: ConflictChoice): Promise<{ copyId: string | null }>;
@@ -106,6 +114,8 @@ export function createSyncEngine(ctx: SyncContext, opts: SyncEngineOptions = {})
     return s;
   };
 
+  let progress: ((p: SyncProgress) => void) | undefined;
+
   const runOnce = async (): Promise<SyncRunResult> => {
     const st = await ctx.local.getState();
     if (!st.enabled || st.uid !== ctx.uid) return { push: null, pull: null, assets: null, status: await emit() };
@@ -114,16 +124,22 @@ export function createSyncEngine(ctx: SyncContext, opts: SyncEngineOptions = {})
     let pushReport: PushReport | null = null;
     let pullReport: PullReport | null = null;
     let assetReport: AssetReport | null = null;
+    const total = Object.values(await ctx.local.countOutbox('pending')).reduce((a, b) => a + (b ?? 0), 0);
+    const report = (step: SyncProgress['step'], done: number) => progress?.({ step, done, total });
     try {
-      pushReport = await push(ctx, pushOpts);
+      report('upload', 0);
+      pushReport = await push(ctx, { ...pushOpts, onUploaded: (n) => report('upload', n) });
+      report('download', pushReport.uploaded);
       await ctx.local.recordRun('push', null);
       pullReport = await pull(ctx);
       await ctx.local.recordRun('pull', null);
+      report('files', pushReport.uploaded);
       if (assets) assetReport = await syncAssetFiles(ctx, assets);
       // A pull can turn a conflict into "local wins": send that right away.
       if ((await ctx.local.listOutbox({ limit: 1 })).length > 0) pushReport = await push(ctx, pushOpts);
       phase = 'idle';
       errorCode = null;
+      report('done', total);
       if (pullReport.changedNotes.length) noteSubs.forEach((f) => f(pullReport?.changedNotes ?? []));
     } catch (e) {
       errorCode = errorCodeOf(e);
@@ -143,7 +159,8 @@ export function createSyncEngine(ctx: SyncContext, opts: SyncEngineOptions = {})
   };
 
   return {
-    syncNow() {
+    syncNow(opts = {}) {
+      if (opts.onProgress) progress = opts.onProgress;
       if (running) {
         again = true;
         return running;
@@ -158,6 +175,7 @@ export function createSyncEngine(ctx: SyncContext, opts: SyncEngineOptions = {})
       };
       running = loop().finally(() => {
         running = null;
+        progress = undefined;
       });
       return running;
     },
