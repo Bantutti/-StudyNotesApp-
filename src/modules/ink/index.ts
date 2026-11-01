@@ -29,6 +29,10 @@ export { pickAnchor, strokeToPx, widthPx, reexpress, indexLayout, type InkLayout
 export { reconcile, type ReconcileResult } from './model/reconcile';
 export { buildStrokes, type BuildInput } from './model/build';
 
+// Rendering for the editor page and export (path data in block units).
+export { renderStroke, renderLayer, renderDiff, type InkRenderItem } from './render';
+export { SAFE_PATH } from './geometry/svg';
+
 // Input routing (stylus-aware mode, palm guards).
 export { routePointer, penCancelsTouch, pastScrollSlop, PALM_AFTER_PEN_MS, PEN_CANCEL_WINDOW_MS, SCROLL_SLOP_PX, type InkInputMode, type Route, type RouteState } from './input/routing';
 

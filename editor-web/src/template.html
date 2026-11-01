@@ -24,6 +24,10 @@ body{background:#fff}
 .sn-prev>*{transform:scale(.55);transform-origin:0 0;width:180%;margin:0!important}
 .sn-label{font-size:15px;font-weight:600}
 .sn-flash{outline:3px solid var(--accent2);outline-offset:2px;transition:outline-color 1.2s}
+/* P4b ink layers: under = behind the text (highlighter), over = on top (pen). Never take touches. */
+.ink-layer{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}
+#ink-under{z-index:0}#editor{position:relative;z-index:1}#ink-over{z-index:2}
+.ink-b{position:absolute;aspect-ratio:1/1;height:auto;overflow:visible;pointer-events:none}
 </style>
 <style id="fonts"></style>
 <style id="theme"></style>

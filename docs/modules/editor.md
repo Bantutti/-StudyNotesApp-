@@ -158,3 +158,13 @@ and single-character keys), with Copy log for Rey's phone test.
 
 **Bridge additions:** native to web `requestSelection`, `scrollToBlock`, `setDiagnostics`, commands for
 the new blocks, tables and block menu; web to native `state` (toolbar), `selection`, `diag`.
+
+## Ink on the page (P4b)
+
+The bridge also carries finished ink: `inkAdd`, `inkRemove`, `inkClear`,
+`setInkFeed`, `requestInkLayout` to the page, and `inkLayout`, `inkAck` back.
+The page draws ready-made, schema-checked SVG paths in two layers outside
+ProseMirror's DOM (`editor-web/src/ink.ts`). The format, security rules and
+layout feed are documented in [ink.md](./ink.md), "Showing ink on the editor
+page".
+

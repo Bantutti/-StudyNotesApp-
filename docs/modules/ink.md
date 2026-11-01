@@ -1,9 +1,9 @@
 # Module: ink (P4b, drawing on notes)
 
 **Status:** being built in P4b (branch `phase/p4b-ink`). M1 (model and
-geometry) and M2 (storage and service) are done. The editor bridge, Draw mode
-UI, tools, sketch block, sync hand-off and diagnostics screen follow in M3 to
-M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
+geometry), M2 (storage and service) and M3 (drawing finished ink on the
+editor page) are done. Draw mode UI, tools, sketch block, sync hand-off and
+the diagnostics screen follow in M4 to M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
 §X.Y.
 
 ## Purpose
@@ -37,6 +37,7 @@ and treated as untrusted on load.
 | `buildStrokes(input)` | Raw pen samples in page px → stored strokes (smooth, convert, simplify, split, encode) |
 | `pickAnchor`, `strokeToPx`, `widthPx`, `reexpress`, `InkLayout` | Anchors (§9) |
 | `reconcile(prevDoc, nextDoc, layer, prevLayout, ctx)` | Keeps strokes attached after text joins (§9.3) |
+| `renderStroke`, `renderLayer`, `renderDiff`, `InkRenderItem` | Strokes → ready-to-draw path items for the editor page (and P6 export), cached per stroke |
 | `routePointer`, `penCancelsTouch`, `pastScrollSlop` | Stylus-aware input routing and palm guards (worklets) |
 | `createInkService(deps)`, `InkSession` | Loading, autosaving, publishing for sync, crash recovery, orphan sweep |
 | `expoInkFiles` | The file adapter (expo-file-system, atomic writes) |
@@ -97,6 +98,55 @@ highlights do. Custom colours are upper-case `#RRGGBB`.
 copy and reports `damaged` (the UI shows a banner). Error messages never echo
 file content. A stroke that's also tombstoned is dropped instead of rejected
 (the tombstone wins, as in a merge).
+
+## Showing ink on the editor page (M3)
+
+The page never reads ink files. Native turns each stroke into a **path item**
+(`renderStroke`) in block units: highlighter and pressure-less pens become a
+round-capped centreline (`mode: 'stroke'`), and pressure pens become a filled
+outline (`mode: 'fill'`). The item crosses the bridge, and the page places it
+in an `<svg viewBox="0 0 1000 1000">` over its block, so 1 unit = block width
+/ 1000 px (§1.2). Items never need recomputing when the layout changes.
+
+```
+#root.pk
+  #ink-under   highlighter strokes, behind the text   (z 0)
+  #editor      TipTap                                  (z 1)
+  #ink-over    pen strokes, on top of the text         (z 2)
+```
+
+The layers sit **outside ProseMirror's DOM**, so the editor never sees or
+changes them. Each SVG is re-placed at most once per frame, after editor
+transactions, resizes, pack and font changes. A stroke whose block is missing
+is hidden, not deleted, so it comes back with its block (decision Q4).
+
+**Bridge messages** (`src/modules/editor/protocol.ts`):
+
+| Direction | Message | Purpose |
+|---|---|---|
+| → page | `inkAdd { items ≤ 500 }` | Draw items (same id = replace). Chunked by `chunkInkItems` to ~1.5 M chars |
+| → page | `inkRemove { ids }`, `inkClear` | Remove strokes |
+| → page | `setInkFeed { on }` | Draw mode: push layout after each change |
+| → page | `requestInkLayout { reqId }` | Layout now |
+| ← page | `inkLayout { originX/Y, viewport, pageWidth, blocks[] }` | Block boxes in page px (scroll-independent), with nesting depth, for anchoring |
+| ← page | `inkAck { ids }` | Those strokes are drawn (native drops its live copy) |
+
+**Security:** every item is checked by `inkItemSchema` on the page:
+* path data may contain only `M L Q Z`, digits, space, `.` and `-`, at most
+  200,000 characters (the same alphabet as `geometry/svg.ts`, kept equal by a
+  test);
+* colours are `p0` to `p2`, `h0` or `#RRGGBB`;
+* ids and block ids must match their patterns;
+* there are at most 10,000 strokes on the page (more gives `invalid_ink`).
+
+Elements are built with `createElementNS` and set only with `setAttribute` or
+`style.setProperty`; a test checks the source never uses `innerHTML`. Pack
+colours become the CSS variables `--ink-p0` to `--ink-p2` and `--ink-h0`, set
+from the validated pack, so ink restyles with the pack.
+
+**After a WebView restart** (P1 r2 remounts it on Android render-process loss),
+the screen must send `inkClear` and then `inkAdd(renderLayer(layer))` on every
+`onReady`. *(The screen wiring comes with Draw mode in M4.)*
 
 ## Saving and sync (decision Q9)
 
