@@ -84,4 +84,4 @@ start web\public\index.html                # preview the site in your browser
 
 ## 9. Export
 
-Zip `StudyNotesApp-C1-compliance-20261101.zip` in `exports/`, Drive folder `StudyNotesApp/C1-compliance`. **SHA-256:** `bb58363603ab4884bc852abb26ae1004d3b47029e95f67bc60167a619bf28795` (92,466 bytes, 42 entries, per-file `MANIFEST.sha256` inside). Drive: folder `StudyNotesApp/C1-compliance` (id `13gI3U3p_Ql_FiGRg79eYh8kuNm14hIDQ`), zip id `1JL9KsmqvpP27qDEkSMe6VRQkDVGrudIe` (downloaded back, SHA-256 matches), PHASE_REPORT.md id `1H8ucWUWrWZk3Chzt5-C5Rheix9rqX2dA`. The copy of this report inside the zip predates the checksum (a file can't contain its own zip's checksum).
+Final draft export (v2), built from branch `phase/c1-compliance` at commit `e78a01a`: `StudyNotesApp-C1-compliance-20261101-v2.zip`, **SHA-256 `680b2c319f32e358c0fea532043dda8d67029f574fabea99a7bcaeeebbf8a3d6`** (109,416 bytes, 46 entries, per-file `MANIFEST.sha256` inside), in Drive `StudyNotesApp/C1-compliance`. The first export (`StudyNotesApp-C1-compliance-20261101.zip`, SHA-256 `bb58363603ab4884bc852abb26ae1004d3b47029e95f67bc60167a619bf28795`) stays in the same folder unchanged.
