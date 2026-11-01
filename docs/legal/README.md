@@ -8,7 +8,7 @@
 |---|---|
 | Know what the app collects and where it goes | `DATA_INVENTORY.md` (the single source, IDs D1–D19) |
 | Read the user-facing legal texts | `PRIVACY_POLICY.md`, `TERMS_OF_USE.md`, `ACCOUNT_DELETION_PAGE.md` |
-| See what needs a lawyer or a P7 check | `LEGAL_REVIEW_CHECKLIST.md` (L-1…L-22, V-1…V-21) |
+| See what needs a lawyer or a P7 check | `LEGAL_REVIEW_CHECKLIST.md` (L-1…L-23, V-1…V-23) |
 | Check a fact's source | `SOURCES.md` (all read 2026-11-01) |
 | Fill Google Play forms | `../store/PLAY_APP_CONTENT.md`, `../store/PLAY_DATA_SAFETY.md`, `../store/AGE_RATINGS.md` §1 |
 | Fill App Store forms | `../store/APPLE_PRIVACY_LABELS.md`, `../store/AGE_RATINGS.md` §2 |

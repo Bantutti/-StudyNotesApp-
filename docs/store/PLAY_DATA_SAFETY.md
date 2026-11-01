@@ -39,7 +39,7 @@ Tick only the rows marked **Tick** for the build being submitted.
 | Personal info → **Name** | **Don't tick**, provided the P7 check passes. P2b requests only the email scope and clears the top-level name. **Tick it** if P7 finds a name in any user's `providerData` (inventory Note 3, `V-5`): the provider's stored copy still counts as collected | D8 | P2b |
 | App activity → **Other user-generated content** | Tick | D10 (synced notes, subjects, cards, review history, settings), D12 (note text sent to AI), drawings if `FILE_SYNC` | P2b, P3 |
 | Audio → **Voice or sound recordings** | Tick once P4 ships | D13 (sent to Groq for transcripts); D11b if `FILE_SYNC` | P4 |
-| Photos and videos → **Photos** | Tick **only if** `FILE_SYNC` (synced images) or `VISION_AI` (D14) | D11b, D14 | P2b+, P5 |
+| Photos and videos → **Photos** | **Tick once P5 ships** "Improve with AI" (approved Nov 1, 2026): reference photos sent to Groq. Also covers synced images if `FILE_SYNC` | D14 (and D11b if `FILE_SYNC`) | P5 |
 | Files and docs | Tick **only if** `FILE_SYNC` (synced PDF attachments) | D11b | P2b+ |
 | Device or other IDs | Tick | D2/D10: the review log's `device` label is synced (Note 1 in the inventory). Later also D17 (App Check) | P4c, later |
 | Location (approximate or precise) | **No** | Firebase Auth logs IP addresses for security (D9), but the app never uses them to work out location. Play says IP must be declared as location only when location is *inferred* from it. The IP FAQ answer didn't render today, so read it in the console (`V-14`) | — |
@@ -58,13 +58,13 @@ The same five questions appear for each ticked type. Proposed answers:
 | Name (only if ticked) | Collected | No | Users can choose | **Account management** |
 | Other user-generated content | **Collected** | No | Users can choose | **App functionality** |
 | Voice or sound recordings | **Collected** | No | Users can choose | **App functionality** |
-| Photos (only if ticked) | Collected | No | Users can choose | App functionality |
+| Photos | **Collected** | **No** (Groq may log requests up to 30 days unless the user turns on ZDR) | **Users can choose** (optional, 18+, explicit tap and image consent) | **App functionality** |
 | Files and docs (only if ticked) | Collected | No | Users can choose | App functionality |
 | Device or other IDs | **Collected** | No | Users can choose (only with sync) | **App functionality** |
 
 **Never tick** Analytics, Developer communications, Advertising or marketing, Personalization, or Fraud prevention for our own use. (Firebase uses IP addresses for abuse prevention as our processor; that's covered under the account rows, `L-6`.)
 
-**"Shared"**: answer **No** for every type (§0: Firebase is a service provider; AI sends are user-initiated with consent).
+**"Shared"**: answer **No** for every type (§0: Firebase is a service provider; AI sends are user-initiated with consent). This includes Photos: each send happens only on the explicit "Improve with AI (sends your photo to Groq)" tap, after a separate image consent, which is the same reasoning as for note text (`L-5`, `L-23`).
 
 ## §4 Other declarations on this form
 
@@ -76,7 +76,7 @@ The same five questions appear for each ticked type. Proposed answers:
 ## §5 What the store listing will show (preview, expected)
 
 - Data shared with third parties: **No data shared with third parties**
-- Data collected: Personal info, App activity, Audio, Device or other IDs (plus Photos and Files if `FILE_SYNC`)
+- Data collected: Personal info, App activity, Audio, Photos (from P5), Device or other IDs (plus Files and docs if `FILE_SYNC`)
 - Data is encrypted in transit
 - You can request that data be deleted
 
@@ -86,6 +86,6 @@ The same five questions appear for each ticked type. Proposed answers:
 |---|---|
 | Rey moves to the Blaze plan and file sync ships (`FILE_SYNC` true) | Tick Photos and Files and docs; drawings stay under Other user-generated content |
 | App Check ships (`APP_CHECK` true) | Re-read Firebase's App Check and Play Integrity disclosures; the Device or other IDs purpose may gain **Fraud prevention, security, and compliance** |
-| A vision AI provider is chosen for P5 (`VISION_AI` true) | Tick Photos; add the provider to the privacy policy |
+| P5 ships "Improve with AI" (`VISION_AI` true, decided Nov 1) | Tick Photos (§2–§3). If P5 ships without it, set `VISION_AI` false and untick Photos unless `FILE_SYNC` needs it |
 | Analytics or crash reporting are ever added | Tick Crash logs, Diagnostics or App interactions as needed, update the privacy policy **first** |
 | A new AI provider is added | Update the privacy policy §4 and the consent screen; types usually stay the same |

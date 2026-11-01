@@ -77,7 +77,7 @@ AI actions such as summarize, make flashcards or tidy up are **optional**, and t
 If you ask for a **transcript of a recording**, the recording, its language and your subject's glossary words are sent directly from your phone to **Groq** in the same way. [VERIFY-AT-P7 V-9]
 <!-- if VISION_AI -->
 
-If you use **Match a look** with a reference image, the image is sent directly from your phone to the AI company named on screen in the same way.
+**Reference photos (Match a look).** Match a look first finds a matching style **on your phone**, without sending anything. If you're 18 or older, you can then tap **"Improve with AI (sends your photo to Groq)"** to get a closer match. The app asks for your permission before it sends photos to Groq for the first time. Up to 3 photos you choose are then sent directly from your phone to **Groq**. Before sending, the app makes each photo smaller (1,024 pixels on the longest side) and removes its hidden details, such as the camera's location data. The app doesn't keep the photos it sends and never uploads them to our servers; it saves only the resulting style, which syncs like your other looks if sync is on. Only send photos you're allowed to share, and avoid photos that show people or private information. [VERIFY-AT-P7 V-22] [LAWYER L-23]
 <!-- endif -->
 
 Because you use your own account, **that company's own terms and privacy policy apply** to what you send:
@@ -119,7 +119,7 @@ We only share your information in these cases:
 | Your account and synced data | Until you delete it or delete your account |
 | After you delete your account | Removed from our live database right away. Google removes deleted accounts from its backup systems within 180 days. We have not turned on extra database backups |
 | Sign-in security logs (IP address) | A few weeks (kept by Firebase Authentication) |
-| Text or audio you sent to an AI company | Set by that company (section 4); we can't delete it for you |
+| Text, audio or photos you sent to an AI company | Set by that company (section 4); we can't delete it for you |
 | Support emails | Until your question is answered and no longer needed |
 | Record of a deletion request | 12 months |
 
@@ -129,7 +129,7 @@ We only share your information in these cases:
 
 You can delete your account **in the app** (in the Me tab, under Account), or, if you no longer have the app, by following the steps on our [account deletion page](ACCOUNT_DELETION_PAGE.md). We complete email requests within 7 days. [VERIFY-AT-P7 V-11]
 
-Deleting your account removes your account, your synced notes, flashcards, review history and settings, and any synced files. It does not delete data that is only on your phone (delete the app or use "Delete local data" for that), or anything you sent to an AI company (contact that company).
+Deleting your account removes your account, your synced notes, flashcards, review history and settings, and any synced files. It does not delete data that is only on your phone (delete the app or use "Delete local data" for that), or anything you sent to an AI company, such as text, recordings or photos (contact that company).
 
 ## 10. Your rights
 

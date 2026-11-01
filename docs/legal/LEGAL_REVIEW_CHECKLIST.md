@@ -31,6 +31,7 @@
 | L-12 | 🟢 | Minimum age 13 and parental knowledge wording | Terms §1 |
 | L-13 | 🟢 | Scope of the permission users give us to store their content | Terms §2 |
 | L-16 | 🟢 | Philippine governing law; any venue clause | Terms §8 |
+| L-23 | 🟠 | **Reference photos to Groq (P5).** Photos of note designs may show other people, their handwriting, faces or school details, or copyrighted designs. Is our wording enough (privacy policy §4, Terms §4, consent screen)? Is "not shared" on Play defensible for photos, as for note text (`L-5`)? | Privacy §4, Terms §4, `PLAY_DATA_SAFETY.md` §3 |
 | L-18 | 🟢 | US state app store age laws (Texas SB 2420 in effect per Google, 2026-11-01) before any US release | `AGE_RATINGS.md` §3 |
 
 ## §2 Checks for P7 against the built app (V)
@@ -53,6 +54,8 @@
 | V-14 | The Firebase **JS** SDK sends only what the Data safety form declares; read Play's IP-address FAQ in the console | Network capture with a proxy | P7 |
 | V-15 | No `AD_ID` permission in the merged Android manifest | Inspect the built AAB | P7 |
 | V-16 | Apple label: Audio Data linked or not linked | Depends on `FILE_SYNC` | P7 |
+| V-22 | Match a look sends photos only: for 18+ users; after the on-device result; on the explicit "Improve with AI (sends your photo to Groq)" tap; after a separate per-provider image consent; at most 3 photos; each downsized to 1,024 px on the long side, re-encoded, with **all EXIF (including GPS) removed**; only to `api.groq.com`; temporary files deleted; nothing uploaded to our backend; only the style pack saved | Network capture of the request (check the image bytes have no EXIF, for example with `exiftool`); inspect app storage after the flow; P5 tests | P5 / P7 |
+| V-23 | Apple label: Photos linked or not linked | Depends on `FILE_SYNC` (No while images aren't synced) | P7 |
 | V-17 | Apple privacy manifest (`PrivacyInfo.xcprivacy`) and required-reason APIs match current rules | Read Apple's current docs; inspect the EAS build | P7 |
 | V-18 | What Apple's 13+ override shows on devices with older iOS versions | App Store Connect | P8 |
 | V-19 | IARC wording on "users interact or exchange content" vs the export share sheet | Play Console questionnaire | P7 |
@@ -73,3 +76,4 @@
 | P3a | Mistral opt-out path: Admin panel → Privacy → "Anonymous improvement data" | Mistral help article dated 2026-09-03 (already passed on) |
 | P1 | Links in notes open in the system browser | Avoids Apple's 16+ "unrestricted web access" (already passed on) |
 | P4c | Review log `device` = random per-install label | `V-6` |
+| P5 | Photo flow as approved (`V-22`), and the consent text "only send photos you're allowed to share, without people or private details" | `L-23`, inventory Note 4 |

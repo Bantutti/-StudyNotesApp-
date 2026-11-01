@@ -28,6 +28,7 @@ Please don't use NotedPo to:
 
 - break the law or anyone else's rights, including copyright;
 - record people without the permission your school, workplace or local law requires (the app reminds you of this before your first recording);
+- send photos to an AI service that you aren't allowed to share, or that show other people or their private information without their permission;
 - try to access other people's data, attack our systems, or get around the app's security or age rules.
 
 ## 5. The app is provided as is

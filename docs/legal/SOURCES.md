@@ -41,6 +41,7 @@ Every fact about Google Play, Apple, Groq, Mistral, Firebase, GitHub and the Phi
 | Your data in GroqCloud (no retention by default; up to 30 days for reliability and abuse; Zero Data Retention; US data location) | https://console.groq.com/docs/your-data |
 | Groq Services Agreement (18+; "not for consumer use") | https://console.groq.com/docs/legal/services-agreement |
 | Groq privacy policy (not directed to children; no knowing collection under 18) | https://groq.com/privacy-policy |
+| Images and Vision (`qwen/qwen3.8-27b`, max 3 images per request, via `chat/completions`) | https://console.groq.com/docs/vision |
 
 ## Mistral
 

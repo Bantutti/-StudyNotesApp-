@@ -28,7 +28,7 @@
 | Identifiers → **Device ID** | Yes | D2/D10: the review log's `device` label (inventory Note 1) | P4c |
 | User Content → **Other User Content** | Yes | D10 (notes, cards, review history, settings, drawings), D12 (text sent to AI) | P2b, P3 |
 | User Content → **Audio Data** | Yes, once P4 ships | D13 (Groq transcripts); D11b if `FILE_SYNC` | P4 |
-| User Content → **Photos or Videos** | **Only if** `FILE_SYNC` or `VISION_AI` | D11b, D14 | later |
+| User Content → **Photos or Videos** | **Yes, once P5 ships** "Improve with AI" (reference photos sent to Groq; approved Nov 1, 2026). Also covers synced images if `FILE_SYNC` | D14 (and D11b) | P5 |
 | Diagnostics (crash, performance) | **No** | No crash reporting (decision Q9) | — |
 | Usage Data, Location, Contacts, Health, Financial, Browsing, Search History, Purchases, Sensitive Info | **No** | Not collected | — |
 | (Birth year) | **No** | D6 stays on the device | — |
@@ -43,7 +43,7 @@
 | Device ID | App Functionality (merging reviews from several devices) | Yes (stored with the account's review history) | No |
 | Other User Content | App Functionality | **Yes** (synced copies sit in the user's account) | No |
 | Audio Data | App Functionality | Yes if synced; the Groq transcript request itself isn't linked to the account by us. Answer **Yes** because the type as a whole is linked when file sync exists, otherwise **No** (`V-16`) | No |
-| Photos or Videos (only if selected) | App Functionality | Yes | No |
+| Photos or Videos | **App Functionality** | **No** while `FILE_SYNC` is off: the photos go only to Groq with the user's own key and the app never stores them or ties them to the account. **Yes** once file sync stores images in the account (`V-23`) | **No** |
 
 **Never select** Third-Party Advertising, Developer's Advertising or Marketing, Analytics, Product Personalization or Other Purposes.
 
@@ -51,7 +51,7 @@
 
 - **Data Linked to You:** Contact Info, Identifiers, User Content
 - **Data Used to Track You:** none
-- **Data Not Linked to You:** none (or Audio Data if file sync never ships, `V-16`)
+- **Data Not Linked to You:** Photos (while file sync is off, `V-23`), and Audio Data if file sync never ships (`V-16`)
 
 ## §5 Other Apple privacy requirements that C1 covers
 

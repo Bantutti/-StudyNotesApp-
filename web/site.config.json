@@ -10,7 +10,7 @@
   },
   "flags": {
     "FILE_SYNC": false,
-    "VISION_AI": false,
+    "VISION_AI": true,
     "APP_CHECK": false
   }
 }

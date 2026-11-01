@@ -10,7 +10,7 @@
 | Privacy policy (plain English, RA 10173, honest data flows) | `docs/legal/PRIVACY_POLICY.md` |
 | Terms of use (13+, AI 18+, AI can be wrong) | `docs/legal/TERMS_OF_USE.md` |
 | Account deletion web page (Play's web link requirement) | `docs/legal/ACCOUNT_DELETION_PAGE.md` |
-| Legal review and P7 checklist (22 L-items, 21 V-items, cross-track changes) | `docs/legal/LEGAL_REVIEW_CHECKLIST.md` |
+| Legal review and P7 checklist (23 L-items, 23 V-items, cross-track changes) | `docs/legal/LEGAL_REVIEW_CHECKLIST.md` |
 | Sources (every official page used, read 2026-11-01) | `docs/legal/SOURCES.md` |
 | Play: App content and Data safety answers | `docs/store/PLAY_APP_CONTENT.md`, `docs/store/PLAY_DATA_SAFETY.md` |
 | Apple privacy labels | `docs/store/APPLE_PRIVACY_LABELS.md` |
@@ -66,6 +66,7 @@ start web\public\index.html                # preview the site in your browser
 4. **Names from Google/Apple sign-in:** P2b requests only the email scope and clears the top-level name and photo, so the forms don't declare Name. The provider's own record (`providerData`) can't be cleared by the app, so P7 checks real user records and declares Name if any appears (`V-5`, inventory Note 3).
 5. **Groq's "not for consumer use" term and Mistral's business-only API** are the top legal questions (`L-14`, `L-20`).
 6. Play Console accounts need the owner to be 18+, and personal accounts need **device verification** with the Play Console mobile app. Play review of production access usually takes **seven days or less** (official page).
+7. **Reference photos to Groq (P5, approved Nov 1):** declared as Photos on Play (collected, optional, not shared, App functionality) and Apple (Photos or Videos, not linked while file sync is off). Checks `V-22`, `V-23`; legal item `L-23`.
 
 ## 7. Known limits
 

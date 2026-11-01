@@ -159,3 +159,13 @@ test('§2.8 the real legal texts produce three clean in-app files', () => {
     assert.equal(/<!--|LAWYER|VERIFY-AT-P7|DRAFT for review|\]\([A-Z_]+\.md/.test(md), false, `${name} not clean`);
   }
 });
+
+test('VISION_AI switches the reference-photo text in the policy and the in-app copy', () => {
+  const config = loadConfig();
+  const on = buildSite({ ...config, flags: { ...config.flags, VISION_AI: true } });
+  const off = buildSite({ ...config, flags: { ...config.flags, VISION_AI: false } });
+  assert.match(on.files.get('privacy.html'), /Improve with AI \(sends your photo to Groq\)/);
+  assert.match(on.appFiles.get('privacy.md'), /1,024 pixels/);
+  assert.equal(off.files.get('privacy.html').includes('Improve with AI'), false);
+  assert.equal(off.appFiles.get('privacy.md').includes('Improve with AI'), false);
+});
