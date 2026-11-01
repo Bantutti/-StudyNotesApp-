@@ -1,0 +1,101 @@
+rules_version = '2';
+
+// =============================================================================
+// Study Notes App — Cloud Storage Security Rules (P2a)
+// -----------------------------------------------------------------------------
+// Layout:  users/{uid}/{folder}/{assetId}.{ext}
+//          folder ∈ audio | images | ink | attachments   (§L.8)
+// Default: DENY. Only the owner can read, list, write and delete their files.
+// Upload:  allowed only when a matching Firestore asset doc already exists
+//          (same owner, same exact path, same byte size, right type) and the
+//          account is not being deleted. So every byte in Storage is tracked by
+//          an asset doc, which makes per-user accounting and complete deletion
+//          possible. Cost: 2 Firestore reads per upload (Storage cross-service rules).
+// Mirror:  Numbers copied from src/schemas/limits.ts (STORAGE).
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function verifiedOwner(userId) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.uid == userId;
+    }
+
+    // §L.8 caps and allowed types per folder.
+    function maxBytes(folder) {
+      return {'audio': 67108864, 'images': 5242880, 'ink': 5242880, 'attachments': 20971520}[folder];
+    }
+    function contentTypeOk(folder, ct) {
+      return ct in {
+        'audio': ['audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac'],
+        'images': ['image/jpeg', 'image/png', 'image/webp'],
+        'ink': ['application/json'],
+        'attachments': ['application/pdf']
+      }[folder];
+    }
+    function fileNameOk(folder, fileName) {
+      return fileName.matches('^[A-Za-z0-9_-]{16,64}[.](' + {
+        'audio': 'm4a|aac|mp4',
+        'images': 'jpg|jpeg|png|webp',
+        'ink': 'json',
+        'attachments': 'pdf'
+      }[folder] + ')$');
+    }
+
+    // Asset type -> folder (same table as firestore.rules assetFolder()).
+    function folderForType(t) {
+      return {'audio': 'audio', 'image': 'images', 'sticker': 'images', 'ink': 'ink', 'pdf': 'attachments'}[t];
+    }
+
+    // The Firestore asset doc that must describe this upload.
+    function assetDocOk(userId, folder, fileName) {
+      let assetId = fileName.split('[.]')[0];
+      let p = /databases/(default)/documents/assets/$(assetId);
+      return firestore.exists(p)
+        && firestore.get(p).data.owner == userId
+        && firestore.get(p).data.deleted == false
+        && firestore.get(p).data.cloudPath == 'users/' + userId + '/' + folder + '/' + fileName
+        && firestore.get(p).data.size == request.resource.size
+        && folderForType(firestore.get(p).data.type) == folder;
+    }
+
+    // Same "account active" check as firestore.rules userActive().
+    function accountActive(userId) {
+      let p = /databases/(default)/documents/users/$(userId);
+      return firestore.exists(p)
+        && firestore.get(p).data.deletionRequestedAt == null;
+    }
+
+    function uploadOk(userId, folder, fileName) {
+      return verifiedOwner(userId)
+        && folder in ['audio', 'images', 'ink', 'attachments']
+        && fileNameOk(folder, fileName)
+        && request.resource.size > 0
+        && request.resource.size <= maxBytes(folder)
+        && contentTypeOk(folder, request.resource.contentType)
+        // No custom metadata: it would be an untracked side channel for data.
+        && (request.resource.metadata == null || request.resource.metadata.size() == 0)
+        && accountActive(userId)
+        && assetDocOk(userId, folder, fileName);
+    }
+
+    match /users/{userId}/{folder}/{fileName} {
+      allow get: if verifiedOwner(userId);
+      // create + update (overwrite, e.g. the ink layer) share the same checks.
+      allow create, update: if uploadOk(userId, folder, fileName);
+      // Delete needs no Firestore check, so account deletion works even after
+      // asset docs are gone, and "delete audio older than X" stays simple.
+      allow delete: if verifiedOwner(userId);
+    }
+
+    // Listing one folder of your own (account deletion and the storage manager).
+    // Only `list` is granted here; get/write/delete come from the block above.
+    match /users/{userId}/{prefix=**} {
+      allow list: if verifiedOwner(userId);
+    }
+
+    // Everything else: implicit DENY.
+  }
+}
