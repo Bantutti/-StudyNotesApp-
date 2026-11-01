@@ -18,7 +18,7 @@ and the rules every later phase follows.
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX. Gaegu (Pastel Highlight's header, ~3 MB per weight, full Korean set) is why `MAX_FONT_BASE64` is 4.5 M and fonts cross the bridge one face per message; P5 replaces it with a Latin subset |
+| Fonts | @expo-google-fonts (SIL OFL): the 22 families of the 13 v1 packs (P5) | Bundled, licence allows embedding in PDF/DOCX. The four large Korean/Japanese families without Reserved Font Names (Gaegu, Gowun Dodum, Mochiy Pop One, Zen Maru Gothic) ship as generated Latin subsets (`npm run build:fonts`), so `MAX_FONT_BASE64` is back to 3 M (largest face: Nanum Gothic Bold, 2.76 M). Fonts still cross the bridge one face per message (P1 PR #9) |
 
 ## Modules
 

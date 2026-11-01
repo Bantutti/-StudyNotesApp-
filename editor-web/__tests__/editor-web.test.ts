@@ -163,10 +163,12 @@ describe('font faces in the page (sent one per message)', () => {
     expect(st.count).toBe(1);
   });
 
-  it('accepts a Gaegu-sized face (4.2 M chars) and rejects invalid ones without changing anything', () => {
+  it('accepts the largest shipped face (Nanum Gothic Bold, 2.76 M chars) and rejects invalid ones without changing anything', () => {
+    // P5: Gaegu ships as a Latin subset, so the cap is back to 3 M (was 4.5 M in P1 PR #9).
     const st = createFontState();
-    expect(st.apply([face('Gaegu', 400, 'A'.repeat(4_219_900))], false)).not.toBeNull();
-    expect(st.apply([face('Gaegu', 700, 'A'.repeat(4_500_001))], true)).toBeNull(); // over MAX_FONT_BASE64
+    expect(st.apply([face('Nanum Gothic', 700, 'A'.repeat(2_763_184))], false)).not.toBeNull();
+    expect(st.apply([face('Gaegu', 700, 'A'.repeat(3_000_001))], true)).toBeNull(); // over MAX_FONT_BASE64
+    expect(st.apply([face('Gaegu', 400, 'A'.repeat(4_219_900))], true)).toBeNull(); // the old full Gaegu file
     expect(st.apply([face('Comic Sans')], true)).toBeNull(); // not an allowed family
     expect(st.apply([{ ...face('Nunito'), base64: 'x<y' }], true)).toBeNull();
     expect(st.count).toBe(1);
