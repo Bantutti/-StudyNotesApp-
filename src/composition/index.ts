@@ -3,7 +3,7 @@ export { createServices, createServicesWith, type Services, type Adapters } from
 export { usePackFaces, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
-export { createTapUnlock, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
+export { createTapUnlock, devMenuUnlocked, devToolsAllowed, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
 export * from './useCases';
 export { runEditorAction, beautifyLiteAction, beautifyMessage, type ActionOutcome } from './editorActions';
 export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOINT_MS } from './versions';

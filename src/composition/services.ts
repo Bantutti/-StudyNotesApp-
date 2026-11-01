@@ -44,7 +44,7 @@ import { createTemplateRegistry, type TemplateRegistry } from '@/modules/templat
 import { createGroqTranscriber, fileSizeOf, type TranscriptionProvider } from '@/modules/voice';
 import { Directory, Paths } from 'expo-file-system';
 
-import type { AppDataDeps } from './appData';
+import { devToolsAllowed, type AppDataDeps } from './appData';
 import { beautifyLiteAction } from './editorActions';
 
 import { createNoteStore, type NoteStore } from './noteStore';
@@ -67,6 +67,8 @@ export interface Services {
   editorActions: EditorActionRegistry;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
+  /** Developer menu allowed in this build (dev mode or a development build only). */
+  devTools: boolean;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
 }
 
@@ -82,6 +84,8 @@ export interface Adapters {
   randomBytes: (n: number) => Uint8Array;
   device: ReturnType<typeof getDeviceInfo>;
   isDev: boolean;
+  /** EAS build profile (EXPO_PUBLIC_APP_VARIANT from eas.json), unset in Expo Go and local runs. */
+  appVariant?: string | null;
   linkPorts: LinkPorts;
   database: Pick<AppDataDeps, 'openDriver' | 'deleteDatabase' | 'wipeFiles'>;
 }
@@ -113,6 +117,7 @@ export function createServicesWith(a: Adapters): Services {
     links: createLinkOpener(a.linkPorts),
     templates: createTemplateRegistry(),
     editorActions: createEditorActionRegistry([beautifyLiteAction]),
+    devTools: devToolsAllowed({ isDev: a.isDev, variant: a.appVariant }),
     appData: {
       ...a.database,
       wipeSecrets: () => keyVault.remove('groq'),
@@ -147,6 +152,7 @@ export function createServices(): Services {
     randomBytes: secureRandomBytes,
     device: getDeviceInfo(),
     isDev: __DEV__,
+    appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? null,
     linkPorts: expoLinkPorts,
     database: { openDriver: () => openExpoDriver(), deleteDatabase: () => deleteExpoDatabase(), wipeFiles: wipeAppFiles },
   });

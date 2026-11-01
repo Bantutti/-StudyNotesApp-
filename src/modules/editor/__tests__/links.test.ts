@@ -1,6 +1,9 @@
+import { domainToASCII } from 'node:url';
+
 import { decode, encode, toNativeSchema } from '../protocol';
 import { allowNavigation } from '../webviewPolicy';
 import { createLinkOpener, linkHost, type LinkPorts } from '../links';
+import { punycodeEncode, toAsciiHost } from '../punycode';
 
 function ports(answer = true) {
   const opened: string[] = [];
@@ -75,5 +78,48 @@ describe('links open outside the app (Apple age-rating rule)', () => {
   it('shows a readable host', () => {
     expect(linkHost('HTTPS://Docs.Example.COM:8443/x')).toBe('docs.example.com:8443');
     expect(linkHost('mailto:prof@school.edu')).toBe('prof@school.edu');
+  });
+});
+
+describe('link spoofing (review L1)', () => {
+  it('rejects backslashes: "https://evil.example\\@good.example/" would open evil.example', async () => {
+    const { p, opened, asked } = ports(true);
+    const open = createLinkOpener(p);
+    expect(await open('https://evil.example\\@good.example/')).toBe('rejected');
+    expect(await open('https://good.example\\evil')).toBe('rejected');
+    expect(asked).toEqual([]);
+    expect(opened).toEqual([]);
+  });
+
+  it('shows internationalized hosts as punycode, the way browsers resolve them', async () => {
+    const { p, asked } = ports(false);
+    await createLinkOpener(p)('https://bücher.example/a');
+    expect(asked[0]?.host).toBe('xn--bcher-kva.example');
+    // Cyrillic "а" (U+0430) in a look-alike of apple.com
+    expect(linkHost('https://\u0430pple.com/')).toBe('xn--pple-43d.com');
+    expect(linkHost('https://xn--pple-43d.com/')).toBe('xn--pple-43d.com');
+    // Unicode full stops separate labels too
+    expect(linkHost('https://good\u3002example/')).toBe('good.example');
+    expect(linkHost('https://User:pw@Example.COM:8443/x')).toBe('example.com:8443');
+  });
+
+  it('punycode matches RFC 3492 sample strings', () => {
+    expect(punycodeEncode('bücher')).toBe('bcher-kva');
+    expect(punycodeEncode('münchen')).toBe('mnchen-3ya');
+    expect(punycodeEncode('пример')).toBe('e1afmkfd');
+    expect(punycodeEncode('☃')).toBe('n3h');
+    expect(punycodeEncode('例え')).toBe('r8jz45g');
+    // RFC 3492 7.1 (B) Chinese (simplified)
+    expect(punycodeEncode('\u4ED6\u4EEC\u4E3A\u4EC0\u4E48\u4E0D\u8BF4\u4E2D\u6587')).toBe('ihqwcrb4cv8a8dqg056pqjye');
+    expect(toAsciiHost('Ünïcode.Example')).toBe('xn--ncode-cta3g.example');
+  });
+
+  it('agrees with Node\'s WHATWG host parser on mixed scripts', () => {
+    const hosts = ['bücher.de', 'παράδειγμα.δοκιμή', '例え.テスト', 'مثال.إختبار', 'ex\u0430mple.com', 'café.fr', 'straße.example', 'ﬁle.example', 'ⓐbc.example', 'BÜCHER.DE', 'ｅｘａｍｐｌｅ.com'];
+    for (const h of hosts) {
+      const node = domainToASCII(h);
+      expect(node).not.toBe('');
+      expect(toAsciiHost(h)).toBe(node);
+    }
   });
 });
