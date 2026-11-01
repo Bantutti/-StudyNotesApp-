@@ -63,3 +63,17 @@ export function utf16StringList(maxItems: number, itemMin: number, itemMax: numb
 
 export const entityIdSchema = z.string().regex(ENTITY_ID_PATTERN);
 export const refIdSchema = z.string().regex(REF_ID_PATTERN);
+
+/**
+ * Validators for synced text fields, all counting UTF-16 units like the
+ * Firestore rules (P2a MERGE_NOTES §6.2). Use these, never z.string().max(),
+ * for anything that syncs.
+ */
+export const syncedText = {
+  subjectName: utf16String(1, TEXT_LIMITS.subjectName),
+  folderName: utf16String(1, TEXT_LIMITS.folderName),
+  noteTitle: utf16String(0, TEXT_LIMITS.noteTitle),
+  tag: utf16String(1, TEXT_LIMITS.tag),
+  cardFront: utf16String(1, TEXT_LIMITS.cardFront),
+  cardBack: utf16String(0, TEXT_LIMITS.cardBack),
+} as const;

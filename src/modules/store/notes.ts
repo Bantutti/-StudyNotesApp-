@@ -2,7 +2,6 @@
  * Notes repository. A save writes the note row and its search rows in ONE
  * transaction, so search never disagrees with the note.
  */
-import * as z from 'zod';
 
 import {
   AppError,
@@ -13,6 +12,7 @@ import {
   refIdSchema,
   TEXT_LIMITS,
   LIST_LIMITS,
+  syncedText,
   type IdGenerator,
   type NoteDoc,
 } from '@/core';
@@ -27,7 +27,8 @@ export interface NotesDeps {
   now: () => number;
 }
 
-const tagItem = z.string().min(1).max(TEXT_LIMITS.tag);
+/** Tags read back from storage or sync: UTF-16 counting like the Firestore rules. */
+const tagItem = syncedText.tag;
 
 /** Cleans and validates tags: trimmed, unique (case-insensitive), 1..40 UTF-16 units, at most 20. */
 export function cleanTags(input: readonly string[]): string[] {
@@ -36,7 +37,7 @@ export function cleanTags(input: readonly string[]): string[] {
   for (const raw of input) {
     const t = cleanLine(raw).replace(/^#+/, '');
     if (!t) continue;
-    if (t.length > TEXT_LIMITS.tag) throw new AppError('validation_failed', `Tags can be at most ${TEXT_LIMITS.tag} characters.`);
+    if (!syncedText.tag.safeParse(t).success) throw new AppError('validation_failed', `Tags can be at most ${TEXT_LIMITS.tag} characters.`);
     const k = t.toLocaleLowerCase();
     if (seen.has(k)) continue;
     seen.add(k);
@@ -48,7 +49,7 @@ export function cleanTags(input: readonly string[]): string[] {
 
 export function cleanTitle(input: string): string {
   const t = cleanLine(input);
-  if (t.length > TEXT_LIMITS.noteTitle) {
+  if (!syncedText.noteTitle.safeParse(t).success) {
     throw new AppError('validation_failed', `Titles can be at most ${TEXT_LIMITS.noteTitle} characters.`);
   }
   return t;

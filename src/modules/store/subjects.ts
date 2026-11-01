@@ -7,6 +7,7 @@ import {
   ICON_PATTERN,
   LIST_LIMITS,
   refIdSchema,
+  syncedText,
   TEXT_LIMITS,
   type IdGenerator,
 } from '@/core';
@@ -28,7 +29,8 @@ const examDate = z.number().int().min(0).max(8_640_000_000_000_000);
 function cleanName(input: string, max: number, what: string): string {
   const n = cleanLine(input);
   if (!n) throw new AppError('validation_failed', `Give the ${what} a name.`);
-  if (n.length > max) throw new AppError('validation_failed', `${what[0]?.toUpperCase()}${what.slice(1)} names can be at most ${max} characters.`);
+  const rule = what === 'subject' ? syncedText.subjectName : syncedText.folderName; // UTF-16 counting (P2a §6.2)
+  if (!rule.safeParse(n).success) throw new AppError('validation_failed', `${what[0]?.toUpperCase()}${what.slice(1)} names can be at most ${max} characters.`);
   return n;
 }
 

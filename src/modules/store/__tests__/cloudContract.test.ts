@@ -1,24 +1,34 @@
 /**
- * Contract test: local rows -> P2a cloud docs.
+ * Contract test: P1 data -> P2a cloud docs (firebase/src/schemas on main).
  *
- * Maps every local table row to the cloud document P2b will upload and
- * validates it with P2a's own zod schemas (firebase/src/schemas). This
- * proves the tables are a 1:1 copy and that P1's documents (block ids in
- * attrs.blockId, decision Q7) pass the cloud checks.
- *
- * Runs only when firebase/ is in the tree (P2a merged into main); skipped
- * otherwise. toCloudDoc() is the reference mapping for P2b's sync module.
+ * - Every local table row, mapped by toCloudDoc(), validates with P2a's own
+ *   zod schema (the 1:1 table contract P2b's sync relies on).
+ * - Every document P1 can produce passes P2a's noteDocumentSchema: the
+ *   sample note, the long sample after ensureBlockIds, all 7 templates and
+ *   Beautify Lite output (block ids live in attrs.blockId, decision Q7).
+ * - Core's mirrored limits equal P2a's limits.ts.
+ * toCloudDoc() is the reference row -> cloud mapping for P2b's sync module.
  */
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  createSeqIdGenerator,
+  DOCUMENT_LIMITS,
+  ENTITY_ID_PATTERN,
+  ensureBlockIds,
+  HEX6_PATTERN,
+  ICON_PATTERN,
+  LIST_LIMITS,
+  makeLongSample,
+  SAMPLE_NOTE,
+  SETTINGS_MAX_CHARS,
+  TEXT_LIMITS,
+  type NoteDoc,
+} from '@/core';
+import { beautifyLite } from '@/modules/beautify';
+import { createTemplateRegistry, instantiateTemplate } from '@/modules/templates';
 
-import { SAMPLE_NOTE } from '@/core';
-
+import * as p2a from '../../../../firebase/src/schemas';
 import type { SqlRow } from '../sql';
 import { makeStore } from './helpers';
-
-const SCHEMAS = join(__dirname, '../../../../firebase/src/schemas/index.ts');
-const describeIfP2a = existsSync(SCHEMAS) ? describe : describe.skip;
 
 const UID = 'test-uid-0001';
 const BOOL_FIELDS = new Set(['deleted', 'aiAllowed', 'autoMakeCards', 'sourceChanged', 'suspended', 'createdFromReference']);
@@ -26,11 +36,7 @@ const TIME_FIELDS = new Set(['created', 'updated', 'deletionRequestedAt', 'revie
 const LIST_FIELDS: Record<string, 'time' | 'plain'> = { examDates: 'time', tags: 'plain', bookmarks: 'plain' };
 const LOCAL_ONLY = new Set(['localPath']);
 
-const ts = (ms: number) => ({
-  seconds: Math.floor(ms / 1000),
-  nanoseconds: (ms % 1000) * 1_000_000,
-  toMillis: () => ms,
-});
+const ts = (ms: number) => ({ seconds: Math.floor(ms / 1000), nanoseconds: (ms % 1000) * 1_000_000, toMillis: () => ms });
 
 /** The row -> cloud doc mapping P2b's sync module must implement. */
 export function toCloudDoc(row: SqlRow, uid: string): Record<string, unknown> {
@@ -49,15 +55,19 @@ export function toCloudDoc(row: SqlRow, uid: string): Record<string, unknown> {
   return out;
 }
 
-describeIfP2a('local rows match P2a cloud schemas', () => {
+const docOk = (d: unknown) => {
+  const r = p2a.noteDocumentSchema.safeParse(d);
+  if (!r.success) throw new Error(JSON.stringify(r.error.issues));
+  return true;
+};
+
+describe('local rows match P2a cloud schemas', () => {
   it('every table row validates as its cloud document', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- optional module, present only after P2a merges
-    const p2a = require(SCHEMAS) as Record<string, { safeParse(v: unknown): { success: boolean; error?: { issues: unknown[] } } }>;
     const { store, driver } = await makeStore();
     const s = await store.subjects.create({ name: 'Biology 😀', color: '#4f7cf7', examDates: [Date.UTC(2026, 11, 1)] });
     const f = await store.folders.create({ subject: s.id, name: 'Week 1' });
-    const n = await store.notes.create({ stylePackId: 'pastel-highlight', subject: s.id, folder: f.id, title: 'Osmosis', tags: ['exam'], document: SAMPLE_NOTE });
-    const empty = await store.notes.create({ stylePackId: 'clear-read' });
+    const n = await store.notes.create({ stylePackId: 'pastel-highlight', subject: s.id, folder: f.id, title: 'Osmosis', tags: ['exam', '😀😀'], document: SAMPLE_NOTE });
+    await store.notes.create({ stylePackId: 'clear-read' });
     const gone = await store.notes.create({ stylePackId: 'clear-read', title: 'bye' });
     await store.notes.remove([gone.id]);
     const raw = driver.raw;
@@ -70,29 +80,79 @@ describeIfP2a('local rows match P2a cloud schemas', () => {
     raw.exec(`INSERT INTO stylePacks (id, created, updated, version, definition) VALUES ('p_0000000000000901', 1, 1, 1, '{"schema":3}')`);
     raw.exec(`INSERT INTO templates (id, created, updated, version, definition) VALUES ('t_0000000000000901', 1, 1, 1, '{"id":"cornell"}')`);
 
-    const pairs: [string, string][] = [
-      ['users', 'userSchema'], ['subjects', 'subjectSchema'], ['folders', 'folderSchema'], ['notes', 'noteSchema'],
-      ['cards', 'cardSchema'], ['reviewLogs', 'reviewLogSchema'], ['recordings', 'recordingSchema'],
-      ['assets', 'assetSchema'], ['stylePacks', 'stylePackSchema'], ['templates', 'templateSchema'],
-    ];
-    for (const [table, schemaName] of pairs) {
+    const pairs = [
+      ['users', p2a.userSchema], ['subjects', p2a.subjectSchema], ['folders', p2a.folderSchema], ['notes', p2a.noteSchema],
+      ['cards', p2a.cardSchema], ['reviewLogs', p2a.reviewLogSchema], ['recordings', p2a.recordingSchema],
+      ['assets', p2a.assetSchema], ['stylePacks', p2a.stylePackSchema], ['templates', p2a.templateSchema],
+    ] as const;
+    for (const [table, schema] of pairs) {
       const rows = raw.prepare(`SELECT * FROM ${table}`).all() as SqlRow[];
       expect(rows.length).toBeGreaterThan(0);
       for (const row of rows) {
-        const docObj = toCloudDoc({ ...row }, UID);
-        if (table === 'users') docObj.id = UID;
-        const r = p2a[schemaName]!.safeParse(docObj);
-        if (!r.success) throw new Error(`${table} row failed ${schemaName}: ${JSON.stringify(r.error?.issues)}`);
+        const cloud = toCloudDoc({ ...row }, UID);
+        if (table === 'users') cloud.id = UID;
+        const r = (schema as { safeParse(v: unknown): { success: boolean; error?: { issues: unknown[] } } }).safeParse(cloud);
+        if (!r.success) throw new Error(`${table} row failed: ${JSON.stringify(r.error?.issues)}`);
       }
     }
-    expect(empty.id).toBeTruthy();
   });
 
-  it('a document that uses attrs.id instead of attrs.blockId is rejected by the cloud schema', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see above
-    const { noteDocumentSchema } = require(SCHEMAS) as { noteDocumentSchema: { safeParse(v: unknown): { success: boolean } } };
+  it('notes made from every template and Beautify Lite output store as valid cloud notes', async () => {
+    const { store, driver } = await makeStore();
+    const reg = createTemplateRegistry();
+    for (const t of reg.list()) {
+      await store.notes.create({ stylePackId: 'pastel-highlight', document: instantiateTemplate(t, { ids: createSeqIdGenerator(), dateText: 'Sunday, 1 November 2026' }) });
+    }
+    const messy: NoteDoc = {
+      type: 'doc',
+      content: ['NOTES:', 'Osmosis :: water moves', '- one', '- two', 'Q: why?', 'A: because', 'Tip: revise'].map((text) => ({ type: 'paragraph' as const, content: [{ type: 'text' as const, text }] })),
+    };
+    const n = await store.notes.create({ stylePackId: 'clear-read', document: messy });
+    const ids = createSeqIdGenerator();
+    await store.notes.save(n.id, { document: beautifyLite((await store.notes.get(n.id))!.document, ids).doc });
+    const rows = driver.raw.prepare('SELECT * FROM notes').all() as SqlRow[];
+    expect(rows).toHaveLength(reg.list().length + 1);
+    for (const row of rows) {
+      const r = p2a.noteSchema.safeParse(toCloudDoc({ ...row }, UID));
+      if (!r.success) throw new Error(JSON.stringify(r.error.issues));
+    }
+  });
+});
+
+describe('P1 documents pass P2a noteDocumentSchema (attrs.blockId)', () => {
+  it('the sample note', () => expect(docOk(SAMPLE_NOTE)).toBe(true));
+
+  it('the long sample once ensureBlockIds has run (and not before: its ids are null)', () => {
+    const long = makeLongSample(25);
+    expect(p2a.noteDocumentSchema.safeParse(long).success).toBe(false);
+    expect(docOk(ensureBlockIds(long, createSeqIdGenerator()))).toBe(true);
+  });
+
+  it('all 7 templates', () => {
+    const reg = createTemplateRegistry();
+    expect(reg.list()).toHaveLength(7);
+    for (const t of reg.list()) expect(docOk(instantiateTemplate(t, { ids: createSeqIdGenerator(), dateText: 'x' }))).toBe(true);
+  });
+
+  it('Beautify Lite output', () => {
+    expect(docOk(beautifyLite(SAMPLE_NOTE, createSeqIdGenerator()).doc)).toBe(true);
+  });
+
+  it('a document using attrs.id instead of attrs.blockId is rejected', () => {
     const wrong = { type: 'doc', content: [{ type: 'paragraph', attrs: { id: 'b_x' }, content: [{ type: 'text', text: 'x' }] }] };
-    expect(noteDocumentSchema.safeParse(wrong).success).toBe(false);
-    expect(noteDocumentSchema.safeParse(SAMPLE_NOTE).success).toBe(true);
+    expect(p2a.noteDocumentSchema.safeParse(wrong).success).toBe(false);
+  });
+});
+
+describe('core limits mirror P2a limits.ts', () => {
+  it('uses the same numbers and patterns', () => {
+    expect(TEXT_LIMITS).toEqual(p2a.TEXT);
+    expect(LIST_LIMITS).toEqual(p2a.LISTS);
+    expect(DOCUMENT_LIMITS.maxChars).toBe(p2a.JSON_CAPS.document);
+    expect(DOCUMENT_LIMITS.maxBytes).toBe(p2a.JSON_CAPS.documentBytes);
+    expect(SETTINGS_MAX_CHARS).toBe(p2a.JSON_CAPS.settings);
+    expect(String(ENTITY_ID_PATTERN)).toBe(String(p2a.ENTITY_ID_PATTERN));
+    expect(String(HEX6_PATTERN)).toBe(String(p2a.HEX6_PATTERN));
+    expect(String(ICON_PATTERN)).toBe(String(p2a.ICON_PATTERN));
   });
 });

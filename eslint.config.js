@@ -13,6 +13,8 @@ module.exports = defineConfig([
       'exports/*',
       'editor-web/dist/*',
       'src/modules/editor/generated/*',
+      // firebase/ is a separate npm project (P2a) with its own ESLint config and tsconfig.
+      'firebase/**',
       '.expo/*',
     ],
   },
