@@ -7,11 +7,11 @@ import { contrast, createPackRegistry, CUSTOM_PACK_ID, isCustomPackId, validateP
 
 import { analyzeImages, type LookAnalysis } from '../analysis/analyze';
 import { mulberry32 } from '../analysis/kmeans';
-import { blendPacks, blendSteps, BLEND_STEPS } from '../build/blend';
-import { buildPack, PackBuildError } from '../build/builder';
-import { newCustomPackId } from '../build/ids';
-import { rankPacks } from '../build/nearest';
-import { nudgeLightness, repairContrast } from '../build/repair';
+import { blendPacks, blendSteps, BLEND_STEPS } from '../pack/blend';
+import { buildPack, PackBuildError } from '../pack/builder';
+import { newCustomPackId } from '../pack/ids';
+import { rankPacks } from '../pack/nearest';
+import { nudgeLightness, repairContrast } from '../pack/repair';
 import { deltaE, hexToLab } from '../color/oklab';
 
 import { synthPage } from './helpers/synthPage';

@@ -8,9 +8,9 @@ import type { RandomBytes } from '@/core';
 import type { StylePack } from '@/modules/stylepacks';
 
 import { analyzeImagesAsync, type AnalyzeProgress, type LookAnalysis } from './analysis/analyze';
-import { buildPack } from './build/builder';
-import { newCustomPackId } from './build/ids';
-import { rankPacks } from './build/nearest';
+import { buildPack } from './pack/builder';
+import { newCustomPackId } from './pack/ids';
+import { rankPacks } from './pack/nearest';
 import { intakeImages, type ImageIntakePorts, type PickedImage } from './image/intake';
 
 export interface MatchResult {

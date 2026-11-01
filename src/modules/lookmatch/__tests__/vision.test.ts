@@ -4,8 +4,8 @@
 import { createPackRegistry, ENUMS, validatePack } from '@/modules/stylepacks';
 
 import { analyzeImages } from '../analysis/analyze';
-import { buildPack } from '../build/builder';
-import { rankPacks } from '../build/nearest';
+import { buildPack } from '../pack/builder';
+import { rankPacks } from '../pack/nearest';
 import {
   FONT_MOODS,
   runVisionPass,

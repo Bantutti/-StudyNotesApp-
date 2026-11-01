@@ -44,7 +44,7 @@ in P5 runs in Expo Go. The step-by-step checks are in **§8 "P5: style packs and
 ## 3. Tests and checks (clean install, Node 24.22.1, npm 11.19.1, Linux sandbox)
 | Check | Result |
 |---|---|
-| `npm run verify` (check:editor, check:fonts, typecheck, lint, Jest, secretlint, audit:prod) | pass: 782 passed / 10 skipped (opt-in live AI), 73 suites; prod audit 0 |
+| `npm run verify` (check:editor, check:fonts, typecheck, lint, Jest, secretlint, audit:prod) | pass: 783 passed / 10 skipped (opt-in live AI), 73 suites; prod audit 0 |
 | `npm run audit:all` | 7 low (jest's dev-only deepmerge chain, unchanged from main); 0 moderate or higher |
 | `npm run bundle:check` | Android and iOS bundles build (8.9 MB each) |
 | P5 tests | about 130 new: packs and fonts, JPEG strip (Pillow-made Exif/GPS/XMP fixtures), intake caps, OKLab and k-means, analysis on SYNTHETIC pages of all 13 packs, fuzz (1,000 analyses give 1,000 valid packs), blend, ids, store and cloud contract, custom packs end to end, vision gates and request shape |
@@ -59,6 +59,7 @@ in P5 runs in Expo Go. The step-by-step checks are in **§8 "P5: style packs and
 | P5-S4 | Info | Accepted: Android CAMERA permission (asked on demand), listed for C1 and P7 |
 | P5-S5 | Info | Accepted: deleting a look moves notes without a version (content unchanged) |
 | P5-S6 | Low | Fixed: the font cap is back to 3 M after the subsets |
+| P5-S7 | Low | Fixed: a source folder named `build` was dropped by the export rules; renamed to `pack`, with a test that every source file is exported |
 
 No high-severity findings are open. Photos are untrusted at every step, and so are packs (validated on save
 and on load) and AI output (enums only). Keys and photos never appear in logs (tests).

@@ -22,7 +22,7 @@ import * as z from 'zod';
 
 import { ENUMS, type StylePack } from '@/modules/stylepacks';
 
-import type { VisionHints } from './build/builder';
+import type { VisionHints } from './pack/builder';
 
 /** Feature flag (Lead, Nov 1: on by default, kept so it can be turned off). */
 export const VISION_MATCH_ENABLED = true;

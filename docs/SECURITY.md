@@ -272,6 +272,7 @@ No high-severity findings are open.
 | P5-S3 | Info | The pre-decode pixel check trusts the picker's width and height. | **Accepted:** the decoder still downsamples while reading (`maxWidth`/`maxHeight`), the decoded size is checked, and the analysis copy is at most 384 px. |
 | P5-S4 | Info | expo-image-picker adds the Android CAMERA permission (asked only when "Take a photo" is tapped). | **Accepted:** listed for C1's store forms and P7 (MERGE_NOTES). No photo or media-library permission is requested. |
 | P5-S5 | Info | Deleting a custom pack moves its notes to the default pack without a "before style change" version. | **Accepted:** content and block ids are unchanged; only the look moves. |
+| P5-S7 | Low | Gate check: the export rules drop any folder named `build` (build output), so `src/modules/lookmatch/build/` (source code) was missing from the phase zip. | **Fixed:** renamed to `lookmatch/pack`; new test `exportRules.test.ts` asserts every file under `src/`, `editor-web/src` and `scripts/` is exported. |
 | P5-S6 | Low | P1 PR #9 had raised `MAX_FONT_BASE64` to 4.5 M for the full Gaegu files. | **Fixed:** Latin subsets; cap back to 3 M (largest face 2,763,184 chars); test pins it. |
 
 No high-severity findings are open.
