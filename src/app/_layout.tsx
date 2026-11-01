@@ -7,7 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AppDataProvider, ServicesProvider, useServices } from '@/composition';
+import { AppDataProvider, CustomPackLoader, ServicesProvider, useServices } from '@/composition';
 import { ThemeProvider, useTheme } from '@/core/ui';
 
 function Navigator() {
@@ -41,6 +41,8 @@ function Navigator() {
         <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
         <Stack.Screen name="font-licenses" options={{ title: 'Font licences' }} />
+        <Stack.Screen name="match" options={{ presentation: 'modal', title: 'Match a look' }} />
+        <Stack.Screen name="looks" options={{ title: 'Your looks' }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
       </Stack>
     </>
@@ -51,6 +53,7 @@ function WithData() {
   const { appData } = useServices();
   return (
     <AppDataProvider deps={appData}>
+      <CustomPackLoader />
       <Navigator />
     </AppDataProvider>
   );

@@ -37,7 +37,7 @@ describe('app routes', () => {
     const files = appFiles();
     expect(files.some((f) => f.includes('__tests__') || f.includes('.test.'))).toBe(false);
     const routes = routesOf(files);
-    for (const r of ['/(tabs)/home', '/(tabs)/subjects', '/(tabs)/me', '/onboarding/look', '/onboarding/subject', '/note/[id]', '/subject/[id]', '/inbox', '/new', '/dev/editor', '/templates', '/history/[id]', '/version/[id]', '/style/[id]', '/search', '/dev/typing']) {
+    for (const r of ['/(tabs)/home', '/(tabs)/subjects', '/(tabs)/me', '/onboarding/look', '/onboarding/subject', '/note/[id]', '/subject/[id]', '/inbox', '/new', '/dev/editor', '/templates', '/history/[id]', '/version/[id]', '/style/[id]', '/search', '/dev/typing', '/match', '/looks', '/font-licenses']) {
       expect(routes).toContain(r);
     }
   });

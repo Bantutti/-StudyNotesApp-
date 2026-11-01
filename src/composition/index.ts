@@ -10,3 +10,5 @@ export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOIN
 export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
 export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
 export { createNoteSession, type NoteSession } from './noteSession';
+export { cleanPackName, loadCustomPacks, saveCustomPack, renameCustomPack, deleteCustomPack, packIsAvailable, PACK_NAME_MAX } from './customPacks';
+export { CustomPackLoader } from './CustomPackLoader';

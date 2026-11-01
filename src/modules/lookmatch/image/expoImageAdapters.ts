@@ -5,7 +5,7 @@
  * UNVERIFIED until Rey's device test: EXIF absence on real phone photos
  * (backed up by stripJpegMetadata), Skia readPixels in Expo Go.
  */
-import { AlphaType, ColorType, Skia } from '@shopify/react-native-skia';
+import type * as SkiaModule from '@shopify/react-native-skia';
 import { File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,6 +14,16 @@ import type { RgbaImage } from '../analysis/pixels';
 
 import type { EncodedCopy, ImageIntakePorts, PickedImage } from './intake';
 import { MAX_IMAGES } from './limits';
+
+/**
+ * React Native Skia, loaded on first decode. Importing it at the top would
+ * initialise its native module when the app (or a test) merely imports the
+ * lookmatch index; only Match a look needs it.
+ */
+function skia(): typeof SkiaModule {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- deliberate lazy load (see above)
+  return require('@shopify/react-native-skia') as typeof SkiaModule;
+}
 
 export type PickOutcome = { kind: 'picked'; images: PickedImage[] } | { kind: 'cancelled' } | { kind: 'denied' };
 
@@ -79,6 +89,7 @@ export const expoImagePorts: ImageIntakePorts = {
     }
   },
   decodeJpeg(base64): RgbaImage {
+    const { AlphaType, ColorType, Skia } = skia();
     const data = Skia.Data.fromBase64(base64);
     const img = Skia.Image.MakeImageFromEncoded(data);
     if (!img) throw new Error('decode_failed');

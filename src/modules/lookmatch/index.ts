@@ -28,3 +28,6 @@ export { blendPacks, blendSteps, BLEND_STEPS } from './build/blend';
 export { rankPacks, packDistance } from './build/nearest';
 export { repairContrast, nudgeLightness } from './build/repair';
 export { newCustomPackId } from './build/ids';
+export { chipOptions, enumLabel, type ChipOptions, type ColorOption, type FontOption } from './chips';
+export { runMatch, type MatchResult } from './flow';
+export { BlendStepper } from './BlendStepper';

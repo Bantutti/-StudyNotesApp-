@@ -64,6 +64,8 @@ export default function StyleSheetScreen() {
       <SectionHeader>Look</SectionHeader>
       <LivePreview id={note.stylePackId} doc={note.document} />
       <PackPicker packs={packs} customIds={customIds} selected={note.stylePackId} onSelect={choose} testIDPrefix="style" />
+      <AppButton kind="secondary" icon="color-palette-outline" label="Match a look from a photo" onPress={() => router.push({ pathname: '/match', params: { note: note.id } })} testID="style-match" />
+      {customIds.size > 0 ? <AppButton kind="plain" icon="create-outline" label="Rename or delete your looks" onPress={() => router.push('/looks')} /> : null}
       {msg ? <Caption>{msg}</Caption> : null}
       {note.subject ? <AppButton kind="secondary" icon="albums-outline" label="Use this look for the subject" onPress={forSubject} /> : null}
       <AppButton kind="secondary" icon="star-outline" label="Use this look for new notes" onPress={forNew} />

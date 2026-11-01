@@ -10,6 +10,7 @@ import { DEFAULT_PACK_ID, isBuiltInPackId, isCustomPackId } from '@/modules/styl
 import { applyTemplateTo, formatTemplateDate, instantiateTemplate, type TemplateRegistry } from '@/modules/templates';
 
 import { KEY_LAST_NOTE, KEY_ONBOARDED, KV_APP } from './appData';
+import { packIsAvailable } from './customPacks';
 
 export const SAMPLE_TAG = 'sample';
 const DAY = 86_400_000;
@@ -256,7 +257,7 @@ export function relativeTime(ms: number, now: number): string {
  * Returns false when the note already uses that pack.
  */
 export async function applyPackToNote(store: Store, noteId: string, packId: string): Promise<boolean> {
-  if (!isOfferedPack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  if (!(await packIsAvailable(store, packId, isBuiltInPackId))) throw new AppError('validation_failed', 'That look is not available yet.');
   const note = await store.notes.get(noteId);
   if (!note || note.deleted) throw new AppError('not_found', 'This note no longer exists.');
   if (note.stylePackId === packId) return false;
@@ -266,6 +267,6 @@ export async function applyPackToNote(store: Store, noteId: string, packId: stri
 
 /** "Use for this subject": new notes in the subject start with this pack. */
 export async function setSubjectPack(store: Store, subjectId: string, packId: string): Promise<void> {
-  if (!isOfferedPack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  if (!(await packIsAvailable(store, packId, isBuiltInPackId))) throw new AppError('validation_failed', 'That look is not available yet.');
   await store.subjects.update(subjectId, { defaultPack: packId });
 }

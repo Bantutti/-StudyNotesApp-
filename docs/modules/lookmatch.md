@@ -5,7 +5,7 @@ style pack (schema v3), shown as matched chips with a slider toward the nearest 
 then saved as a custom pack. The output is always pack DATA that `validatePack` accepts; never CSS,
 HTML or URLs. Maths with derivations: `src/modules/lookmatch/MATCH_MATH.md` (code comments cite §X.Y).
 
-Status: P5 in progress. M2 (image intake), M3 (on-device analysis) and M4 (pack builder) are done; M5 (screens) and M6 (vision pass) are coming.
+Status: P5 in progress. M2 (image intake), M3 (on-device analysis), M4 (pack builder) and M5 (screens and saving) are done; M6 (vision pass) is coming.
 
 ## Public interface (so far)
 - `intakeImages(picked, ports, { vision })`: checks, re-encodes, strips metadata, decodes, and
@@ -81,3 +81,24 @@ strip is the backup, tested on Pillow-made JPEGs carrying Exif GPS, XMP and a co
 - `microphonePermission`: the same text as expo-audio's. Setting it to `false` would BLOCK
   `RECORD_AUDIO` on Android and break lecture recording. The picker never records video.
 - `READ/WRITE_EXTERNAL_STORAGE` stay blocked (P1's `android.blockedPermissions`).
+
+## Screens and saving (M5)
+- **Entry points:** + sheet > **Match a look** (`/match`), and the Style sheet's **Match a look from a photo**
+  (`/match?note=<id>`, which previews and applies on that note).
+- **Flow** (`runMatch`): pick (system picker or camera), clean, analyse (progress shown, Cancel), then rank
+  the built-in packs and build a first matched pack, all in memory.
+- **Result:** a live preview on the note (or the sample page); the closest built-in look; the 11-step
+  **BlendStepper** ("Your photo" to the nearest pack, or to this note's look by tapping the swap
+  button); the **chips** Paper, Paper colour, Ink, Header colour, Highlighters (keep or leave out each),
+  Fonts (every pairing a built-in pack uses) and Header style (`chipOptions`). There is no free colour
+  entry and every option is a schema value. Contrast is repaired after every change.
+- **Save:** "Save and use on this note", "Save and use for this subject", or "Just save". Names go
+  through `cleanPackName` (control, zero-width and bidi characters removed; at most 40 characters;
+  markup, CSS and URLs refused).
+- **Your looks** (`/looks`, linked from the Style sheet): rename (version + 1) or delete. Deleting
+  leaves a tombstone with the definition erased; notes and subjects using the pack go back to Pastel
+  Highlight, and the default look is reset if it was this pack.
+- **Storage:** `store.stylePacks` (the local `stylePacks` table, fields 1:1 with P2a's cloud doc;
+  definition capped at 50,000 characters; only `ref-` ids). P2b's triggers sync it. Every load
+  re-validates each definition (`loadCustomPacks` -> `registry.setCustom`); tampered or unreadable rows
+  are skipped and counted. `CustomPackLoader` reloads on every data change, including synced packs.

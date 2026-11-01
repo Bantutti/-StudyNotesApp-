@@ -8,6 +8,11 @@ All notable changes, one section per phase.
 - M1: all 13 v1 packs in the app (Pick your look, Style sheet, subject default), a native PackPicker with
   one live preview, custom pack support in the registry (validated on load), Latin font subsets
   (`npm run build:fonts` / `check:fonts`), 14 more OFL font packages, Me > Font licences.
+- M2-M5: **Match a look** (+ sheet, Style sheet). Reference photos are cleaned (caps, re-encode, Exif/GPS
+  strip) and analysed on the phone (OKLab palette, paper pattern, colour roles, up to 3 photos), turned
+  into a validated custom pack (nearest built-in pack, contrast repair), and tweaked with chips and an
+  11-step slider. Saved locally (`store.stylePacks`, synced by P2b) and re-validated on load. Your looks:
+  rename or delete. `MATCH_MATH.md` documents the maths.
 
 ### Fixed
 - The default pack's Gaegu header font was never loaded (its files exceeded the 3M-character base64 cap);
