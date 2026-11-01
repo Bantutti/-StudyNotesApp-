@@ -74,7 +74,7 @@ free-tier training on notes (Mistral opt-out, Gemini not used).
 | Editor bridge | New messages are strict zod schemas (block ids by pattern, command enum, no HTML). **Typing diagnostics** carry metadata only: event and input types, lengths, flags, offsets; printable keys become "char"; the schema rejects any text field and single-character keys. Off by default, developer menu only. |
 | Developer menu | Hidden behind 7 taps on the version; every `/dev` route redirects home unless enabled, so a deep link can't open it. |
 | Logging | Redaction also drops titles, terms, queries, search, snippets, previews, tags, links and card text fields. |
-| Accessibility of security prompts | Dialogs are native Alerts with plain wording ("This opens example.com in your browser, outside Study Notes."). |
+| Accessibility of security prompts | Dialogs are native Alerts with plain wording ("This opens example.com in your browser, outside NotedPo."). |
 
 ### Untrusted content
 - **Pasted HTML:** parsed in an inert `DOMParser` document; script/style/iframe/object/embed/form/

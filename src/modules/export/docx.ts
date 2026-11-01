@@ -32,7 +32,7 @@ import {
   type ParagraphChild,
 } from 'docx';
 
-import { base64ToBytes, safeHref, type DocNode, type Mark } from '@/core';
+import { base64ToBytes, safeHref, t, type DocNode, type Mark } from '@/core';
 import { highlighterColor, type FontFaceData, type StylePack } from '@/modules/stylepacks';
 
 import { PAPER_POINTS, type ExportInput } from './types';
@@ -306,7 +306,7 @@ export async function buildDocx(input: ExportInput): Promise<Uint8Array> {
   const accent = hexNoHash(pack.palette.accent);
   const document = new Document({
     title: input.title.slice(0, 200),
-    creator: 'Study Notes',
+    creator: t('app.name'),
     background: { color: hexNoHash(pack.paper.color) },
     fonts: embeddedFonts(input.faces),
     styles: {

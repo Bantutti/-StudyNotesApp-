@@ -1,4 +1,4 @@
-# Study Notes App
+# NotedPo (Study Notes App)
 
 Cross-platform (Android + iPhone) study notes app with an aesthetic handwritten-notes look.
 Expo + TypeScript, local-first. **Current phase: P1 (core app)**: the offline app runs in Expo Go on

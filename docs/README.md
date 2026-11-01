@@ -1,4 +1,4 @@
-# Study Notes App: developer README
+# NotedPo (Study Notes App): developer README
 
 ## What it is
 
@@ -24,6 +24,19 @@ P1 is the real offline app (guest mode: no account, no AI key):
 
 Also in the repo: the **P2a backend** (`firebase/`, Firestore and Storage rules with emulator tests) and the
 **P3a AI engine** (`src/modules/ai`, no screens until P3b). Accounts and sync arrive in P2b.
+
+## App identity
+
+| Item | Value | Where |
+|---|---|---|
+| Display name | **NotedPo** | `app.json` `expo.name` and `'app.name'` in `src/core/strings.ts` (every visible use reads it via `{app}`; a test keeps the two equal) |
+| Android package | `com.reyanyan.studynotes.dev` (placeholder) | `app.json` `expo.android.package` |
+| iOS bundle id | `com.reyanyan.studynotes.dev` (placeholder) | `app.json` `expo.ios.bundleIdentifier` |
+
+**TODO (waiting for Rey):** switch both ids to the proposed `io.github.bantutti.notedpo`. Do it in one commit,
+together with the test in `src/core/__tests__/appName.test.ts`. The Android id becomes **permanent at the first
+Google Play upload**, and changing it later means a new app (users would lose their local notes when moving).
+Until then, keep the placeholder.
 
 ## Requirements
 

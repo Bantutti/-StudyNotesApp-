@@ -7,7 +7,8 @@
  * interprets markup). Tone (plan 9.6): short, friendly, specific, never blaming.
  */
 export const EN = {
-  'app.name': 'Study Notes',
+  /** The visible app name: change it here only (app.json "name" must match; a test checks). */
+  'app.name': 'NotedPo',
   'common.cancel': 'Cancel',
   'common.save': 'Save',
   'common.delete': 'Delete',
@@ -28,6 +29,7 @@ export const EN = {
   'welcome.review.title': 'Review',
   'welcome.review.body': 'Definitions and highlights become study cards later.',
   'welcome.start': 'Get started',
+  'welcome.title': 'Welcome to {app}',
   'look.title': 'Pick your look',
   'look.body': 'You can change it any time, for any note.',
   'subject.first.title': 'Add your first subject',
@@ -73,11 +75,13 @@ export const EN = {
   'editor.saved': 'Saved on device',
 
   'link.openTitle': 'Open link?',
-  'link.openBody': 'This opens {host} in your browser, outside Study Notes.',
+  'link.openTitle.hint': 'Select some text first. Links open in your browser, outside {app}.',
+  'link.openBody': 'This opens {host} in your browser, outside {app}.',
 
   'search.empty': 'No notes match "{query}".',
   'me.deleteAll': 'Delete all data',
   'me.deleteAllAsk': 'This deletes every note, subject and setting on this phone. It can’t be undone.',
+  'mic.denied': 'Microphone permission denied. Enable it in Settings > Apps > {app} > Permissions.',
 } as const;
 
 export type StringKey = keyof typeof EN;
@@ -90,10 +94,11 @@ export function setStrings(next: StringTable): void {
   table = next;
 }
 
+/** Fills {placeholders}; {app} is always the app name from this table. */
 export function t(key: StringKey, vars?: Readonly<Record<string, string | number>>): string {
   const s = table[key] ?? EN[key];
-  if (!vars) return s;
-  return s.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
+  const all: Record<string, string | number> = { app: table['app.name'] ?? EN['app.name'], ...vars };
+  return s.replace(/\{(\w+)\}/g, (m, name: string) => (name in all ? String(all[name]) : m));
 }
 
 /** Picks the .one / .other form for a count. */

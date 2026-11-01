@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Study Notes",
+    "name": "NotedPo",
     "slug": "study-notes-app",
     "scheme": "studynotes",
     "version": "0.0.1",
@@ -36,7 +36,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Study Notes records lectures only when you tap Record. Audio stays on this device unless you choose to transcribe it.",
+          "microphonePermission": "NotedPo records lectures only when you tap Record. Audio stays on this device unless you choose to transcribe it.",
           "enableBackgroundRecording": true,
           "enableBackgroundPlayback": false
         }

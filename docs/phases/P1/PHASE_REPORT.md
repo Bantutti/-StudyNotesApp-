@@ -52,7 +52,7 @@ Android APK (no PC needed afterwards): `npx eas-cli@latest build --profile previ
 
 | Gate | Result |
 |---|---|
-| Unit tests | **419 passed**, 10 skipped (P3a opt-in live tests) in 45 suites (app + web). Includes 8 P2a contract tests, 41 editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes |
+| Unit tests | **422 passed**, 10 skipped (P3a opt-in live tests) in 46 suites (app + web). Includes 8 P2a contract tests, 41 editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes |
 | Type check (`tsc --noEmit`, strict) | Pass |
 | Lint (`eslint . --max-warnings 0`, React Compiler rules) | Pass |
 | Editor page integrity (`npm run check:editor`) | Pass: CSP hash matches the single inline script (585,659 bytes, `sha256-LKFRTdTXKTf9bl+xfg2L49464tVyvKOuutQojoiaczg=`) |
@@ -74,9 +74,9 @@ sections 1 and 2 exactly:
 | Unzip to an empty folder; confirm no `.env` inside | Pass (`.env.example` only; `PHASE_REPORT.md` and `TESTING_ON_DEVICE.md` at the root) |
 | `npm ci` | Pass in 17 s (install-script warnings as documented) |
 | `copy .env.example .env` (Linux: `cp`) | Pass |
-| `npm run verify` | Pass: editor page up to date, types, lint, **419/419 tests** (10 skipped), secret scan, prod audit 0 |
+| `npm run verify` | Pass: editor page up to date, types, lint, **422/422 tests** (10 skipped), secret scan, prod audit 0 |
 | `npm run bundle:check` | Pass: Android and iOS Hermes bundles (8.1 MB each) |
-| `npm run start:go` (headless) | Pass: Metro running, manifest `runtimeVersion exposdk:58.0.0` (Expo Go SDK 58), app name "Study Notes", Android dev bundle served (14.3 MB, HTTP 200) |
+| `npm run start:go` (headless) | Pass: Metro running, manifest `runtimeVersion exposdk:58.0.0` (Expo Go SDK 58), app name "NotedPo", Android dev bundle served (14.3 MB, HTTP 200) |
 
 Windows-specific parts (PowerShell `copy`, Windows Firewall prompt, `adb reverse`) and the EAS APK build
 (needs your Expo account) could not be run here; they are written for you to follow.
@@ -110,7 +110,8 @@ private-key, Groq, Google, OpenAI, GitHub, Expo-token or service-account pattern
 - Folders show one level in the screens; drag-to-reorder is replaced by Move up / Move down.
 - No database encryption at rest (decision Q5).
 - Expo Go in the stores runs only the newest Expo SDK; if it moves past SDK 58, use the APK or upgrade.
-- App name "notedpo" and the Android package id are not set yet (store-name check pending).
+- Display name is **NotedPo** (store check found no clash). The Android package and iOS bundle id are still the
+  placeholder `com.reyanyan.studynotes.dev`; `io.github.bantutti.notedpo` is waiting for Rey (TODO in docs/README.md).
 - Backend tests were not re-run in this sandbox (no Java); `firebase/` is unchanged since the P2a merge.
 
 ## 8. What is next

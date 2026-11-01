@@ -1,5 +1,7 @@
 import { Alert, Linking } from 'react-native';
 
+import { t } from '@/core';
+
 import type { LinkPorts } from './links';
 
 /**
@@ -11,8 +13,8 @@ export const expoLinkPorts: LinkPorts = {
   confirm: ({ host, url }) =>
     new Promise((resolve) => {
       Alert.alert(
-        'Open link?',
-        `This opens ${host || 'the link'} in your browser, outside Study Notes.\n\n${url.slice(0, 300)}`,
+        t('link.openTitle'),
+        `${t('link.openBody', { host: host || 'the link' })}\n\n${url.slice(0, 300)}`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           { text: 'Open', onPress: () => resolve(true) },

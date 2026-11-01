@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Text, View } from 'react-native';
 
 import { useServices } from '@/composition';
-import { isExpoGo, round } from '@/core';
+import { isExpoGo, round, t } from '@/core';
 import { Banner, Body, Button, Card, Row, Screen, Segmented, Stat } from '@/core/ui';
 import {
   deleteRecording,
@@ -105,7 +105,7 @@ function Recorder({ preset, onSaved }: { preset: PresetId; onSaved: () => void }
   const start = async () => {
     const perm = await requestRecordingPermissionsAsync();
     if (!perm.granted) {
-      setMessage('Microphone permission denied. Enable it in Settings > Apps > Study Notes > Permissions.');
+      setMessage(t('mic.denied'));
       return;
     }
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, allowsBackgroundRecording: !isExpoGo(), interruptionMode: 'doNotMix' });

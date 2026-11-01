@@ -141,7 +141,7 @@ This builds a real installable app (APK) in the cloud. Free Expo account, no And
    ```powershell
    npm run start:dev
    ```
-6. Open the new **Study Notes** app on the phone (not Expo Go). It finds the server
+6. Open the new **NotedPo** app on the phone (not Expo Go). It finds the server
    on the same Wi-Fi, or scan the QR code from inside the app.
 
 > Phases that need a development build: **P0 recording spike** (background), **P2** if
@@ -167,11 +167,12 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
    project folder).
 3. Open the link it prints on your Android phone, download the APK and install it (allow installs from
    your browser for this install only).
-4. Open **Study Notes**. Everything in section 8 "P1" works offline in this build.
+4. Open **NotedPo**. Everything in section 8 "P1" works offline in this build.
 
-> The app name and Android package id are still placeholders (`Study Notes`, `com.reyanyan.studynotes.dev`).
-> The final name ("notedpo") is set once the store-name check is done. An APK built now installs next to
-> later builds only if the package id stays the same.
+> The app's display name is **NotedPo**. The Android package id is still the placeholder
+> `com.reyanyan.studynotes.dev` (the proposed final id `io.github.bantutti.notedpo` is waiting for Rey's
+> confirmation, because it becomes permanent at the first Google Play upload). An APK built now updates in
+> place only while the package id stays the same; after the id changes, it installs as a separate app.
 >
 > The 6 app icons in `assets/` are in this zip but not in GitHub (the integration can't upload images).
 > If you build from a GitHub checkout, copy them in from the zip first.
@@ -335,7 +336,7 @@ Use Expo Go (sections 3 and 4) or the APK (4c). Write PASS / FAIL and notes next
 **Security checks (P1)**
 26. *Links open outside the app:* select a word > **Aa** > link icon > `https://example.com` > **Add link**.
     Tap the link. *Expected:* an "Open link?" dialog showing `example.com`. **Cancel** does nothing; **Open**
-    opens your phone's browser as a separate app. Nothing ever loads inside Study Notes.
+    opens your phone's browser as a separate app. Nothing ever loads inside NotedPo.
 27. *Pasted content is cleaned:* copy part of a web page with a picture and a link, paste it into a note.
     *Expected:* text and the link stay; the picture doesn't; nothing pops up.
 28. *Note text never reaches logs:* while `npm run start:go` runs, write a note titled `SECRETWORD` with
@@ -391,7 +392,7 @@ Use Expo Go (sections 3 and 4) or the APK (4c). Write PASS / FAIL and notes next
     "90 min size" **under 25 MB**. Note Battery/hour. Tap **Save result**.
 21. *Expo Go check (any phone):* start a 2-minute recording and lock the screen. *Expected:* the
     yellow banner warned you; Stop shows low coverage. This proves the gap detector works.
-22. *Security:* deny the microphone permission once (Settings > Apps > Expo Go or Study Notes >
+22. *Security:* deny the microphone permission once (Settings > Apps > Expo Go or NotedPo >
     Permissions > Microphone > Don't allow), then tap Start. *Expected:* a clear message, no crash.
 
 **5. Audio timestamps** (needs a Groq key, section 7)
@@ -444,7 +445,7 @@ expected results in `docs/backend/TESTING_BACKEND.md` section 5.
 | Expo Go says the project needs a newer SDK | Update Expo Go from the store. The project uses Expo SDK 58. If Expo Go in the store has moved to a newer SDK, tell me: the project needs a short SDK upgrade (or use the APK, section 4c). |
 | `npm ci` fails with "Unsupported engine" | Install Node 24 LTS (section 1) and reopen the terminal. |
 | `npm ci` fails with EPERM / file locked | Close VS Code and any running `expo start`, then retry. Avoid OneDrive-synced folders. |
-| Microphone permission denied | Phone Settings > Apps > Expo Go (or Study Notes) > Permissions > Microphone > Allow. |
+| Microphone permission denied | Phone Settings > Apps > Expo Go (or NotedPo) > Permissions > Microphone > Allow. |
 | Recording stops when the screen locks | Expected in Expo Go. Use the Android development build (section 4b). |
 | Development build cannot find the server | Run `npm run start:dev` (not start:go). Same Wi-Fi, or scan the QR code from inside the dev app. |
 | EAS build fails | Run `npx eas-cli@latest whoami` to check login. Copy the build log link and send it to me. |

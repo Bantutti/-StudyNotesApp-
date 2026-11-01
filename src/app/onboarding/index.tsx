@@ -34,6 +34,7 @@ export default function Welcome() {
   return (
     <AppScreen scroll={false} padded={false} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.top}>
+        <Title>{t('welcome.title')}</Title>
         <AppButton kind="plain" label={t('common.skip')} onPress={skip} testID="welcome-skip" />
       </View>
       <ScrollView ref={scroller} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={onScroll}>
@@ -62,7 +63,7 @@ export default function Welcome() {
 }
 
 const styles = StyleSheet.create({
-  top: { alignItems: 'flex-end', paddingHorizontal: 8 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 8 },
   card: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 },
   badge: { width: 120, height: 120, borderRadius: 60, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   bottom: { padding: 24, gap: 20 },

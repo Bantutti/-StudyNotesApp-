@@ -6,7 +6,7 @@
 import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { safeHref, type OutlineItem } from '@/core';
+import { safeHref, t, type OutlineItem } from '@/core';
 import { AppButton, BodyText, Caption, ListRow, SectionHeader, TextField, Title, useTheme, type IconName } from '@/core/ui';
 import type { EditorCommand } from '@/modules/editor';
 
@@ -73,7 +73,7 @@ export function LinkSheet({ visible, onClose, onApply, onRemove }: { visible: bo
   };
   return (
     <Sheet visible={visible} onClose={onClose} title="Link">
-      <BodyText muted>Select some text first. Links open in your browser, outside Study Notes.</BodyText>
+      <BodyText muted>{t('link.openTitle.hint')}</BodyText>
       <TextField label="Web address" value={href} onChangeText={setHref} autoCapitalize="none" autoCorrect={false} keyboardType="url" maxLength={2000} error={error} />
       <AppButton label="Add link" onPress={apply} />
       <AppButton
