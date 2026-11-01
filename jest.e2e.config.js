@@ -18,6 +18,11 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/test/e2e/setup.js'],
   testEnvironmentOptions: { customExportConditions: ['node', 'require', 'default'] },
   testMatch: ['**/__e2e__/**/*.e2e.test.ts'],
+  moduleNameMapper: {
+    ...base.moduleNameMapper,
+    // One Firebase SDK instance: P2a's deletion module resolves to the app's copy.
+    '^firebase/(app|auth|firestore|storage)$': '<rootDir>/node_modules/firebase/$1',
+  },
   roots: ['<rootDir>/src'],
   testTimeout: 60_000,
   maxWorkers: 1,

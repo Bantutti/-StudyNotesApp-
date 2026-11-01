@@ -78,6 +78,10 @@ export interface SyncController {
   /** Ids of notes changed by a pull (an open editor reloads). */
   onNotesChanged(fn: (ids: string[]) => void): () => void;
   dismissAccountGone(): void;
+  /** Account deletion: stop the engine (P2a precondition) without changing settings. */
+  stopForDeletion(): Promise<void>;
+  /** After account deletion finished on THIS phone (local data is guest data again). */
+  afterAccountDeleted(): Promise<void>;
 }
 
 const emailOf = (s: AuthState): string | null => (s.status === 'ready' || s.status === 'unverified' ? s.email : null);
@@ -267,6 +271,16 @@ export function createSyncController(deps: SyncControllerDeps): SyncController {
     dismissAccountGone() {
       accountGone = false;
       void refresh();
+    },
+
+    async stopForDeletion() {
+      stopEngine();
+    },
+
+    async afterAccountDeleted() {
+      stopEngine();
+      await deps.auth.signOut().catch(() => undefined); // the Auth user is gone; clear the session
+      await refresh();
     },
   };
 }

@@ -28,3 +28,5 @@ export {
 } from './ports';
 export { createSecureKeyValue, encodeKey, CHUNK_CHARS, type SecureStorePort, type AsyncKeyValue } from './securePersistence';
 export { bindAccount, pauseSyncForSignOut, type BindResult } from './binding';
+export { deleteAccountAndCloudData, type AccountDeletionDeps, type AccountDeletionResult } from './accountDeletion';
+export type { DeletionProgress, DeletionReport } from './p2aDeletion';
