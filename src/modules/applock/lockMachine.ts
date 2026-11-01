@@ -25,6 +25,8 @@ export interface LockState {
   settings: LockSettings;
   locked: boolean;
   backgroundedAt: number | null;
+  /** Unlocked at least once since start (the app stays mounted under a re-lock). */
+  everUnlocked: boolean;
 }
 
 export type LockEvent =
@@ -35,7 +37,7 @@ export type LockEvent =
   | { type: 'settings'; settings: LockSettings };
 
 export function initialLock(settings: LockSettings = DEFAULT_LOCK): LockState {
-  return { settings, locked: settings.enabled, backgroundedAt: null };
+  return { settings, locked: settings.enabled, backgroundedAt: null, everUnlocked: !settings.enabled };
 }
 
 export function lockReducer(s: LockState, e: LockEvent): LockState {
@@ -50,9 +52,9 @@ export function lockReducer(s: LockState, e: LockEvent): LockState {
       return { ...s, locked: s.locked || lock, backgroundedAt: null };
     }
     case 'unlocked':
-      return { ...s, locked: false };
+      return { ...s, locked: false, everUnlocked: true };
     case 'settings':
       // Turning the lock on doesn't lock the person out mid-session; turning it off unlocks.
-      return { ...s, settings: e.settings, locked: e.settings.enabled ? s.locked : false };
+      return { ...s, settings: e.settings, locked: e.settings.enabled ? s.locked : false, everUnlocked: s.everUnlocked || !e.settings.enabled };
   }
 }

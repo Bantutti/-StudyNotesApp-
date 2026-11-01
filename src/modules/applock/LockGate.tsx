@@ -21,6 +21,8 @@ export const LOCK_NS = 'applock';
 export const LOCK_KEY = 'settings';
 export const lockKvSchema: z.ZodType<LockSettings> = lockSettingsSchema;
 
+const styles = StyleSheet.create({ fill: { flex: 1 } });
+
 export function LockGate(props: {
   storage: LockStorage;
   device: DeviceAuthPort;
@@ -75,19 +77,24 @@ export function LockGate(props: {
   }, [ready, state.locked, inactive, unlock]);
 
   if (!ready) return <View style={[StyleSheet.absoluteFill, { backgroundColor: th.bg }]} />;
-  if (state.locked) {
-    return (
-      <AppScreen edges={['top', 'left', 'right', 'bottom']}>
-        <Title>{props.appName} is locked</Title>
-        <BodyText muted>Use your fingerprint, face or phone PIN to open your notes.</BodyText>
-        <AppButton label="Unlock" onPress={() => void unlock()} testID="applock-unlock" />
-      </AppScreen>
-    );
-  }
+  const lockScreen = (
+    <AppScreen edges={['top', 'left', 'right', 'bottom']}>
+      <Title>{props.appName} is locked</Title>
+      <BodyText muted>Use your fingerprint, face or phone PIN to open your notes.</BodyText>
+      <AppButton label="Unlock" onPress={() => void unlock()} testID="applock-unlock" />
+    </AppScreen>
+  );
+  // Cold start: nothing of the app is mounted until the first unlock (deep links wait).
+  if (state.locked && !state.everUnlocked) return lockScreen;
+  const hidden = state.locked || (inactive && state.settings.enabled);
   return (
     <>
-      {props.children}
-      {inactive && state.settings.enabled ? <View testID="applock-cover" style={[StyleSheet.absoluteFill, { backgroundColor: th.bg }]} /> : null}
+      {/* Kept mounted (navigation state survives a re-lock) but hidden from screen readers and covered. */}
+      <View style={styles.fill} importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'} accessibilityElementsHidden={hidden}>
+        {props.children}
+      </View>
+      {state.locked ? <View style={[StyleSheet.absoluteFill, { backgroundColor: th.bg }]}>{lockScreen}</View> : null}
+      {!state.locked && inactive && state.settings.enabled ? <View testID="applock-cover" style={[StyleSheet.absoluteFill, { backgroundColor: th.bg }]} /> : null}
     </>
   );
 }

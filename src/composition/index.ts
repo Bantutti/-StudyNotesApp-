@@ -13,3 +13,8 @@ export { createNoteSession, type NoteSession } from './noteSession';
 export { createSyncController, type SyncController, type SyncView, type UploadCounts } from './syncController';
 export { createCloudRuntime, type CloudRuntime, type CloudParts } from './cloudRuntime';
 export { SyncBridge } from './SyncBridge';
+export { useSyncView, useCloudSyncView, useNoteSync } from './syncHooks';
+export { previewPair, type PreviewLine, type PreviewMark } from './conflictPreview';
+export { countsText, maskEmail } from './syncText';
+export { bumpLockRevision, useLockRevision } from './lockRevision';
+export { AppLockGate } from './AppLockGate';

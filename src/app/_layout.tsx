@@ -2,12 +2,14 @@
  * Root layout: services, theme, app data (database), then the navigator.
  * Routes: / (decides onboarding or tabs), (tabs), onboarding, subject/[id],
  * inbox, note/[id], new (sheet), dev (hidden developer menu).
+ * P2b: account/*, sync/*, settings/app-lock, legal/[doc]; SyncBridge and the
+ * app lock gate sit inside the data provider.
  */
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AppDataProvider, ServicesProvider, useServices } from '@/composition';
+import { AppDataProvider, AppLockGate, ServicesProvider, SyncBridge, useServices } from '@/composition';
 import { ThemeProvider, useTheme } from '@/core/ui';
 
 function Navigator() {
@@ -41,6 +43,17 @@ function Navigator() {
         <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
+        {/* P2b: account, sync, app lock and legal pages */}
+        <Stack.Screen name="account/sign-in" options={{ title: 'Sign in' }} />
+        <Stack.Screen name="account/sign-up" options={{ title: 'Create an account' }} />
+        <Stack.Screen name="account/verify" options={{ title: 'Check your email' }} />
+        <Stack.Screen name="account/reset" options={{ title: 'Reset password' }} />
+        <Stack.Screen name="account/delete" options={{ title: 'Delete account' }} />
+        <Stack.Screen name="sync/turn-on" options={{ title: 'Turn on sync' }} />
+        <Stack.Screen name="sync/attention" options={{ title: 'Needs attention' }} />
+        <Stack.Screen name="sync/conflict" options={{ title: 'Choose what to keep' }} />
+        <Stack.Screen name="settings/app-lock" options={{ title: 'App lock' }} />
+        <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
       </Stack>
     </>
   );
@@ -50,7 +63,10 @@ function WithData() {
   const { appData } = useServices();
   return (
     <AppDataProvider deps={appData}>
-      <Navigator />
+      <SyncBridge />
+      <AppLockGate>
+        <Navigator />
+      </AppLockGate>
     </AppDataProvider>
   );
 }

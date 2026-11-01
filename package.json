@@ -84,9 +84,11 @@
     "audit:prod": "npm audit --omit=dev --audit-level=low",
     "audit:all": "npm audit --audit-level=moderate",
     "bundle:check": "expo export --platform android --platform ios --output-dir dist-check",
-    "verify": "npm run check:editor && npm run typecheck && npm run lint && npm test && npm run secrets:scan && npm run audit:prod",
+    "verify": "npm run check:editor && npm run check:legal && npm run typecheck && npm run lint && npm test && npm run secrets:scan && npm run audit:prod",
     "export:phase": "node scripts/export-phase.mjs",
-    "test:sync-e2e": "node scripts/test-sync-e2e.mjs"
+    "test:sync-e2e": "node scripts/test-sync-e2e.mjs",
+    "check:legal": "node scripts/build-legal.mjs --check",
+    "emu:verify": "node scripts/emu-verify-email.mjs"
   },
   "private": true,
   "overrides": {
