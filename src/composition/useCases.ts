@@ -6,7 +6,7 @@ import * as z from 'zod';
 
 import { AppError, firstLine, SAMPLE_NOTE, SAMPLE_NOTE_TITLE, t, type IdGenerator, type NoteDoc } from '@/core';
 import type { Note, NoteListItem, SaveResult, Store, Subject } from '@/modules/store';
-import { DEFAULT_PACK_ID, P1_PACK_IDS } from '@/modules/stylepacks';
+import { DEFAULT_PACK_ID, isBuiltInPackId, isCustomPackId } from '@/modules/stylepacks';
 import { applyTemplateTo, formatTemplateDate, instantiateTemplate, type TemplateRegistry } from '@/modules/templates';
 
 import { KEY_LAST_NOTE, KEY_ONBOARDED, KV_APP } from './appData';
@@ -22,13 +22,18 @@ const DAY = 86_400_000;
 export async function packForNewNote(store: Store, subjectId: string | null): Promise<string> {
   if (subjectId) {
     const s = await store.subjects.get(subjectId);
-    if (s?.defaultPack && isP1Pack(s.defaultPack)) return s.defaultPack;
+    if (s?.defaultPack && isOfferedPack(s.defaultPack)) return s.defaultPack;
   }
   const settings = await store.settings.get();
-  return settings.defaultPack && isP1Pack(settings.defaultPack) ? settings.defaultPack : DEFAULT_PACK_ID;
+  return settings.defaultPack && isOfferedPack(settings.defaultPack) ? settings.defaultPack : DEFAULT_PACK_ID;
 }
 
-export const isP1Pack = (id: string): boolean => (P1_PACK_IDS as readonly string[]).includes(id);
+/**
+ * Packs a note, subject or the default may point at (P5): the 13 v1 packs,
+ * or a custom pack id ("ref-..."). A custom id whose pack was deleted still
+ * renders safely: the registry falls back to the default pack.
+ */
+export const isOfferedPack = (id: string): boolean => isBuiltInPackId(id) || isCustomPackId(id);
 
 // ---------------------------------------------------------------------------
 // Onboarding (plan Flow 1)
@@ -47,7 +52,7 @@ export interface FirstSubjectInput {
  * still creates the sample note, in the Inbox.
  */
 export async function finishOnboarding(store: Store, input: { packId: string; subject: FirstSubjectInput | null }): Promise<string> {
-  const packId = isP1Pack(input.packId) ? input.packId : DEFAULT_PACK_ID;
+  const packId = isOfferedPack(input.packId) ? input.packId : DEFAULT_PACK_ID;
   await store.settings.update({ defaultPack: packId });
   let subject: Subject | null = null;
   if (input.subject) {
@@ -64,7 +69,7 @@ export async function finishOnboarding(store: Store, input: { packId: string; su
 
 /** Skip at any step: lands on an empty Home with the "Create your first note" card (plan Flow 1). */
 export async function skipOnboarding(store: Store, packId?: string): Promise<void> {
-  if (packId && isP1Pack(packId)) await store.settings.update({ defaultPack: packId });
+  if (packId && isOfferedPack(packId)) await store.settings.update({ defaultPack: packId });
   await store.kv.set(KV_APP, KEY_ONBOARDED, true);
 }
 
@@ -251,7 +256,7 @@ export function relativeTime(ms: number, now: number): string {
  * Returns false when the note already uses that pack.
  */
 export async function applyPackToNote(store: Store, noteId: string, packId: string): Promise<boolean> {
-  if (!isP1Pack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  if (!isOfferedPack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
   const note = await store.notes.get(noteId);
   if (!note || note.deleted) throw new AppError('not_found', 'This note no longer exists.');
   if (note.stylePackId === packId) return false;
@@ -261,6 +266,6 @@ export async function applyPackToNote(store: Store, noteId: string, packId: stri
 
 /** "Use for this subject": new notes in the subject start with this pack. */
 export async function setSubjectPack(store: Store, subjectId: string, packId: string): Promise<void> {
-  if (!isP1Pack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
+  if (!isOfferedPack(packId)) throw new AppError('validation_failed', 'That look is not available yet.');
   await store.subjects.update(subjectId, { defaultPack: packId });
 }

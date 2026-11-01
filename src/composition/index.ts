@@ -1,6 +1,6 @@
 export { ServicesProvider, useServices } from './ServicesContext';
 export { createServices, createServicesWith, type Services, type Adapters } from './services';
-export { usePackFaces, useTemplateDeps } from './hooks';
+export { usePackFaces, usePackList, usePackRegistryRevision, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
 export { createTapUnlock, devMenuUnlocked, devToolsAllowed, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';

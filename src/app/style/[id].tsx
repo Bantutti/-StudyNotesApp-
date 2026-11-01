@@ -1,41 +1,24 @@
 /**
- * Style sheet (plan 9.3 / 9.4): every look shown on THIS note, tap to apply
+ * Style sheet (plan 9.3 / 9.4): THIS note shown live in its look, above a
+ * grid of every look (13 built-in plus the student's own, P5). Tap to apply
  * (a version is saved first; content and block ids never change), use it for
  * the subject or for new notes, or add a template.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert } from 'react-native';
 
-import { applyPackToNote, setSubjectPack, useAppData, usePackFaces } from '@/composition';
+import { applyPackToNote, setSubjectPack, useAppData, usePackFaces, usePackList } from '@/composition';
 import { userMessage, type NoteDoc } from '@/core';
-import { AppButton, AppScreen, BodyText, Caption, Icon, SectionHeader, useTheme } from '@/core/ui';
+import { AppButton, AppScreen, Caption, SectionHeader } from '@/core/ui';
 import { PagePreview } from '@/modules/editor';
 import type { Note } from '@/modules/store';
-import { P1_PACK_IDS } from '@/modules/stylepacks';
+import { PackPicker } from '@/modules/stylepacks';
 
-function PackChoice({ id, doc, selected, onPress }: { id: string; doc: NoteDoc; selected: boolean; onPress: () => void }) {
-  const th = useTheme();
+/** The note itself, live, in the look it has now (one WebView; the grid below is native swatches, P5 Q9). */
+function LivePreview({ id, doc }: { id: string; doc: NoteDoc }) {
   const { pack, faces } = usePackFaces(id);
-  return (
-    <Pressable
-      testID={`style-${id}`}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      accessibilityLabel={`${pack.name}. ${pack.meta.bestFor}.`}
-      onPress={onPress}
-      style={[styles.card, { borderColor: selected ? th.accent : th.line, backgroundColor: th.surface, borderRadius: th.radius.card }]}
-    >
-      <PagePreview doc={doc} pack={pack} faces={faces ?? []} height={200} zoom={0.6} label={`${pack.name} preview of this note`} />
-      <View style={styles.row}>
-        <View style={styles.flex}>
-          <BodyText>{pack.name}</BodyText>
-          <Caption>{pack.meta.bestFor}</Caption>
-        </View>
-        {selected ? <Icon name="checkmark-circle" size={28} color={th.accent} /> : null}
-      </View>
-    </Pressable>
-  );
+  return <PagePreview doc={doc} pack={pack} faces={faces ?? []} height={240} zoom={0.6} label={`${pack.name} preview of this note`} />;
 }
 
 export default function StyleSheetScreen() {
@@ -43,6 +26,7 @@ export default function StyleSheetScreen() {
   const { store, bus } = useAppData();
   const [note, setNote] = useState<Note | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const { packs, customIds } = usePackList();
 
   useEffect(() => {
     let alive = true;
@@ -78,9 +62,8 @@ export default function StyleSheetScreen() {
   return (
     <AppScreen>
       <SectionHeader>Look</SectionHeader>
-      {P1_PACK_IDS.map((p) => (
-        <PackChoice key={p} id={p} doc={note.document} selected={note.stylePackId === p} onPress={() => choose(p)} />
-      ))}
+      <LivePreview id={note.stylePackId} doc={note.document} />
+      <PackPicker packs={packs} customIds={customIds} selected={note.stylePackId} onSelect={choose} testIDPrefix="style" />
       {msg ? <Caption>{msg}</Caption> : null}
       {note.subject ? <AppButton kind="secondary" icon="albums-outline" label="Use this look for the subject" onPress={forSubject} /> : null}
       <AppButton kind="secondary" icon="star-outline" label="Use this look for new notes" onPress={forNew} />
@@ -94,9 +77,3 @@ export default function StyleSheetScreen() {
     </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { borderWidth: 2, padding: 8, gap: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 6, paddingBottom: 4 },
-  flex: { flex: 1 },
-});

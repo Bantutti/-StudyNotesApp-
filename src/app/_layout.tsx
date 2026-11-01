@@ -40,6 +40,7 @@ function Navigator() {
         <Stack.Screen name="history/[id]" options={{ title: 'History' }} />
         <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
+        <Stack.Screen name="font-licenses" options={{ title: 'Font licences' }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
       </Stack>
     </>

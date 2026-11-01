@@ -85,11 +85,9 @@ export default function Me() {
 
       <SectionHeader>About</SectionHeader>
       <ListRow icon="information-circle-outline" title={`${t('app.name')} ${version}`} subtitle="P1 core app (beta)" onPress={tapVersion} testID="me-version" />
+      <ListRow icon="document-text-outline" title="Font licences" subtitle="22 fonts, SIL Open Font License 1.1" onPress={() => router.push('/font-licenses')} testID="me-font-licences" />
       <Surface>
-        <Caption>
-          Fonts: Gaegu, Nunito, Cinzel, Crimson Pro and Atkinson Hyperlegible, each under the SIL Open Font License
-          1.1. Style pack art is original.
-        </Caption>
+        <Caption>Style pack art is original.</Caption>
       </Surface>
       {devMenu ? <ListRow icon="construct-outline" title="Developer menu (P0 spike lab)" onPress={() => router.push('/dev')} testID="me-dev" /> : null}
     </AppScreen>

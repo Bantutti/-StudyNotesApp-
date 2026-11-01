@@ -3,10 +3,9 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { formatExamDate, isP1Pack, parseExamDate, useServices, useStore } from '@/composition';
+import { formatExamDate, isOfferedPack, parseExamDate, useServices, useStore } from '@/composition';
 import { t, userMessage } from '@/core';
 import { AppButton, AppScreen, BodyText, ListRow, SectionHeader, SUBJECT_COLORS, Swatch, TextField } from '@/core/ui';
-import { P1_PACK_IDS } from '@/modules/stylepacks';
 
 const COLOR_NAMES = ['Blue', 'Pink', 'Green', 'Amber', 'Violet', 'Teal', 'Orange', 'Slate'];
 
@@ -31,7 +30,7 @@ export default function SubjectForm() {
       setColor(s.color);
       const next = s.examDates.find((d) => d >= Date.now() - 86_400_000);
       setExam(next ? formatExamDate(next) : '');
-      setPack(s.defaultPack && isP1Pack(s.defaultPack) ? s.defaultPack : null);
+      setPack(s.defaultPack && isOfferedPack(s.defaultPack) ? s.defaultPack : null);
       setTemplate(s.defaultTemplate && templates.get(s.defaultTemplate) ? s.defaultTemplate : null);
     });
     return () => {
@@ -67,8 +66,8 @@ export default function SubjectForm() {
       <TextField label={t('subject.examDate')} value={exam} onChangeText={setExam} placeholder="2026-12-15" keyboardType="numbers-and-punctuation" maxLength={10} />
       <SectionHeader>Default look for this subject</SectionHeader>
       <ListRow title="Same as my default" icon={pack === null ? 'radio-button-on' : 'radio-button-off'} onPress={() => setPack(null)} />
-      {P1_PACK_IDS.map((p) => (
-        <ListRow key={p} title={packs.getOrDefault(p).name} icon={pack === p ? 'radio-button-on' : 'radio-button-off'} onPress={() => setPack(p)} />
+      {packs.list().map((p) => (
+        <ListRow key={p.id} title={p.name} subtitle={p.meta.bestFor} icon={pack === p.id ? 'radio-button-on' : 'radio-button-off'} onPress={() => setPack(p.id)} />
       ))}
       <SectionHeader>New notes start from</SectionHeader>
       <ListRow title="A blank page" icon={template === null ? 'radio-button-on' : 'radio-button-off'} onPress={() => setTemplate(null)} />
