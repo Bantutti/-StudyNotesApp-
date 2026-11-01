@@ -284,16 +284,36 @@ describe('tombstones (deleted means deleted)', () => {
     expect(await B.store.versions.list(n.id)).toEqual([]);
   });
 
-  it('undo inside the window means the cloud never sees the delete', async () => {
-    const { A, cloud } = await setup(1);
+  it('a sync inside the undo window leaves the row untouched, so Undo still works (P1 r2 rule)', async () => {
+    const { A, B, cloud, clock } = await setup();
     await A.enable();
+    await B.enable();
     const n = await A.store.notes.create({ stylePackId: PACK, title: 'Oops' });
-    await A.sync();
+    await settle([A, B]);
     const token = await A.store.notes.remove([n.id]);
-    await A.sync();
-    await A.store.undo(token);
+    const before = A.raw.prepare('SELECT * FROM notes WHERE id = ?').get(n.id);
+    clock.advance(3000);
+    await A.sync(); // push (deferred), pull (our own doc: skipped), asset pass
+    await B.sync();
+    expect(A.raw.prepare('SELECT * FROM notes WHERE id = ?').get(n.id)).toEqual(before); // not one column changed
+    expect(cloud.peek('notes', n.id)).toMatchObject({ deleted: false, title: 'Oops' });
+    expect(await A.store.undo(token)).toBe(true);
     await A.sync();
     expect(cloud.peek('notes', n.id)).toMatchObject({ deleted: false, title: 'Oops' });
+    expect(await A.store.notes.get(n.id)).toMatchObject({ deleted: false, title: 'Oops' });
+  });
+
+  it('once P1 has wiped the text (after the window), the tombstone goes up at once', async () => {
+    const { A, cloud, clock } = await setup(1);
+    await A.enable();
+    const n = await A.store.notes.create({ stylePackId: PACK, title: 'Gone' });
+    await A.sync();
+    await A.store.notes.remove([n.id]);
+    clock.advance(UNDO_WINDOW_MS + 1);
+    expect(await A.store.purge()).toBe(1); // bumps `updated`
+    const r = await A.sync();
+    expect(r.push?.deferred).toBe(0);
+    expect(cloud.peek('notes', n.id)).toMatchObject({ deleted: true, title: '' });
   });
 
   it('a note created and deleted before it ever synced is never uploaded', async () => {

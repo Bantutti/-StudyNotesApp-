@@ -1,25 +1,26 @@
 /**
  * Hidden developer menu: the P0 spike lab, kept reachable until P6.
- * Unlocked by tapping the version number on the Me tab 7 times; otherwise
- * every /dev route redirects home (so a deep link can't open it either).
+ * Unlocked by tapping the version number on the Me tab 7 times, and only in
+ * dev mode or a development build (devToolsAllowed). Otherwise every /dev
+ * route redirects home, so a deep link (notedpo://dev/settings) can't open it
+ * either, even if an older build stored the unlock.
  */
 import { Redirect, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import * as z from 'zod';
-
-import { KEY_DEV_MENU, KV_APP, useStore } from '@/composition';
+import { devMenuUnlocked, useServices, useStore } from '@/composition';
 import { Spinner, ui } from '@/core/ui';
 
 export default function DevLayout() {
   const store = useStore();
+  const { devTools } = useServices();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   useEffect(() => {
     let alive = true;
-    store.kv.get(KV_APP, KEY_DEV_MENU, z.boolean()).then((v) => alive && setAllowed(v === true));
+    devMenuUnlocked(store, devTools).then((v) => alive && setAllowed(v));
     return () => {
       alive = false;
     };
-  }, [store]);
+  }, [store, devTools]);
 
   if (allowed === null) return <Spinner />;
   if (!allowed) return <Redirect href="/" />;

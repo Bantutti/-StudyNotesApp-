@@ -3,8 +3,8 @@
  *
  * Every synced field is validated locally with the SAME numbers the cloud
  * uses, so nothing the app accepts is rejected later at sync time (P2b).
- * A contract test compares these values with P2a's file once firebase/ is
- * on main (see src/core/__tests__/limits.test.ts).
+ * A contract test compares these values with P2a's file: "core limits mirror
+ * P2a limits.ts" in src/modules/store/__tests__/cloudContract.test.ts.
  *
  * Lengths are UTF-16 code units (JS `.length`), exactly what Firestore
  * rules' string.size() counts. zod's .max() counts code points instead,

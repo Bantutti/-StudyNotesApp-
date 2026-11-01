@@ -12,7 +12,7 @@
  * 4. On success the local rev/owner are updated; the outbox item is
  *    cleared only if the row was not edited during the upload.
  */
-import { ensureBlockIds, parseNoteDocJson } from '@/core';
+import { EMPTY_DOC_JSON, ensureBlockIds, parseNoteDocJson } from '@/core';
 import { UNDO_WINDOW_MS, type OutboxItem, type SqlRow } from '@/modules/store';
 
 import { AccountGoneError, contentHash, limitsOf, type SyncContext } from './context';
@@ -40,6 +40,11 @@ interface Prepared {
   row: SqlRow;
   plan: PlannedWrite;
   hash: string;
+}
+
+/** P1's purge has wiped this deleted note's text (it can no longer be undone). */
+function isWipedNote(row: SqlRow): boolean {
+  return row.document === EMPTY_DOC_JSON && row.title === '' && row.tags === '[]' && row.inkLayerRef == null;
 }
 
 const isTransient = (e: unknown) => e instanceof RemoteError && TRANSIENT_CODES.includes(e.code);
@@ -83,7 +88,11 @@ async function prepare(ctx: SyncContext, item: OutboxItem): Promise<Prepared | '
       await local.removeOutbox(tbl, item.id); // created and deleted before it was ever uploaded
       return 'done';
     }
-    if (ctx.now() - Number(row.updated) < UNDO_WINDOW_MS) return 'deferred';
+    // Inside the undo window nothing may touch the row: P1's Undo only works
+    // while `updated` still equals the delete time. A note whose text P1 has
+    // already wiped can't be undone any more, so it goes up at once (the
+    // wipe itself bumps `updated`, which would otherwise restart the wait).
+    if (ctx.now() - Number(row.updated) < UNDO_WINDOW_MS && !(tbl === 'notes' && isWipedNote(row))) return 'deferred';
     row = eraseRow(tbl, row);
   } else if (tbl === 'notes') {
     const json = String(row.document);

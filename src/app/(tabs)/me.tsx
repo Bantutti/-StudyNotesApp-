@@ -1,43 +1,43 @@
 /**
  * Me (P1 subset): default look, Delete all data, About and font licences,
- * and the hidden developer menu (tap the version 7 times). P2b adds
+ * and the hidden developer menu (tap the version 7 times; only in dev mode
+ * or a development build, see devToolsAllowed). P2b adds
  * account, sync, app lock and storage here.
  */
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
-import * as z from 'zod';
 
-import { createTapUnlock, KEY_DEV_MENU, KV_APP, useAppData, useServices } from '@/composition';
+import { createTapUnlock, devMenuUnlocked, KEY_DEV_MENU, KV_APP, useAppData, useServices } from '@/composition';
 import { t, userMessage } from '@/core';
 import { AppScreen, BodyText, Caption, ListRow, SectionHeader, Surface } from '@/core/ui';
 import { DEFAULT_PACK_ID } from '@/modules/stylepacks';
 
 export default function Me() {
   const { store, resetAll } = useAppData();
-  const { packs } = useServices();
+  const { packs, devTools } = useServices();
   const [devMenu, setDevMenu] = useState(false);
   const [packId, setPackId] = useState<string>(DEFAULT_PACK_ID);
-  const unlock = useMemo(() => createTapUnlock(), []);
+  const unlock = useMemo(() => createTapUnlock({ enabled: devTools }), [devTools]);
   const version = Constants.expoConfig?.version ?? '0.0.0';
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
-      Promise.all([store.kv.get(KV_APP, KEY_DEV_MENU, z.boolean()), store.settings.get()]).then(([dev, settings]) => {
+      Promise.all([devMenuUnlocked(store, devTools), store.settings.get()]).then(([dev, settings]) => {
         if (!alive) return;
-        setDevMenu(dev === true);
+        setDevMenu(dev);
         setPackId(settings.defaultPack ?? DEFAULT_PACK_ID);
       });
       return () => {
         alive = false;
       };
-    }, [store]),
+    }, [store, devTools]),
   );
 
   const tapVersion = async () => {
-    if (devMenu) return;
+    if (devMenu || !devTools) return; // preview and store builds: the version row is just text
     const left = unlock.tap();
     if (left === 0) {
       await store.kv.set(KV_APP, KEY_DEV_MENU, true);

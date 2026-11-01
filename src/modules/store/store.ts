@@ -103,15 +103,27 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
 
   await profile.ensure(db);
 
-  /** Wipes deleted text. `immediate` skips the undo window (app going to the background). */
+  /**
+   * Wipes deleted text. `immediate` skips the undo window (app going to the background).
+   * secure_delete zeroes freed pages, but in WAL mode the old page images stay in the -wal
+   * file until a checkpoint, so a purge that removed anything checkpoints and truncates it.
+   */
   const purge = async (immediate = false): Promise<number> => {
     const cutoff = immediate ? now() : now() - UNDO_WINDOW_MS;
-    return db.transaction(async (tx) => {
+    const count = await db.transaction(async (tx) => {
       const n = await notes.purgeDeleted(tx, cutoff);
       const s = await subjects.purgeDeleted(tx, cutoff);
       const f = await folders.purgeDeleted(tx, cutoff);
       return n + s + f;
     });
+    if (count > 0) {
+      try {
+        await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+      } catch {
+        log.warn('wal_checkpoint_failed'); // busy reader: SQLite checkpoints again later
+      }
+    }
+    return count;
   };
   const purged = await purge();
   if (purged) log.info('purged_on_open', { count: purged });
@@ -141,7 +153,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
             if (noteIds.length) await tx.run(`UPDATE notes SET subject = NULL, updated = ? WHERE id IN ${inList(noteIds)}`, [t, ...noteIds]);
             if (folderIds.length) await tx.run(`UPDATE folders SET subject = NULL, updated = ? WHERE id IN ${inList(folderIds)}`, [t, ...folderIds]);
           } else {
-            await notes.softDelete(tx, noteIds);
+            await notes.softDelete(tx, noteIds, t);
             for (const f of folderIds) await folders.setDeleted(tx, f, true);
           }
           await subjects.setDeleted(tx, id, true);
@@ -190,7 +202,10 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
           return notes.save(tx, id, patch);
         }),
       remove: (noteIds: readonly string[]): Promise<UndoToken> =>
-        db.transaction(async (tx) => ({ kind: 'notes', at: now(), noteIds: await notes.softDelete(tx, noteIds) })),
+        db.transaction(async (tx) => {
+          const at = now();
+          return { kind: 'notes', at, noteIds: await notes.softDelete(tx, noteIds, at) };
+        }),
     },
 
     versions: {
@@ -228,7 +243,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
         const t = now();
         switch (token.kind) {
           case 'notes':
-            return (await notes.undelete(tx, token.noteIds)) > 0 || token.noteIds.length === 0;
+            return (await notes.undelete(tx, token.noteIds, token.at)) > 0 || token.noteIds.length === 0;
           case 'subject': {
             const s = await subjects.get(tx, token.subjectId);
             if (!s || s.name === WIPED_NAME) return false;
@@ -238,7 +253,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
               if (n.length) await tx.run(`UPDATE notes SET subject = ?, updated = ? WHERE subject IS NULL AND id IN ${inList(n)}`, [token.subjectId, t, ...n]);
               if (f.length) await tx.run(`UPDATE folders SET subject = ?, updated = ? WHERE subject IS NULL AND id IN ${inList(f)}`, [token.subjectId, t, ...f]);
             } else {
-              await notes.undelete(tx, token.noteIds);
+              await notes.undelete(tx, token.noteIds, token.at);
               for (const f of token.folderIds) await folders.setDeleted(tx, f, false);
             }
             return true;

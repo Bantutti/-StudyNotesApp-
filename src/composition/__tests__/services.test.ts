@@ -40,6 +40,13 @@ describe('composition root', () => {
     expect(calls).toEqual([`Bearer ${KEY}`]);
   });
 
+  it('developer tools only in dev mode or a development build (review M4)', () => {
+    expect(createServicesWith(adapters({ isDev: false })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'preview' })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'development' })).devTools).toBe(true);
+    expect(createServicesWith(adapters({ isDev: true })).devTools).toBe(true);
+  });
+
   it('caches font faces per font pair', async () => {
     let reads = 0;
     const s = createServicesWith(adapters({ readAsset: async () => { reads++; return 'AAAA'; } }));

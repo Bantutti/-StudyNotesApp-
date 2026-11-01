@@ -3,13 +3,18 @@
  * - Loads the generated, CSP-pinned HTML (no network, no navigation).
  * - Validates every inbound message (size -> JSON -> schema -> doc schema).
  * - Exposes a small imperative API to screens.
+ * - Recovers from a WebView crash: iOS reloads the page, Android remounts the
+ *   WebView; pending requests fail, and on every 'ready' the current pack,
+ *   fonts and the newest document (getDoc) are sent again.
+ * - A requestDoc the page cannot answer with a valid document is rejected
+ *   (never answered with a stand-in document).
  */
-import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
 
-import { validateNoteDoc, type Logger, type NoteDoc } from '@/core';
+import { AppError, validateNoteDoc, type Logger, type NoteDoc } from '@/core';
 import type { FontFaceData, StylePack } from '@/modules/stylepacks';
 
 import { EDITOR_HTML } from './generated/editorHtml';
@@ -46,6 +51,12 @@ export interface EditorEvents {
 
 interface Props extends EditorEvents {
   logger: Logger;
+  /** Sent on every 'ready' (first start and after a WebView restart) and whenever it changes. */
+  pack?: StylePack | null;
+  /** Sent on every 'ready' and whenever they change. */
+  faces?: readonly FontFaceData[] | null;
+  /** The document to show on every 'ready': the newest one the screen holds, never a stale copy. */
+  getDoc?: () => NoteDoc | null;
 }
 
 // react-native-webview types the class as WebView<P = undefined>, so its props
@@ -59,7 +70,10 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
   const web = useRef<HostWebViewRef>(null);
   const pending = useRef(new Map<number, Pending>());
   const nextId = useRef(1);
+  const isReady = useRef(false);
+  const [generation, setGeneration] = useState(0);
   const log = props.logger.child('editor');
+  const { pack, faces } = props;
 
   const send = useCallback((msg: ToWeb) => {
     web.current?.postMessage(encode(msg));
@@ -79,6 +93,23 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
     [send],
   );
 
+  useEffect(() => {
+    if (isReady.current && pack) send({ v: 1, type: 'setPack', pack });
+  }, [pack, send]);
+  useEffect(() => {
+    if (isReady.current && faces) send({ v: 1, type: 'setFonts', faces: [...faces] });
+  }, [faces, send]);
+
+  /** The page is gone (crash): fail what is waiting; the next 'ready' restores everything. */
+  const lost = () => {
+    isReady.current = false;
+    for (const [id, p] of pending.current) {
+      clearTimeout(p.timer);
+      p.reject(new AppError('timeout', 'The editor restarted. Try again.'));
+      pending.current.delete(id);
+    }
+  };
+
   const settle = (reqId: number, value: unknown, error?: Error) => {
     const p = pending.current.get(reqId);
     if (!p) return;
@@ -96,14 +127,29 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
     }
     const msg = r.msg;
     switch (msg.type) {
-      case 'ready':
+      case 'ready': {
+        isReady.current = true;
+        if (pack) send({ v: 1, type: 'setPack', pack });
+        if (faces) send({ v: 1, type: 'setFonts', faces: [...faces] });
+        const doc = props.getDoc?.();
+        if (doc) send({ v: 1, type: 'load', doc });
         props.onReady?.();
         return;
+      }
       case 'metric':
         props.onMetric?.(msg.name, msg.ms);
         return;
       case 'error':
         log.warn('editor_error', { code: msg.code });
+        if (msg.reqId != null) {
+          settle(
+            msg.reqId,
+            null,
+            msg.code === 'too_large'
+              ? new AppError('too_large', 'This note is too long to save.')
+              : new AppError('validation_failed', 'The editor could not check this note.'),
+          );
+        }
         props.onBridgeError?.(msg.code);
         return;
       case 'openLink':
@@ -149,6 +195,7 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
 
   return (
     <HostWebView
+      key={generation}
       ref={web}
       style={styles.web}
       source={{ html: EDITOR_HTML }}
@@ -159,9 +206,16 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
       onShouldStartLoadWithRequest={(req: ShouldStartLoadRequest) => allowNavigation(req.url)}
       onOpenWindow={() => undefined}
       onMessage={onMessage}
-      onContentProcessDidTerminate={() => web.current?.reload()}
+      onContentProcessDidTerminate={() => {
+        log.warn('content_process_terminated');
+        lost();
+        web.current?.reload();
+      }}
       onRenderProcessGone={() => {
+        // Android: the WebView instance is dead and must be replaced, not reloaded.
         log.warn('render_process_gone');
+        lost();
+        setGeneration((g) => g + 1);
         return true;
       }}
     />

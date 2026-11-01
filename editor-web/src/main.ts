@@ -26,7 +26,7 @@ import { runCommand } from './commands';
 import { createEditor, loadDoc } from './createEditor';
 import { createDiagnostics } from './diagnostics';
 import { createBlockMenu } from './menu';
-import { normalizeDoc } from './normalize';
+import { checkOutgoingDoc, requestDocReply } from './replies';
 
 declare global {
   interface Window {
@@ -59,13 +59,12 @@ let suppressChange = false;
 
 /** The document to send: normalized, then validated with the app's schema. */
 function currentDoc(): unknown | null {
-  const json = normalizeDoc(editor.getJSON());
-  const r = validateNoteDoc(json);
-  if (!r.ok) {
-    post({ v: 1, type: 'error', code: r.error.code === 'too_large' ? 'too_large' : 'invalid_doc' });
+  const c = checkOutgoingDoc(editor.getJSON());
+  if (!c.ok) {
+    post({ v: 1, type: 'error', code: c.code });
     return null;
   }
-  return r.value;
+  return c.doc;
 }
 
 function blockKind(): BlockKind {
@@ -197,7 +196,8 @@ function handle(msg: ToWeb): void {
       else runCommand(editor, msg.name, msg.arg);
       return;
     case 'requestDoc':
-      post({ v: 1, type: 'doc', reqId: msg.reqId, reason: 'request', doc: currentDoc() ?? { type: 'doc', content: [] } });
+      // Never an empty stand-in: an invalid live document is an error for this request.
+      post(requestDocReply(editor.getJSON(), msg.reqId));
       return;
     case 'requestSelection':
       post({ v: 1, type: 'selection', reqId: msg.reqId, blockIds: selectionBlockIds() });
