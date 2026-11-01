@@ -64,6 +64,9 @@ export default function Home() {
           <Button kind="secondary" label="Results log" onPress={() => router.push('/dev/results')} />
         </View>
         <View style={{ flex: 1 }}>
+          <Button kind="secondary" label="Typing diagnostics" onPress={() => router.push('/dev/typing')} />
+        </View>
+        <View style={{ flex: 1 }}>
           <Button kind="secondary" label="AI key" onPress={() => router.push('/dev/settings')} />
         </View>
       </Row>

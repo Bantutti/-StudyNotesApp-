@@ -8,3 +8,5 @@ export * from './useCases';
 export { runEditorAction, beautifyLiteAction, beautifyMessage, type ActionOutcome } from './editorActions';
 export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOINT_MS } from './versions';
 export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
+export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
+export { createNoteSession, type NoteSession } from './noteSession';

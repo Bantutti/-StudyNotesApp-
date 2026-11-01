@@ -73,3 +73,57 @@ storage or the WebView directly. Placements: `toolbar` (shown now), `sparkle` (t
 
 **Finish in M5:** the note screen's `EditorHost` switches from the stored document to the live editor
 (`requestDoc`, selection, `load`).
+
+## The live editor (P1 M5)
+
+**Note screen** (`src/app/note/[id].tsx`): title, mode switch Type · Draw (P4b placeholder) · Style,
+History and Info (word count, outline with jump), add template, delete with Undo, focus mode, and the
+keyboard toolbar (`src/screens/EditorToolbar.tsx`): Aa (H1, H2, H3, Text, B, I, U, S, link), highlight
+(the pack's highlighters with their meanings), lists and quotes, + block (picker), block menu (move up
+and down, duplicate, turn into, delete), the **P3b sparkle slot** (actions with placement `sparkle`),
+Beautify, undo and redo, hide keyboard. Table controls appear inside tables.
+
+**Saving:** `createNoteSession` (composition) wraps `createAutosave`: 1 s after typing stops, at least
+every 5 s while typing, flushed when the app goes to the background, before actions and Style, History
+or Template, and on leaving the note (then the "When you left" version). Before each save the
+"every 10 minutes" version rule runs. A failed save keeps the text and retries with the next change.
+
+**Editor page (`editor-web/`):**
+- New nodes (`blocks.ts`): blockquote, summary, Q&A, two columns (even or Cornell), simple tables
+  (`@tiptap/extension-table` 3.32.2, no merged cells, max 12 columns). Content expressions mirror
+  `checkDocStructure` exactly (list items and boxes hold simple blocks only, cells hold paragraphs).
+- `normalize.ts`: before every send, ragged pasted tables are padded and oversized ones become lines;
+  then the document is validated with the app's schema. An invalid document is never sent (the screen
+  shows a banner) instead of being silently dropped.
+- `loadDoc()`: loading a note resets undo history (Undo right after opening could otherwise blank it).
+- Slash menu and + block picker (`menu.ts`), rendered inside the page with pack-styled previews,
+  built with `createElement`/`textContent` only.
+- Typing shortcuts (`shortcuts.ts`): `# `, `- `, `1. `, `> `, `---` (StarterKit), `==text==`
+  (highlight), `Term :: meaning` + Enter (definition box), Enter in a Q&A question moves to the answer.
+
+**Block ids (`blockIdPlugin.ts`, decision Q6 = A), tested in `editor-web/__tests__/blockIds.test.ts`:**
+
+| Edit | Result |
+|---|---|
+| Enter in the middle of a line | first half keeps the id, second half gets a new one |
+| Enter at the start of a line (P0 bug) | an empty line is inserted above; the text keeps its id |
+| Enter at the start of a list item | a new item above; the item and its text keep their ids |
+| Turn into (heading, paragraph, `# ` input rule) | same id (restored at the same position when the text matches) |
+| Wrap in list, callout | the line keeps its id; the wrapper gets a new one |
+| Paste a copy above its original (P0 bug) | the original keeps the id; the copy gets a fresh one |
+| Paste from another note | fresh ids |
+| Cut + paste within the note (a move) | ids kept (cut ids remembered 10 minutes) |
+| Duplicate block | the original keeps; the copy gets fresh ids |
+| Move up / down | ids kept |
+| Undo / redo | ids restored by history |
+| Delete | the id is gone (never moved onto another block) |
+
+**IME and keyboards (UNVERIFIED on real phones):** conservative settings: no custom key handling while
+`view.composing`, the id pass waits for `compositionend`, documents aren't sent mid-composition, menus are
+driven by editor state (not key events), spellcheck and autocorrect stay on. **Developer menu > Typing
+diagnostics** (`/dev/typing`) logs keyboard and composition events as metadata only (types, input types,
+lengths, flags, cursor offsets; printable keys become "char"; the bridge schema rejects any text field
+and single-character keys), with Copy log for Rey's phone test.
+
+**Bridge additions:** native to web `requestSelection`, `scrollToBlock`, `setDiagnostics`, commands for
+the new blocks, tables and block menu; web to native `state` (toolbar), `selection`, `diag`.

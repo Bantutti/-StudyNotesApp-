@@ -40,6 +40,7 @@ export default function DevLayout() {
       <Stack.Screen name="ink" options={{ title: 'Ink latency' }} />
       <Stack.Screen name="results" options={{ title: 'Results log' }} />
       <Stack.Screen name="settings" options={{ title: 'AI key (Groq)' }} />
+      <Stack.Screen name="typing" options={{ title: 'Typing diagnostics' }} />
     </Stack>
   );
 }

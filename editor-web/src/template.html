@@ -12,6 +12,18 @@ body{background:#fff}
 .ProseMirror{outline:none;min-height:70vh;caret-color:var(--accent);white-space:pre-wrap;word-wrap:break-word}
 .ProseMirror-selectednode{outline:2px solid var(--accent2)}
 .ProseMirror-gapcursor:after{border-top:1px solid var(--ink)}
+#root{position:relative}
+.pk-cols>.pk-col{min-height:1.5em}
+.pk-table p{margin:0}
+.selectedCell{background:rgba(127,127,127,.15)}
+.sn-menu{position:absolute;left:12px;right:12px;z-index:10;max-height:46vh;overflow-y:auto;background:#fff;color:#1F2328;border:1px solid #E6E1DA;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;font-family:-apple-system,Roboto,sans-serif}
+.sn-menu[hidden]{display:none}
+.sn-item{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:6px 8px;border:0;border-radius:10px;background:transparent;text-align:left;font:inherit;color:inherit}
+.sn-item:active,.sn-item:focus{background:#F1EEE9;outline:none}
+.sn-prev{width:96px;height:40px;overflow:hidden;flex:0 0 96px;border-radius:8px;background:var(--paper);color:var(--ink);pointer-events:none}
+.sn-prev>*{transform:scale(.55);transform-origin:0 0;width:180%;margin:0!important}
+.sn-label{font-size:15px;font-weight:600}
+.sn-flash{outline:3px solid var(--accent2);outline-offset:2px;transition:outline-color 1.2s}
 </style>
 <style id="fonts"></style>
 <style id="theme"></style>

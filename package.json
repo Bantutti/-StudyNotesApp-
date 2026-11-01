@@ -47,6 +47,7 @@
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@tiptap/core": "3.32.2",
     "@tiptap/extension-heading": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
     "@tiptap/pm": "3.32.2",
     "@tiptap/starter-kit": "3.32.2",
     "@types/jest": "30.0.0",

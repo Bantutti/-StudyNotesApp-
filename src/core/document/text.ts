@@ -67,3 +67,25 @@ export function firstLine(doc: NoteDoc, max = 80): string {
   const first = extractTextBlocks(doc)[0]?.text ?? '';
   return first.length > max ? `${first.slice(0, max - 1)}…` : first;
 }
+
+export interface OutlineItem {
+  blockId: string | null;
+  level: 1 | 2 | 3;
+  text: string;
+}
+
+/** Headings in document order (Info sheet outline; tap to jump). */
+export function outline(doc: NoteDoc, max = 200): OutlineItem[] {
+  const out: OutlineItem[] = [];
+  const walk = (nodes: readonly DocNode[]) => {
+    for (const n of nodes) {
+      if (out.length >= max) return;
+      if (n.type === 'heading') {
+        const text = inlineText(n).replace(/\s+/g, ' ').trim();
+        if (text) out.push({ blockId: getBlockId(n), level: n.attrs.level, text: text.slice(0, 120) });
+      } else if ('content' in n && n.content) walk(n.content);
+    }
+  };
+  walk(doc.content);
+  return out;
+}

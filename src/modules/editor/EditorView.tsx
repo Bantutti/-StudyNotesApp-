@@ -13,7 +13,7 @@ import { validateNoteDoc, type Logger, type NoteDoc } from '@/core';
 import type { FontFaceData, StylePack } from '@/modules/stylepacks';
 
 import { EDITOR_HTML } from './generated/editorHtml';
-import { decode, encode, toNativeSchema, type EditorCommand, type ToNative, type ToWeb } from './protocol';
+import { decode, encode, toNativeSchema, type DiagEvent, type EditorCommand, type ToNative, type ToWeb } from './protocol';
 import { allowNavigation, HARDENED_WEBVIEW_PROPS } from './webviewPolicy';
 
 export interface EditorHandle {
@@ -22,8 +22,14 @@ export interface EditorHandle {
   setFonts(faces: readonly FontFaceData[]): void;
   command(name: EditorCommand, arg?: string): void;
   requestDoc(): Promise<NoteDoc>;
+  /** Block ids touched by the current selection (empty when nothing is selected). */
+  requestSelection(): Promise<string[]>;
+  scrollToBlock(blockId: string): void;
+  setDiagnostics(on: boolean): void;
   ping(): Promise<number>;
 }
+
+export type EditorState = Extract<ToNative, { type: 'state' }>;
 
 export interface EditorEvents {
   onReady?: () => void;
@@ -32,6 +38,10 @@ export interface EditorEvents {
   onBridgeError?: (code: string) => void;
   /** A link was tapped in the note. Wire to a LinkOpener (opens outside the app). */
   onOpenLink?: (href: string) => void;
+  /** Toolbar state at the cursor (block kind, active marks, undo/redo). */
+  onState?: (state: EditorState) => void;
+  /** Typing diagnostics batches (only when setDiagnostics(true)). Metadata only. */
+  onDiag?: (events: DiagEvent[]) => void;
 }
 
 interface Props extends EditorEvents {
@@ -99,6 +109,15 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
       case 'openLink':
         props.onOpenLink?.(msg.href);
         return;
+      case 'state':
+        props.onState?.(msg);
+        return;
+      case 'diag':
+        props.onDiag?.(msg.events);
+        return;
+      case 'selection':
+        settle(msg.reqId, msg.blockIds);
+        return;
       case 'pong':
         settle(msg.reqId, Date.now() - msg.sentAt);
         return;
@@ -122,6 +141,9 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
     setFonts: (faces) => send({ v: 1, type: 'setFonts', faces: [...faces] }),
     command: (name, arg) => send({ v: 1, type: 'command', name, arg }),
     requestDoc: () => request<NoteDoc>((reqId) => ({ v: 1, type: 'requestDoc', reqId })),
+    requestSelection: () => request<string[]>((reqId) => ({ v: 1, type: 'requestSelection', reqId })),
+    scrollToBlock: (blockId) => send({ v: 1, type: 'scrollToBlock', blockId }),
+    setDiagnostics: (on) => send({ v: 1, type: 'setDiagnostics', on }),
     ping: () => request<number>((reqId) => ({ v: 1, type: 'ping', reqId, sentAt: Date.now() })),
   }));
 
@@ -132,6 +154,8 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
       source={{ html: EDITOR_HTML }}
       {...HARDENED_WEBVIEW_PROPS}
       webviewDebuggingEnabled={__DEV__}
+      hideKeyboardAccessoryView
+      automaticallyAdjustContentInsets={false}
       onShouldStartLoadWithRequest={(req: ShouldStartLoadRequest) => allowNavigation(req.url)}
       onOpenWindow={() => undefined}
       onMessage={onMessage}

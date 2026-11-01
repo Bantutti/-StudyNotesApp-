@@ -9,6 +9,7 @@ import {
   firstLine,
   getBlockId,
   listBlockIds,
+  outline,
   prepareDocForSave,
   SAMPLE_NOTE,
   utf16String,
@@ -74,5 +75,14 @@ describe('utf16String', () => {
   it('counts UTF-16 units like Firestore rules', () => {
     expect(utf16String(1, 2).safeParse('😀').success).toBe(true);
     expect(utf16String(1, 2).safeParse('😀a').success).toBe(false);
+  });
+});
+
+describe('outline', () => {
+  it('lists headings with their block ids and levels', () => {
+    expect(outline(SAMPLE_NOTE)).toEqual([
+      { blockId: 'b_sample000000001', level: 1, text: 'Osmosis & Diffusion' },
+      { blockId: 'b_sample000000007', level: 2, text: 'Solution types' },
+    ]);
   });
 });
