@@ -11,4 +11,4 @@ export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type
 export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
 export { createNoteSession, type NoteSession } from './noteSession';
 export { inkServiceFor, inkStorePort } from './ink';
-export { createNoteInk, KV_INK, KEY_INK_PREFS, LIVE_CLEAR_FALLBACK_MS, type NoteInk, type NoteInkState, type InkPrefs } from './noteInk';
+export { createNoteInk, KV_INK, KEY_INK_PREFS, LIVE_CLEAR_FALLBACK_MS, RENDER_BATCH, type NoteInk, type NoteInkState, type InkPrefs } from './noteInk';

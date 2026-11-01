@@ -11,6 +11,7 @@ export { INK_STRINGS, CUSTOM_PEN_COLOURS } from './ui/strings';
 export { InkCanvas, type InkCanvasHandle } from './InkCanvas';
 export { acceptPointer, POINTER, type InkMode } from './policy';
 export { emptyInkStats, summarizeInk, judgeInk, histPercentile, type InkStats, type InkSummary } from './stats';
+export { runInkBench, judgeBench, syntheticLayout, BENCH_TARGETS, type BenchResult } from './diagnostics/bench';
 
 // Model: format, limits, operations.
 export { INK_LIMITS, INK_UNIT, PEN_KEYS, HIGHLIGHTER_KEYS, type PenKey, type HighlighterKey } from './model/limits';

@@ -21,7 +21,7 @@ import {
   inkUsage,
   INK_LIMITS,
   PEN_KEYS,
-  renderLayer,
+  renderStroke,
   type InkController,
   type InkInputMode,
   type InkPoint,
@@ -36,6 +36,8 @@ export const KV_INK = 'ink';
 export const KEY_INK_PREFS = 'prefs';
 /** How long the live stroke waits for the page's inkAck before it is dropped anyway. */
 export const LIVE_CLEAR_FALLBACK_MS = 600;
+/** Strokes rendered per batch when a whole layer is shown (open, WebView restart). */
+export const RENDER_BATCH = 500;
 
 const prefsSchema = z.object({
   stylusSeen: z.boolean().default(false),
@@ -143,11 +145,29 @@ export function createNoteInk(deps: NoteInkDeps) {
   /** The page shows ink: always when there are strokes (reconcile needs the layout too), and in Draw mode. */
   const updateFeed = () => deps.editor()?.setInkFeed(drawMode || (ctl?.layer.strokes.length ?? 0) > 0);
 
+  /**
+   * Shows the whole layer: the first RENDER_BATCH strokes at once, the rest in
+   * later batches so a very full drawing never blocks the JS thread for long
+   * (the synthetic bench: ~1 s to render 5,000 strokes in one go on Node).
+   * A newer sendAll cancels batches still pending from an older one.
+   */
+  let sendGen = 0;
   const sendAll = () => {
     const ed = deps.editor();
     if (!ed || !ctl) return;
+    const gen = ++sendGen;
+    const strokes = ctl.layer.strokes;
     ed.inkClear();
-    ed.inkAdd(renderLayer(ctl.layer));
+    ed.inkAdd(strokes.slice(0, RENDER_BATCH).map(renderStroke));
+    const next = (from: number) => {
+      if (from >= strokes.length) return;
+      setT(() => {
+        if (gen !== sendGen || disposed) return;
+        deps.editor()?.inkAdd(strokes.slice(from, from + RENDER_BATCH).map(renderStroke));
+        next(from + RENDER_BATCH);
+      }, 0);
+    };
+    next(RENDER_BATCH);
     updateFeed();
   };
 

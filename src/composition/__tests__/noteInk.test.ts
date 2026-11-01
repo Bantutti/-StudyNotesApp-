@@ -11,7 +11,7 @@ import { parseInkJson, type InkFilesPort } from '@/modules/ink';
 import { openStore } from '@/modules/store';
 
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
-import { createNoteInk, KEY_INK_PREFS, KV_INK, LIVE_CLEAR_FALLBACK_MS, type NoteInkState } from '../noteInk';
+import { createNoteInk, KEY_INK_PREFS, KV_INK, LIVE_CLEAR_FALLBACK_MS, RENDER_BATCH, type NoteInkState } from '../noteInk';
 import { inkServiceFor } from '../ink';
 
 const B1 = 'b_AAAAAAAAAA01';
@@ -66,6 +66,11 @@ function memFiles(): InkFilesPort & { files: Map<string, string> } {
   };
 }
 
+const created: { dispose(): void }[] = [];
+afterEach(() => {
+  for (const c of created.splice(0)) c.dispose(); // cancels the session's 1.5 s working-copy timer
+});
+
 async function setup() {
   let t = Date.UTC(2026, 10, 1);
   const now = () => (t += 5);
@@ -97,6 +102,7 @@ async function setup() {
     clearTimer: () => undefined,
   });
   await ink.start();
+  created.push(ink);
   return { ink, store, files, calls, states, seen, timers, note, setLatest: (d: NoteDoc) => (latest = d) };
 }
 
@@ -229,5 +235,32 @@ describe('createNoteInk', () => {
     ink.fling(0, 900);
     ink.zoom(2);
     expect(calls.slice(-3).map((c) => [c.name, c.args])).toEqual([['inkScroll', [0, 30]], ['inkFling', [0, 900]], ['inkZoom', [2]]]);
+  });
+});
+
+describe('createNoteInk: very full drawings', () => {
+  it('shows a big layer in batches of 500 so the JS thread is never blocked for long', async () => {
+    const ids = createSeqIdGenerator();
+    const logger = createLogger({ sink: memorySink() });
+    const store = await openStore(nodeSqliteDriver(), { ids, logger });
+    const files = memFiles();
+    inkServiceFor(store, { ids, logger, files });
+    const note = await store.notes.create({ stylePackId: 'pastel-highlight', document: doc(B1) });
+    // A leftover working copy with 1,200 strokes (opened and merged on start).
+    const strokes = Array.from({ length: 1_200 }, (_, i) => ({ id: `s_F${String(i).padStart(15, '0')}`, b: B1, tool: 'pen' as const, c: 'p0', w: 30, o: [10, 10] as [number, number], d: [5, 5], t: 1_760_000_000_000 + i }));
+    files.files.set(`ink/work/${note.id}.json`, JSON.stringify({ kind: 'notedpo-ink', v: 1, note: note.id, unit: 1000, strokes, gone: [] }));
+    const { ed, calls } = fakeEditor();
+    const timers: (() => void)[] = [];
+    const ink = createNoteInk({
+      store, ids, logger, noteId: note.id, editor: () => ed, getLatestDoc: () => null, onNoteUpdated: () => undefined, onState: () => undefined,
+      setTimer: (fn) => timers.push(fn), clearTimer: () => undefined,
+    });
+    await ink.start();
+    created.push(ink);
+    const sizes = () => calls.filter((c) => c.name === 'inkAdd').map((c) => (c.args[0] as unknown[]).length);
+    expect(sizes()).toEqual([500]);
+    while (timers.length) timers.shift()?.();
+    expect(sizes()).toEqual([500, 500, 200]);
+    expect(RENDER_BATCH).toBe(500);
   });
 });
