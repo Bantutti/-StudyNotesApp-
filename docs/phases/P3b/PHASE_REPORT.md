@@ -6,7 +6,7 @@
 | Date | 2026-11-01 (Asia/Manila) |
 | Zip | `{{ZIP_NAME}}` ({{ZIP_FILES}} files, {{ZIP_BYTES}} bytes) |
 | SHA-256 | `{{ZIP_SHA256}}` |
-| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p3b-ai-ui`, draft PR #7. It was branched from `phase/p1-core-app` at 8855b26 (P1 isn't merged yet), so it contains P1's commits until main is merged in |
+| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p3b-ai-ui`, draft PR #7. Cut from `phase/p1-core-app` at 8855b26; **main (21b29b8: P1 merged as 91882b6, plus the Gaegu font fix) is merged in**, so the PR diff is P3b only |
 
 > The copy of this report **inside** the zip shows the placeholders above, because a zip can't contain its
 > own checksum. The real values are in `exports/<zip>.sha256` and in the copy uploaded next to the zip
@@ -53,8 +53,8 @@ Developer > **Demo AI**. Full steps: `TESTING_ON_DEVICE.md` §7, checklist **P3b
 
 | Check | Result |
 |---|---|
-| `npm run verify` | Pass: editor page up to date, types, lint (0 warnings), **601 passed / 10 skipped** (59 suites; P1 base 430), secret scan clean, prod audit 0 |
-| New tests | 171 in P3b: aiui 151 (age rule, gate, consent kinds, reports, flow, diff and wording, demo, screens, settings, static security), composition 14 (the action through `runEditorAction` on real SQLite; Delete all data; empty-document guard; Groq only through the gate), ai 6 (candidate key, reload) |
+| `npm run verify` | Pass: editor page up to date, types, lint (0 warnings), **648 passed / 10 skipped** (63 suites; main 21b29b8 base 476), secret scan clean, prod audit 0 |
+| New tests | 172 in P3b: aiui 151 (age rule, gate, consent kinds, reports, flow, diff and wording, demo, screens, settings, static security), composition 15 (the action through `runEditorAction` on real SQLite; Delete all data; empty-document guard; Groq only through the gate), ai 6 (candidate key, reload) |
 | Production dependency audit | **0 vulnerabilities** |
 | Full audit (incl. dev tools) | 7 low (deepmerge via Jest, dev-only, no fix): unchanged from P1, accepted as P0-S6 |
 | `npm run bundle:check` | Pass: Android 8.3 MB, iOS 8.3 MB (P1: 8.1 MB) |

@@ -4,8 +4,11 @@ For the Lead when merging PR #7 (P3b AI screens).
 
 ## 1. Order and conflicts
 
-- This branch was cut from `phase/p1-core-app` at **8855b26**. Merge P1 (PR #5) first, then merge `main` into
-  `phase/p3b-ai-ui`, re-run `npm run verify`, and the PR diff shrinks to P3b only.
+- **Done (Nov 1, 4:4x PM):** main 21b29b8 (P1 merged + the Gaegu font fix) is merged into `phase/p3b-ai-ui`
+  with a real merge commit. Conflicts were only in `src/app/note/[id].tsx` (imports: keep P1's `AppError` and P3b's
+  `errorCode`) and `src/composition/services.ts` (keep P1's `devTools` and P3b's `ai`/`aiui`). The transcriber's
+  developer exception now uses P1's `devToolsAllowed` (`__DEV__` or an EAS development build), the same rule as
+  the developer menu. verify after the merge: 648 passed / 10 skipped.
 - **P2b runs in parallel** and edits the same shared files. P3b's changes are small and self-contained, so a
   conflict should only need both sides kept:
   - `src/composition/services.ts`: the `ai`/`aiui` fields, `Adapters.aiFile`, the two `appData` wrappers

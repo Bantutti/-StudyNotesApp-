@@ -285,6 +285,21 @@ describe('the AI gate is the only route to Groq in release builds', () => {
     expect(calls).toEqual([]);
   });
 
+  it('the transcriber follows the developer-menu rule: EAS development builds yes, preview or store builds no', async () => {
+    for (const [variant, expected] of [['development', true], ['preview', false], [null, false]] as const) {
+      const { a } = adapters({
+        isDev: false,
+        appVariant: variant,
+        fetchFn: (async () => ({ ok: true, status: 200, json: async () => ({}) })) as unknown as typeof fetch,
+      });
+      const s = createServicesWith(a);
+      await s.keyVault.set('groq', GROQ_KEY);
+      if (expected) expect(await s.transcriber.testKey()).toBe(true);
+      else await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' });
+      expect(s.devTools).toBe(expected);
+    }
+  });
+
   it('development builds keep the P0 spike screens working', async () => {
     const calls: string[] = [];
     const { a } = adapters({
