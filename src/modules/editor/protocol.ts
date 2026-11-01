@@ -112,7 +112,11 @@ export type InkBlockBox = z.infer<typeof inkBlockBoxSchema>;
 export const toWebSchema = z.discriminatedUnion('type', [
   z.object({ v, type: z.literal('load'), doc: z.unknown() }),
   z.object({ v, type: z.literal('setPack'), pack: z.unknown() }),
-  z.object({ v, type: z.literal('setFonts'), faces: z.array(z.unknown()).max(12) }),
+  /**
+   * Font faces. A pack's faces can exceed one message (Gaegu alone is ~4.2 M chars), so native sends
+   * them one per message: the first replaces the page's faces, the rest have append: true.
+   */
+  z.object({ v, type: z.literal('setFonts'), faces: z.array(z.unknown()).max(12), append: z.boolean().optional() }),
   z.object({
     v,
     type: z.literal('command'),

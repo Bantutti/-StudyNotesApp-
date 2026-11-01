@@ -6,6 +6,8 @@ validated message bridge.
 **Public interface**
 - `<EditorView ref logger pack faces getDoc onReady onChange onMetric onBridgeError />` with handle methods
   `load(doc)`, `setPack(pack)`, `setFonts(faces)`, `command(name, arg?)`, `requestDoc()`, `ping()`.
+- **Fonts go one face per `setFonts` message** (first replaces, the rest `append: true`; the page keeps at
+  most 12, `editor-web/src/fonts.ts`): Pastel Highlight's Gaegu faces are ~4 M chars each.
 - **Every `ready`** (first start and after a WebView restart) `EditorView` sends `pack`, `faces` and
   `getDoc()` (the screen passes the newest document, `session.readyDoc`). Android render-process loss
   remounts the WebView; iOS content-process loss reloads it; pending requests fail with `timeout`.
