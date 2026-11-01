@@ -153,7 +153,7 @@ export function createServices(): Services {
 }
 
 /** App-made folders outside the database. Fixed names only, never user input. */
-const APP_FOLDERS = ['p0', 'recordings'] as const;
+const APP_FOLDERS = ['p0', 'recordings', 'ink'] as const; // 'ink': P4b drawings (working + published copies)
 
 async function wipeAppFiles(): Promise<void> {
   for (const name of APP_FOLDERS) {

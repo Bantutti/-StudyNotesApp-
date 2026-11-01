@@ -1,19 +1,148 @@
-# ink
+# Module: ink (P4b, drawing on notes)
 
-**Purpose:** pen and finger drawing with palm rejection and smoothness measurements.
+**Status:** being built in P4b (branch `phase/p4b-ink`). M1 (model and
+geometry) and M2 (storage and service) are done. The editor bridge, Draw mode
+UI, tools, sketch block, sync hand-off and diagnostics screen follow in M3 to
+M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
+§X.Y.
 
-**Public interface**
-- `<InkCanvas ref mode color paper strokeWidth />` with handle `clear()`, `readStats()`, `resetStats()`.
-- `acceptPointer(mode, pointerType, stylusSeen)` (worklet), `POINTER`, `InkMode` (`any`, `auto`, `stylus`).
-- `emptyInkStats`, `summarizeInk(stats)` (frame p50/p95/max from a 1 ms histogram, dropped-frame %,
-  samples per second, pressure range), `judgeInk(summary)`, `histPercentile`.
+## Purpose
 
-**How it works:** Gesture Handler 3 `usePanGesture` callbacks run as Reanimated worklets on the UI
-thread. Skia 2 paths are immutable, so each stroke grows an `SkPathBuilder` and publishes `build()`
-snapshots to shared values that the Skia `<Path>` draws; finished strokes are added to a second
-builder. React never re-renders during a stroke.
+Lets students draw on a note with a stylus or a finger: pen, highlighter,
+eraser and lasso, plus undo and redo. Strokes stay attached to the text they
+were drawn on. They move when text above them grows, they survive edits,
+undo, version restore and sync, and they render the same on phone and tablet.
 
-**How to extend (P4b)**
-- Per-touch palm rejection (palm first, pen second) with a manual gesture and touch ids.
-- Variable stroke width from pressure (one path per stroke or a vertices mesh).
-- Store strokes as data (points, pressure, pen index) attached to a block id.
+## Design in one paragraph
+
+Finished strokes live **inside the editor WebView** as SVG attached to their
+anchor block (M3), so they scroll and reflow with the text natively and print
+the same way (P6). The stroke being drawn right now is drawn by a **native
+Skia overlay**, shown only in Draw mode (M4), for low latency. Both use the
+same TypeScript outline code, so a stroke doesn't jump when it's committed.
+Each note has **one JSON ink file**. It's validated with zod, capped at 4 MiB,
+and treated as untrusted on load.
+
+## Public interface (`src/modules/ink/index.ts`)
+
+| Export | What it does |
+|---|---|
+| `InkLayer`, `InkStroke`, `InkTombstone` | The file format (below) |
+| `parseInkJson(text, { expectedNote })` / `validateInkLayer(value)` | The **only** way to load ink. Checks size before parsing, then the strict schema, per-stroke checks and caps |
+| `serializeInk(layer)` | Fixed key order, ASCII-only output (§6.3) |
+| `emptyInkLayer(noteId)`, `inkUsage(layer)` | An empty layer; the share of the tightest cap used (warn at 90%) |
+| `applyOp(layer, { remove, add }, ctx)` | The one write primitive: tombstones removals, gives re-added strokes fresh ids, refuses ops that would pass a cap |
+| `createInkHistory()` | Undo and redo (100 steps per visit), with `remap()` for renamed strokes |
+| `mergeInkLayers(a, b)` | The two-device merge (union with tombstones, §10) |
+| `buildStrokes(input)` | Raw pen samples in page px → stored strokes (smooth, convert, simplify, split, encode) |
+| `pickAnchor`, `strokeToPx`, `widthPx`, `reexpress`, `InkLayout` | Anchors (§9) |
+| `reconcile(prevDoc, nextDoc, layer, prevLayout, ctx)` | Keeps strokes attached after text joins (§9.3) |
+| `routePointer`, `penCancelsTouch`, `pastScrollSlop` | Stylus-aware input routing and palm guards (worklets) |
+| `createInkService(deps)`, `InkSession` | Loading, autosaving, publishing for sync, crash recovery, orphan sweep |
+| `expoInkFiles` | The file adapter (expo-file-system, atomic writes) |
+| `InkCanvas`, `summarizeInk`, `judgeInk` | P0 spike canvas and metrics, kept for the Ink diagnostics screen |
+
+The composition root adapts the Store with `inkStorePort(store)` and creates
+one service per Store with `inkServiceFor(store, deps)`
+(`src/composition/ink.ts`).
+
+## File format (v1)
+
+```jsonc
+{ "kind": "notedpo-ink", "v": 1, "note": "<noteId>", "unit": 1000,
+  "strokes": [{
+    "id": "s_<16..32 [A-Za-z0-9]>",   // immutable: an edit = tombstone + new id
+    "b": "b_…",                        // anchor block (attrs.blockId)
+    "tool": "pen" | "hl",
+    "c": "p0" | "p1" | "p2" | "h0" | "#RRGGBB",  // pack key (restyles with the pack) or custom colour
+    "w": 5..400,                       // width in tenths of a unit
+    "o": [x0, y0],                     // first point, units from the block's top-left corner
+    "d": [dx1, dy1, …],                // integer deltas (§6.1)
+    "p": [0..100, …],                  // optional pressure, one per point
+    "t": 1730450000000,                // created (ms)
+    "rec": { "r": "<recordingId>", "ms": 12345 }  // optional, filled by P4 while recording
+  }],
+  "gone": [{ "id": "s_…", "t": 1730450001000 }]    // tombstones for the merge
+}
+```
+
+**Units:** 1000 = the anchor block's width, on both axes (§1).
+**Pens** use `p0` to `p2` (the pack's three ink pens), and the **highlighter**
+uses `h0` (the pack's highlighter), so ink restyles with the pack the way text
+highlights do. Custom colours are upper-case `#RRGGBB`.
+
+### Caps (`INK_LIMITS`)
+
+| What | Cap |
+|---|---|
+| File size | 4 MiB (the cloud allows 5 MiB) |
+| Strokes per note | 10,000 |
+| Points per stroke | 2,000 (longer gestures are split, §6.4) |
+| Points per note | 400,000 |
+| Tombstones | 5,000 (oldest compacted, §10.3) |
+| Coordinates | x −1000..2000, y −50000..50000, step ≤ 4000 (§6.2) |
+| Width | 5..400 tenths of a unit |
+| Undo steps | 100 per note visit |
+
+### Loading untrusted ink
+
+`parseInkJson` runs these checks in order:
+1. raw length ≤ 4 MiB **before** `JSON.parse`;
+2. zod strict objects (unknown keys rejected);
+3. per-stroke checks: integer deltas, step size, cumulative bounds, colour
+   allowed for the tool, pressure length = point count;
+4. unique ids, stroke, point and tombstone caps, and the note id.
+
+**One bad stroke rejects the whole file.** The service keeps its last good
+copy and reports `damaged` (the UI shows a banner). Error messages never echo
+file content. A stroke that's also tombstoned is dropped instead of rejected
+(the tombstone wins, as in a merge).
+
+## Saving and sync (decision Q9)
+
+| Copy | Path (relative to the documents folder) | Written | Synced |
+|---|---|---|---|
+| **Working** | `ink/work/<noteId>.json` | 1.5 s after the last change, on leaving Draw mode, on going to the background | No |
+| **Published** | `ink/<assetId>.json` (= `assets.localPath`) | Only on **leaving the note**, and only if the bytes changed | Yes, by P2b |
+
+* **Publishing** flushes the working copy, purges strokes that can't be
+  recovered (§9.3), and writes the published file atomically. It then makes
+  **one** synced row change:
+  * first drawing on a note: `store.assets.createInkLayer` creates the asset
+    and sets `notes.inkLayerRef` in one transaction;
+  * later visits: `store.assets.update(size)`.
+
+  P2b's triggers queue that one change, so a note is uploaded **at most once
+  per visit** (Storage free tier: 5K uploads per month). The published file
+  never changes while P2b may be uploading it.
+* **Asset size** = published bytes, which P2a's Storage rule requires (§6.3).
+* **Crash recovery:** at start-up, `recover()` publishes every leftover
+  working copy. On open, a leftover working copy is **merged** with the
+  published copy, so nothing drawn is lost.
+* **Deleting a note:** P1's purge clears `notes.inkLayerRef` after the 8 s
+  undo window. `sweepOrphans()` then tombstones the asset (P2b deletes the
+  cloud file) and deletes the local file.
+* **Delete all data** removes the whole `ink/` folder (`services.ts`
+  `APP_FOLDERS`) and the `assets` rows.
+* **Two devices:** P2b calls the ink merger (`registerAssetMerger('ink', …)`,
+  being added by P2b) when an ink upload is rejected as stale or a newer copy
+  is pulled. The merge is the union in §10. *(M8)*
+
+## Privacy
+
+Handwriting is note content:
+* it's never logged (only event names and counts; a test checks this);
+* it's not in diagnostics results;
+* it's wiped by Delete all data;
+* it's deleted with its note.
+
+## Extending
+
+* **A new tool** that changes strokes must go through `applyOp`, so undo, caps
+  and tombstones work. Strokes are immutable: build a new stroke with a fresh
+  id instead of editing one.
+* **A format change** needs a new `v` and a migration in the loader. Old apps
+  refuse files with a newer `v` (the schema uses `z.literal(1)`).
+* **Testing:** Skia and Reanimated are replaced by small stubs in Jest
+  (`test/mocks/`), so ink logic is tested directly. Drawing itself is checked
+  on devices with the Ink diagnostics screen (M9) and TESTING_ON_DEVICE.

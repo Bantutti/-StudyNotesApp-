@@ -32,3 +32,7 @@ export { buildStrokes, type BuildInput } from './model/build';
 // Input routing (stylus-aware mode, palm guards).
 export { routePointer, penCancelsTouch, pastScrollSlop, PALM_AFTER_PEN_MS, PEN_CANCEL_WINDOW_MS, SCROLL_SLOP_PX, type InkInputMode, type Route, type RouteState } from './input/routing';
 
+// Service: local saving, publishing for sync, recovery.
+export { createInkService, publishedPath, workingPath, WORKING_SAVE_DEBOUNCE_MS, type InkService, type InkSession, type PublishResult, type InkSource } from './service/inkService';
+export { expoInkFiles } from './service/expoInkFiles';
+export type { InkFilesPort, InkStorePort, InkNoteInfo, InkAssetInfo } from './service/ports';
