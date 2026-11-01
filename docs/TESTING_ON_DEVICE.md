@@ -169,10 +169,9 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
    your browser for this install only).
 4. Open **NotedPo**. Everything in section 8 "P1" works offline in this build.
 
-> The app's display name is **NotedPo**. The Android package id is still the placeholder
-> `com.reyanyan.studynotes.dev` (the proposed final id `io.github.bantutti.notedpo` is waiting for Rey's
-> confirmation, because it becomes permanent at the first Google Play upload). An APK built now updates in
-> place only while the package id stays the same; after the id changes, it installs as a separate app.
+> The APK is **NotedPo** with the final app id `io.github.bantutti.notedpo`, so later builds install as
+> updates over this one (your notes stay). If you ever installed an older test build with a different id,
+> uninstall it first; it is a separate app.
 >
 > The 6 app icons in `assets/` are in this zip but not in GitHub (the integration can't upload images).
 > If you build from a GitHub checkout, copy them in from the zip first.

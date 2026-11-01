@@ -30,13 +30,18 @@ Also in the repo: the **P2a backend** (`firebase/`, Firestore and Storage rules 
 | Item | Value | Where |
 |---|---|---|
 | Display name | **NotedPo** | `app.json` `expo.name` and `'app.name'` in `src/core/strings.ts` (every visible use reads it via `{app}`; a test keeps the two equal) |
-| Android package | `com.reyanyan.studynotes.dev` (placeholder) | `app.json` `expo.android.package` |
-| iOS bundle id | `com.reyanyan.studynotes.dev` (placeholder) | `app.json` `expo.ios.bundleIdentifier` |
+| Android package | `io.github.bantutti.notedpo` | `app.json` `expo.android.package` |
+| iOS bundle id | `io.github.bantutti.notedpo` | `app.json` `expo.ios.bundleIdentifier` |
+| URL scheme | `notedpo` (`notedpo://`) | `app.json` `expo.scheme` |
+| Expo slug | `notedpo` | `app.json` `expo.slug` (the EAS project name; no EAS project is linked yet) |
 
-**TODO (waiting for Rey):** switch both ids to the proposed `io.github.bantutti.notedpo`. Do it in one commit,
-together with the test in `src/core/__tests__/appName.test.ts`. The Android id becomes **permanent at the first
-Google Play upload**, and changing it later means a new app (users would lose their local notes when moving).
-Until then, keep the placeholder.
+Name and app id **confirmed by Rey on Nov 1, 2026**. The Android id becomes **permanent at the first Google Play
+upload** (a new id would mean a new store listing, and users would lose their local notes when moving), so do not
+change it. `src/core/__tests__/appName.test.ts` fails if these values drift or a P0 placeholder comes back.
+
+Internal names that are **not** app identifiers and stay as they are: the npm package name `study-notes-app`, the
+on-device database file `studynotes.db` (renaming it would orphan existing test installs' notes), and the P2a
+emulator project `demo-studynotes` (P2b picks the real Firebase project id).
 
 ## Requirements
 

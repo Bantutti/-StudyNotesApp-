@@ -1,21 +1,21 @@
 {
   "expo": {
     "name": "NotedPo",
-    "slug": "study-notes-app",
-    "scheme": "studynotes",
+    "slug": "notedpo",
+    "scheme": "notedpo",
     "version": "0.0.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.reyanyan.studynotes.dev",
+      "bundleIdentifier": "io.github.bantutti.notedpo",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.reyanyan.studynotes.dev",
+      "package": "io.github.bantutti.notedpo",
       "adaptiveIcon": {
         "backgroundColor": "#FDEEF3",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -16,8 +16,14 @@ describe('app name (one place: strings.ts)', () => {
     expect(t('welcome.title')).toBe('Welcome to Renamed');
   });
 
-  it('the package id and bundle identifier are NOT changed yet (TODO: io.github.bantutti.notedpo, pending Rey)', () => {
-    expect(appJson.expo.android.package).toBe('com.reyanyan.studynotes.dev');
-    expect(appJson.expo.ios.bundleIdentifier).toBe('com.reyanyan.studynotes.dev');
+  it('final app id confirmed by Rey (Nov 1): same id on Android and iOS, matching scheme and slug', () => {
+    expect(appJson.expo.android.package).toBe('io.github.bantutti.notedpo');
+    expect(appJson.expo.ios.bundleIdentifier).toBe('io.github.bantutti.notedpo');
+    expect(appJson.expo.scheme).toBe('notedpo');
+    expect(appJson.expo.slug).toBe('notedpo');
+  });
+
+  it('no P0 placeholder identifiers remain in app.json', () => {
+    expect(JSON.stringify(appJson)).not.toMatch(/reyanyan|studynotes|study-notes/i);
   });
 });

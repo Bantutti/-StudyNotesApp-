@@ -27,7 +27,8 @@ All notable changes, one section per phase.
 - Core: ErrorCode `cancelled` and `consent` (P3a follow-up); `syncedText` UTF-16 validators (P2a follow-up).
 
 ### Changed
-- Display name **NotedPo** (`app.json` name and the strings table; package and bundle ids unchanged, TODO).
+- App identity (confirmed by Rey): display name **NotedPo** (`app.json` name and the strings table), Android package
+  and iOS bundle id `io.github.bantutti.notedpo`, URL scheme and Expo slug `notedpo` (were P0 placeholders).
 - P0 spike screens moved under `/dev` (developer menu). `expo-crypto` and `expo-device` pinned exactly.
 - Export renders the new blocks (basic; P6 polishes). Editor script about 586 KB.
 
