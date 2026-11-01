@@ -28,6 +28,12 @@ body{background:#fff}
 .ink-layer{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}
 #ink-under{z-index:0}#editor{position:relative;z-index:1}#ink-over{z-index:2}
 .ink-b{position:absolute;aspect-ratio:1/1;height:auto;overflow:visible;pointer-events:none}
+/* P4b: tablets get a fixed, centred page width (decision Q3), so ink looks the same in portrait and landscape. */
+#root{zoom:var(--ink-zoom,1)}
+@media (min-width:800px){#root{max-width:760px;margin:0 auto}}
+/* P4b sketch block: a framed drawing area in the note flow. */
+.pk-sketch{position:relative;margin:calc(var(--gap)*.5) 0;border:1.5px dashed var(--soft,#ccc);border-radius:10px;min-height:120px;box-sizing:border-box}
+.pk-sketch.ProseMirror-selectednode{outline:2px solid var(--accent2)}
 </style>
 <style id="fonts"></style>
 <style id="theme"></style>

@@ -1,9 +1,10 @@
 # Module: ink (P4b, drawing on notes)
 
 **Status:** being built in P4b (branch `phase/p4b-ink`). M1 (model and
-geometry), M2 (storage and service) and M3 (drawing finished ink on the
-editor page) are done. Draw mode UI, tools, sketch block, sync hand-off and
-the diagnostics screen follow in M4 to M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
+geometry), M2 (storage and service), M3 (finished ink on the editor page),
+M4 (Draw mode: live stroke, input routing, scroll and zoom), M5 (tools) and
+M6 (toolbars) are done. Sketch block, sync hand-off and the diagnostics
+screen follow in M7 to M9. The maths is in [INK_MATH.md](./INK_MATH.md). Code comments cite it as
 §X.Y.
 
 ## Purpose
@@ -147,6 +148,59 @@ from the validated pack, so ink restyles with the pack.
 **After a WebView restart** (P1 r2 remounts it on Android render-process loss),
 the screen must send `inkClear` and then `inkAdd(renderLayer(layer))` on every
 `onReady`. *(The screen wiring comes with Draw mode in M4.)*
+
+## Draw mode (M4 to M6)
+
+| Piece | File | Role |
+|---|---|---|
+| `InkOverlay` | `ui/InkOverlay.tsx` | Skia surface over the editor WebView (Draw mode only). Gestures and the live stroke run on the UI thread (worklets); finished gestures go to JS with `scheduleOnRN` |
+| `InkController` | `controller.ts` | Pure logic: commit strokes, eraser (whole / partial), lasso (select, move, recolour, delete), undo/redo, reconcile, hidden drawings |
+| `InkToolbar` | `ui/InkToolbar.tsx` | Phone bar (bottom) or tablet floating pill (docks left/right, draggable) |
+| `createNoteInk` | `src/composition/noteInk.ts` | One note's ink while the editor is open: session, controller, page updates, preferences |
+| `useNoteInk`, `NoteInkOverlay`, `NoteInkBar` | `src/screens/NoteInk.tsx` | Thin React wrappers used by `src/app/note/[id].tsx` |
+
+**Coordinates.** Overlay touches are WebView view px. The controller
+subtracts the page origin from `inkLayout` to get page px, then converts to
+block units (§1.2). The page measures its own (zoomed) boxes, so pinch zoom
+needs no extra maths.
+
+**Live stroke = committed stroke.** The overlay smooths with the same
+`smoothStep` (§2.1) and builds its path with the same `centerlinePath` /
+`strokeOutline` code. The live copy stays until the page acknowledges the
+committed stroke (`inkAck` → `clearKey`), with a 600 ms fallback, so the line
+never flickers or jumps.
+
+**Input routing (decision Q8).** `routePointer` runs per touch on the UI
+thread:
+* the pen always draws;
+* a finger draws until a stylus has been seen on this device (remembered in
+  kv); after that, one finger scrolls;
+* "Draw with finger" and the ⋯ menu's input mode override this;
+* touches are ignored while the pen is down and for 400 ms after it lifts;
+* a gesture cancelled by a second pointer (often a palm) draws nothing;
+* two fingers always scroll, and pinch zooms 1x to 3x.
+
+The overlay owns the touches, so it scrolls the page with `inkScroll` and
+`inkFling` (exponential decay), and zooms it with `inkZoom` (CSS `zoom` via
+`--ink-zoom`, reset when Draw mode ends). All thresholds are **UNVERIFIED** on
+real hardware.
+
+**Tools.**
+
+| Tool | Behaviour |
+|---|---|
+| Pen | Three pack pens (`p0` to `p2`) or a custom colour; widths 1.6 / 3 / 5 px |
+| Highlighter | `h0`, widths 10 / 14 / 20 px, drawn behind the text |
+| Eraser | Radius 10 px. Tap it again to switch between whole strokes and partial erasing (§7.4); the highlighter is always erased whole |
+| Lasso | Select strokes at least half inside the loop. Drag inside the selection to move it (strokes re-anchor to the block under them). Toolbar: Delete, Recolour (cycles the pens), Clear |
+| Undo / redo | 100 steps per visit; one gesture = one step |
+
+**Preferences** are stored in kv namespace `ink`, key `prefs`, and never
+synced: stylus seen, input mode, finger drawing, toolbar side, last tools,
+and whether the tip was shown.
+
+**Tablet page width.** At 800 px or wider, the page is a centred 760 px
+column (decision Q3), so ink looks the same in portrait and landscape.
 
 ## Saving and sync (decision Q9)
 

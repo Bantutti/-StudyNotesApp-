@@ -137,6 +137,12 @@ export const toWebSchema = z.discriminatedUnion('type', [
   /** Draw mode on: the page pushes inkLayout after every layout change (batched per frame). */
   z.object({ v, type: z.literal('setInkFeed'), on: z.boolean() }),
   z.object({ v, type: z.literal('requestInkLayout'), reqId }),
+  /** Draw mode: the native overlay owns touches, so it scrolls the page by these deltas (CSS px). */
+  z.object({ v, type: z.literal('inkScroll'), dx: z.number().min(-20_000).max(20_000), dy: z.number().min(-20_000).max(20_000) }),
+  /** Draw mode: a fling after a scroll; the page decays the velocity (px per second). */
+  z.object({ v, type: z.literal('inkFling'), vx: z.number().min(-50_000).max(50_000), vy: z.number().min(-50_000).max(50_000) }),
+  /** Draw mode pinch zoom (decision Q11): 1 = normal, up to 3x. Reset with 1 when Draw mode ends. */
+  z.object({ v, type: z.literal('inkZoom'), scale: z.number().min(1).max(3) }),
 ]);
 export type ToWeb = z.infer<typeof toWebSchema>;
 

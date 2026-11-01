@@ -27,6 +27,7 @@ import { createEditor, loadDoc } from './createEditor';
 import { createDiagnostics } from './diagnostics';
 import { createFontState } from './fonts';
 import { createInkLayer } from './ink';
+import { createInkView } from './inkView';
 import { createBlockMenu } from './menu';
 import { checkOutgoingDoc, requestDocReply } from './replies';
 
@@ -112,6 +113,8 @@ function sendState(): void {
 const ink = createInkLayer({ root, editorEl: document.getElementById('editor') as HTMLElement, post });
 window.addEventListener('resize', () => ink.refresh());
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => ink.refresh()).observe(root);
+window.addEventListener('scroll', () => ink.refresh(), { passive: true });
+const inkView = createInkView({ root, onMoved: () => ink.refresh() });
 // Created before the editor: onUpdate below uses it.
 
 const editor: Editor = createEditor({
@@ -235,6 +238,15 @@ function handle(msg: ToWeb): void {
       return;
     case 'requestInkLayout':
       ink.layout(msg.reqId);
+      return;
+    case 'inkScroll':
+      inkView.scroll(msg.dx, msg.dy);
+      return;
+    case 'inkFling':
+      inkView.fling(msg.vx, msg.vy);
+      return;
+    case 'inkZoom':
+      inkView.zoom(msg.scale);
       return;
   }
 }

@@ -52,6 +52,10 @@ export interface EditorHandle {
   setInkFeed(on: boolean): void;
   /** Block boxes and the page origin right now. */
   requestInkLayout(): Promise<InkLayoutMessage>;
+  /** Draw mode: scroll the page (the overlay owns touches), fling, pinch zoom 1..3. */
+  inkScroll(dx: number, dy: number): void;
+  inkFling(vx: number, vy: number): void;
+  inkZoom(scale: number): void;
 }
 
 /** Ink layout from the page (block boxes in page px, page origin in viewport px). */
@@ -242,6 +246,9 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
     inkClear: () => send({ v: 1, type: 'inkClear' }),
     setInkFeed: (on) => send({ v: 1, type: 'setInkFeed', on }),
     requestInkLayout: () => request<InkLayoutMessage>((reqId) => ({ v: 1, type: 'requestInkLayout', reqId })),
+    inkScroll: (dx, dy) => send({ v: 1, type: 'inkScroll', dx: clampNum(dx, 20_000), dy: clampNum(dy, 20_000) }),
+    inkFling: (vx, vy) => send({ v: 1, type: 'inkFling', vx: clampNum(vx, 50_000), vy: clampNum(vy, 50_000) }),
+    inkZoom: (scale) => send({ v: 1, type: 'inkZoom', scale: Math.min(3, Math.max(1, Number.isFinite(scale) ? scale : 1)) }),
   }));
 
   return (
@@ -274,3 +281,8 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
 });
 
 const styles = StyleSheet.create({ web: { flex: 1, backgroundColor: 'transparent' } });
+
+/** Finite and within +/- max (the bridge schema refuses anything else). */
+function clampNum(v: number, max: number): number {
+  return Number.isFinite(v) ? Math.min(max, Math.max(-max, v)) : 0;
+}

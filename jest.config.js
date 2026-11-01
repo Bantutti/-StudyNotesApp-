@@ -24,10 +24,13 @@ module.exports = {
         '^@shopify/react-native-skia$': '<rootDir>/test/mocks/react-native-skia.tsx',
         // P4b: Reanimated 4 boots native worklets (even its own mock does); a small stub instead.
         '^react-native-reanimated$': '<rootDir>/test/mocks/react-native-reanimated.ts',
+        '^react-native-worklets$': '<rootDir>/test/mocks/react-native-worklets.ts',
         // P2a's firebase/src uses NodeNext ".js" import specifiers for .ts files.
         '^(\\.{1,2}/.*)\\.js$': '$1',
       },
       roots: ['<rootDir>/src', '<rootDir>/scripts'],
+      // P4b: Gesture Handler's documented Jest setup (mocks its native module; Draw mode uses its gesture hooks).
+      setupFiles: ['react-native-gesture-handler/jestSetup.js'],
       modulePathIgnorePatterns: ['<rootDir>/firebase/node_modules'],
       transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@shopify/react-native-skia|ts-fsrs|docx|zod)',

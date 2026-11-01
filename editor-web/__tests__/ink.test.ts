@@ -145,6 +145,20 @@ describe('editor page ink layers', () => {
     expect(sent.filter((m) => m.type === 'inkLayout')).toHaveLength(1);
   });
 
+  it('throttles the layout feed while typing (at most one message per 120 ms, trailing)', () => {
+    jest.useFakeTimers();
+    const { ink, sent, flush } = setup();
+    ink.setFeed(true);
+    flush();
+    ink.refresh();
+    flush(); // within 120 ms of the first: deferred
+    const feeds = () => sent.filter((m) => m.type === 'inkLayout' && m.reqId === null).length;
+    expect(feeds()).toBe(1);
+    jest.advanceTimersByTime(130);
+    expect(feeds()).toBe(2);
+    jest.useRealTimers();
+  });
+
   it('refuses more than the stroke cap and reports invalid_ink', () => {
     const { ink, sent } = setup();
     for (let k = 0; k < 20; k++) ink.add(Array.from({ length: 500 }, (_, i) => item(k * 500 + i + 1)));

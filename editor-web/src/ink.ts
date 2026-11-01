@@ -26,6 +26,8 @@ import { INK_MAX_ITEMS, type InkBlockBox, type InkItem, type ToNative } from '..
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const LAYOUT_MAX_BLOCKS = 5_000;
+/** The layout feed sends at most once per this many ms (typing must stay cheap). */
+export const FEED_MIN_INTERVAL_MS = 120;
 
 export interface InkPalette {
   pens: readonly [string, string, string];
@@ -77,6 +79,22 @@ export function createInkLayer(deps: InkLayerDeps) {
   const groups = new Map<string, Group>();
   let feedOn = false;
   let scheduled = false;
+  let lastFeed = -Infinity; // the first layout goes out at once
+  let feedTimer: ReturnType<typeof setTimeout> | null = null;
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+  /** Sends the layout now, or once the minimum interval has passed (trailing). */
+  const pushFeed = (): void => {
+    if (!feedOn || feedTimer) return;
+    const wait = FEED_MIN_INTERVAL_MS - (now() - lastFeed);
+    const send = () => {
+      feedTimer = null;
+      lastFeed = now();
+      if (feedOn) deps.post(layoutMessage(null));
+    };
+    if (wait <= 0) send();
+    else feedTimer = setTimeout(send, wait);
+  };
 
   const svgFor = (block: string): Group => {
     let g = groups.get(block);
@@ -118,10 +136,20 @@ export function createInkLayer(deps: InkLayerDeps) {
           continue;
         }
         const b = el.getBoundingClientRect();
+        const w = Math.max(1, b.width);
         svg.style.removeProperty('display');
         svg.style.setProperty('left', `${b.left - r.left}px`);
         svg.style.setProperty('top', `${b.top - r.top}px`);
-        svg.style.setProperty('width', `${Math.max(1, b.width)}px`);
+        svg.style.setProperty('width', `${w}px`);
+        if (el.classList.contains('pk-sketch')) {
+          // Sketch block (decision Q2): ink is clipped to the frame. The viewBox
+          // keeps 1000 units = width and spans exactly the block's height.
+          const h = Math.max(1, b.height);
+          svg.setAttribute('viewBox', `0 0 1000 ${Math.round((h * 1000) / w)}`);
+          svg.style.setProperty('height', `${h}px`);
+          svg.style.setProperty('aspect-ratio', 'auto');
+          svg.style.setProperty('overflow', 'hidden');
+        }
       }
     }
   };
@@ -161,7 +189,7 @@ export function createInkLayer(deps: InkLayerDeps) {
     raf(() => {
       scheduled = false;
       position(blockElements());
-      if (feedOn) deps.post(layoutMessage(null));
+      pushFeed();
     });
   };
 
@@ -228,6 +256,10 @@ export function createInkLayer(deps: InkLayerDeps) {
     setFeed(on: boolean): void {
       feedOn = on;
       if (on) refresh();
+      else if (feedTimer) {
+        clearTimeout(feedTimer);
+        feedTimer = null;
+      }
     },
     layout: (reqId: number) => deps.post(layoutMessage(reqId)),
     refresh,
