@@ -75,6 +75,8 @@ export interface Services {
   /** Developer menu allowed in this build (dev mode or a development build only). */
   devTools: boolean;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
+  /** The app's CSPRNG (expo-crypto), e.g. for custom pack ids (P5). */
+  randomBytes: (n: number) => Uint8Array;
   /** Font faces that could not be loaded so far (diagnostics; family, weight, reason, size only). */
   fontSkips(): readonly FaceSkip[];
 }
@@ -162,6 +164,7 @@ export function createServicesWith(a: Adapters): Services {
       return p;
     },
     fontSkips: () => [...skips],
+    randomBytes: a.randomBytes,
   };
 }
 
