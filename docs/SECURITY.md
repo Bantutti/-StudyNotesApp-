@@ -76,17 +76,6 @@ free-tier training on notes (Mistral opt-out, Gemini not used).
 | Logging | Redaction also drops titles, terms, queries, search, snippets, previews, tags, links and card text fields. |
 | Accessibility of security prompts | Dialogs are native Alerts with plain wording ("This opens example.com in your browser, outside NotedPo."). |
 
-### P4b controls (drawing and ink)
-
-| Area | Control |
-|---|---|
-| Ink files are untrusted (local, cloud, bridge) | One loader (`parseInkJson`): size checked **before** `JSON.parse` (4 MiB), zod strict objects, integer deltas with step and cumulative coordinate bounds, colour allowed per tool (pack key or `#RRGGBB`), pressure length = point count, unique ids, stroke/point/tombstone caps, note id must match. One bad stroke rejects the file; the last good copy is kept and a banner explains. Errors never echo content. |
-| Editor page (MASVS-PLATFORM) | The page never parses ink: native sends ready path items checked by `inkItemSchema` (path alphabet `[MLQZ0-9 .-]` only, ≤ 200k chars, colour enum or hex, id patterns, ≤ 500 per message, ≤ 10,000 on the page). SVG built with `createElementNS` + `setAttribute`/`style.setProperty`; a test forbids `innerHTML` in the ink code. CSP unchanged. Layout messages from the page are bounded by `inkBlockBoxSchema`. |
-| Files (MASVS-STORAGE) | Ink in the app's private documents folder (`ink/`), written atomically (temp + move). `localPath` is relative and pattern-checked (no `..`, no leading `/`); the Expo adapter re-checks every path segment. Delete all data removes `ink/`; ink of deleted notes is tombstoned after the 8 s undo window and its file deleted. Not encrypted at rest (same as the database, P1-S6). |
-| Sync hand-off | The merger and download-on-open parse cloud copies as untrusted; a tampered copy is never stored. Recording a download location never looks like a synced change. Asset size = published bytes (P2a's Storage rule). |
-| Privacy (MASVS-PRIVACY) | Handwriting is note content: never logged (only event names and counts; tested), not in diagnostics results (metrics only), never sent anywhere except P2b's sync of the user's own file. Ink preferences stay on the device (kv `ink`). |
-| Availability | Caps on every axis (file, strokes, points, tombstones, items per message); full layers render in batches of 500 strokes; the layout feed is throttled (120 ms). |
-
 ### Untrusted content
 - **Pasted HTML:** parsed in an inert `DOMParser` document; script/style/iframe/object/embed/form/
   svg/math/img/media elements removed; unknown elements unwrapped to text (allowlist); `on*`,
@@ -210,23 +199,6 @@ test that fails on the code before it (checked by running the new tests against 
 | P1-S22 | L5 | Low | Purged note text could stay readable in the `-wal` file until SQLite's next automatic checkpoint. | **Fixed:** a purge that wiped anything runs `PRAGMA wal_checkpoint(TRUNCATE)`; test reads the database and WAL files. |
 | P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **TODO(P5):** Latin subsets, then lower the cap. |
 | P1-S23 | L6 | Low | Undo after deleting a note stored as the empty document did nothing (the empty doc doubled as the "wiped" marker), and an empty note with a title was never wiped. | **Fixed:** Undo needs the note untouched since its deletion time; a purge bumps `updated`, so a wiped note never comes back. Purge wipes anything left (text, title, tags, ink, versions). |
-
-## 4d. Findings and fixes (P4b)
-
-Severity scale: High / Medium / Low / Info. **No open High or Medium issue.**
-
-| ID | Severity | Finding | Status |
-|---|---|---|---|
-| P4b-S1 | Medium | Hostile ink file (from a damaged disk or a tampered cloud copy) could carry huge coordinates, mismatched arrays or markup. | **Fixed by design:** single validating loader (size before parse, strict schema, cumulative bounds, caps); 24 rejection cases plus 500 seeded random mutations tested; tampered cloud copies never stored (test). |
-| P4b-S2 | Medium | SVG/markup injection into the editor page through ink. | **Fixed by design:** the page receives only schema-checked path strings with a 14-character alphabet; colours enum or hex; elements built without `innerHTML` (source test). |
-| P4b-S3 | Medium | Two-device conflicts could silently drop strokes (P2b's default for assets is last-push-wins). | **Fixed:** immutable strokes + tombstones, union merger registered for type `ink`; commutative, associative, idempotent (property tests); two-device simulation test. |
-| P4b-S4 | Low | Opening a very full drawing (5,000 strokes) rendered everything at once: ~1 s of JS work on Node in the bench. | **Fixed:** batches of 500 strokes with yields; test. Device numbers pending (diagnostics bench). |
-| P4b-S5 | Low | Recolouring a lasso selection dropped unchanged strokes from the selection, so a following Delete missed them. Found by tests. | **Fixed:** unchanged selected strokes stay selected; regression test. |
-| P4b-S6 | Low | Per-stroke upload would exceed the Storage free tier (5K uploads/month) and change the file mid-upload. | **Fixed by design:** working copy local only; published once per visit when bytes changed; test asserts no synced row change while drawing. |
-| P4b-S7 | Low | Strokes on a block created seconds before leaving could be purged as "unrecoverable" (the stored doc lags the editor). Found in review. | **Fixed:** `publish` also keeps the editor's live block ids; test. |
-| P4b-S8 | Low (accepted) | Tombstone compaction (oldest first beyond 5,000) can let a long-offline device bring back a stroke erased thousands of deletions ago. | Accepted and documented (INK_MATH §10.3). |
-| P4b-S9 | Low (accepted) | Ink files are not encrypted at rest. | Accepted with P1-S6 (revisit in P7). |
-| P4b-S10 | Info | Palm-rejection thresholds, latency and rendering speed are unverified on real hardware. | Hidden Ink diagnostics screen produces the numbers in Rey's device test. |
 
 ## 4c. Findings from P2a and P3a (merged)
 
