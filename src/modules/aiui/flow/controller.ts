@@ -35,6 +35,8 @@ import type { EditorActionContext, EditorActionResult } from '@/modules/editor';
 import { buildDiffRows, initialAccepted } from '../diff/viewModel';
 import type { GateStore } from '../gate/gateStore';
 import type { NewReport, ReportReason, ReportsStore } from '../gate/reportsStore';
+import { ta } from '../strings';
+import { docHasText } from './action';
 import { testAndSaveKey } from './keys';
 import { errorView } from './messages';
 import type { FlowSnapshot, FlowStep, ProviderStatus, SaveKeyResult, ScopeChoice, UsageLine } from './types';
@@ -415,6 +417,12 @@ export function createAiFlow(deps: AiFlowDeps): AiFlow {
       if (!r.ok) {
         log.warn('apply_failed', { kind: isAiError(r.error) ? r.error.kind : 'unknown' });
         return go({ name: 'error', error: errorView(r.error, null) });
+      }
+      // Defensive: never hand back a note with no text when it had text (e.g. the AI
+      // deleted every block). Nothing is saved; the student keeps the original.
+      if (docHasText(p.ctx.doc) && !docHasText(r.value.doc)) {
+        log.warn('apply_refused_empty');
+        return go({ name: 'error', error: { kind: 'unknown', message: ta('ai.guard.emptyResult'), next: 'ok', switchTo: null } });
       }
       const n = r.value.appliedChangeIds.length;
       const label = ACTION_DEFS[proposal.action].label;

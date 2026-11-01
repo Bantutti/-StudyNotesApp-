@@ -232,6 +232,8 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 | P3b-S8 | Low | Demo AI (fake answers) shipping in release. | **Fixed:** the demo engine is created only when `isDev`; the switch is ignored otherwise; DEMO label on every screen; test. |
 | P3b-S9 | Info | `gate.json` can be edited on a rooted phone. | **Accepted:** the gate protects the user and honours the providers' terms; there is no server to trust, and the engine re-checks the same gate. |
 | P3b-S10 | Info | The subject "Never send to AI" lookup could fail. | **Fixed:** fail closed (blocked) on a read error; test. |
+| P3b-S11 | Medium | P1 bug (found in P1's review): the editor can hand over an **empty document** when the live one fails validation, and `runEditorAction` would save it, wiping the note. | **Guarded in P3b** until P1's fix lands: the AI action refuses to run when the handed-in doc has no text while the stored note has text (fail closed if the stored note can't be read); Apply refuses any result that would remove all the text; tests. P1 fixes the root cause. |
+| P3b-S12 | Medium | Groq could be reached outside the AI gate: the P0 developer screens (AI key, timestamps) call the Groq transcriber directly. | **Fixed:** in release builds the transcriber gets the key only after the 18+ answer and the current Groq consent (`transcriptionAllowed`); P1 also locks the developer menu to dev builds; tests. P4 must extend the Groq consent wording to audio and bump its version. |
 
 No high-severity findings are open.
 

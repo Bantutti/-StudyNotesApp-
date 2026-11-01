@@ -16,9 +16,9 @@ import { openStore } from '@/modules/store';
 import { DEFAULT_PACK_ID } from '@/modules/stylepacks';
 
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
-import { subjectAiAllowed } from '../aiWiring';
+import { storedNoteHasText, subjectAiAllowed } from '../aiWiring';
 import { runEditorAction } from '../editorActions';
-import { APP_FOLDERS, createServicesWith, type Adapters } from '../services';
+import { APP_FOLDERS, createServicesWith, transcriptionAllowed, type Adapters } from '../services';
 
 const GROQ_KEY = 'gsk_' + 'Ab9'.repeat(18);
 const MISTRAL_KEY = 'Mz7' + 'Qx4'.repeat(10);
@@ -59,12 +59,12 @@ function adapters(over: Partial<Adapters> = {}) {
   return { a, secrets, aiFiles, wipedCount: () => wiped };
 }
 
-async function noteWorld() {
+async function noteWorld(handOver?: NoteDoc) {
   let t = Date.UTC(2026, 10, 1);
   const ids = createSeqIdGenerator();
   const store = await openStore(nodeSqliteDriver(), { ids, logger: createLogger({ sink: memorySink() }), now: () => (t += 1000) });
   const note = await store.notes.create({ stylePackId: DEFAULT_PACK_ID, document: start });
-  let current: NoteDoc = note.document;
+  let current: NoteDoc = handOver ?? note.document;
   const host: EditorHost = {
     getDocument: async () => current,
     getSelection: async () => null,
@@ -87,7 +87,7 @@ describe('AI action through runEditorAction (real store)', () => {
     await ui.gate.giveConsent('groq', 1);
 
     const w = await noteWorld();
-    const action = createAiEditorAction({ flow: ui.flow, subjectAiAllowed: async () => true });
+    const action = createAiEditorAction({ flow: ui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
     const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
     await new Promise((r) => setTimeout(r, 0));
     await ui.flow.chooseAction('beautify');
@@ -114,7 +114,7 @@ describe('AI action through runEditorAction (real store)', () => {
     const { a } = adapters();
     const s = createServicesWith(a);
     const w = await noteWorld();
-    const action = createAiEditorAction({ flow: s.aiui.flow, subjectAiAllowed: async () => true });
+    const action = createAiEditorAction({ flow: s.aiui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
     const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
     await new Promise((r) => setTimeout(r, 0));
     s.aiui.flow.close();
@@ -131,6 +131,7 @@ describe('AI action through runEditorAction (real store)', () => {
       subjectAiAllowed: async () => {
         throw new Error('db closed');
       },
+      storedNoteHasText: async () => true,
     });
     const w = await noteWorld();
     const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
@@ -183,5 +184,119 @@ describe('Delete all data (P1 bugs fixed in P3b)', () => {
 
   it("the real app wipe covers the 'ai' folder", () => {
     expect(APP_FOLDERS).toContain('ai');
+  });
+});
+
+describe('P1 empty-document bug guard (Lead, Nov 1)', () => {
+  const EMPTY: NoteDoc = { type: 'doc', content: [] };
+
+  it('an empty hand-over while the stored note has text: refused, flow never opens, nothing saved', async () => {
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    const w = await noteWorld(EMPTY); // the editor hands over an empty doc (P1 bug)
+    const action = createAiEditorAction({ flow: s.aiui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
+    await expect(runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id)).rejects.toMatchObject({
+      code: 'validation_failed',
+      message: expect.stringContaining('couldn’t be read just now'),
+    });
+    expect(s.aiui.flow.getSnapshot().step.name).toBe('closed');
+    expect((await w.store.notes.get(w.note.id))!.document).toEqual(start);
+    expect(await w.store.versions.list(w.note.id)).toHaveLength(0);
+  });
+
+  it('a doc with only an empty line counts as empty too', async () => {
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    const w = await noteWorld({ type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'b_aiwire00000009' } }] });
+    const action = createAiEditorAction({ flow: s.aiui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
+    await expect(runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id)).rejects.toMatchObject({ code: 'validation_failed' });
+    expect((await w.store.notes.get(w.note.id))!.document).toEqual(start);
+  });
+
+  it('fails closed when the stored note cannot be read', async () => {
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    const w = await noteWorld(EMPTY);
+    const action = createAiEditorAction({
+      flow: s.aiui.flow,
+      subjectAiAllowed: async () => true,
+      storedNoteHasText: async () => {
+        throw new Error('db closed');
+      },
+    });
+    await expect(runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id)).rejects.toMatchObject({ code: 'validation_failed' });
+  });
+
+  it('a genuinely empty note (stored empty too) still opens the panel', async () => {
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    const w = await noteWorld(EMPTY);
+    await w.store.notes.save(w.note.id, { document: EMPTY });
+    const action = createAiEditorAction({ flow: s.aiui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
+    const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(s.aiui.flow.getSnapshot().step.name).toBe('actions');
+    s.aiui.flow.close();
+    await expect(running).rejects.toMatchObject({ code: 'cancelled' });
+  });
+
+  it('Apply refuses a result that would remove all the text', async () => {
+    const groq = createFakeProvider('groq', [{ json: { units: [{ ref: 'u1', op: 'delete', blocks: [] }, { ref: 'u2', op: 'delete', blocks: [] }] } }]);
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    const ui = createAiUi({ keyVault: s.keyVault, fetchFn: a.fetchFn, logger: s.logger, ids: s.ids, aiFile: a.aiFile, isDev: false, providers: { groq } });
+    await s.keyVault.set('groq', GROQ_KEY);
+    await ui.gate.recordAge(true);
+    await ui.gate.giveConsent('groq', 1);
+    const w = await noteWorld();
+    const action = createAiEditorAction({ flow: ui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
+    const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
+    await new Promise((r) => setTimeout(r, 0));
+    await ui.flow.chooseAction('beautify');
+    for (let i = 0; i < 5 && ui.flow.getSnapshot().step.name !== 'preview'; i++) await new Promise((r) => setImmediate(r));
+    expect(ui.flow.getSnapshot().rows).toHaveLength(2);
+    await ui.flow.apply();
+    const st = ui.flow.getSnapshot().step;
+    expect(st.name).toBe('error');
+    if (st.name === 'error') expect(st.error.message).toContain('removed all the text');
+    ui.flow.close();
+    await expect(running).rejects.toMatchObject({ code: 'cancelled' });
+    expect((await w.store.notes.get(w.note.id))!.document).toEqual(start);
+    expect(await w.store.versions.list(w.note.id)).toHaveLength(0);
+  });
+});
+
+describe('the AI gate is the only route to Groq in release builds', () => {
+  it('release: the transcriber gets no key until the 18+ answer and Groq consent', async () => {
+    const calls: string[] = [];
+    const { a } = adapters({
+      fetchFn: (async (url: unknown) => {
+        calls.push(String(url));
+        return { ok: true, status: 200, json: async () => ({}) };
+      }) as unknown as typeof fetch,
+    });
+    const s = createServicesWith(a);
+    await s.keyVault.set('groq', GROQ_KEY);
+    await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' });
+    await s.aiui.gate.recordAge(true);
+    await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' }); // consent still missing
+    expect(calls).toEqual([]);
+    await s.aiui.gate.giveConsent('groq', 1);
+    expect(await s.transcriber.testKey()).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('release: an under-18 answer never unlocks Groq', async () => {
+    const { a } = adapters();
+    const s = createServicesWith(a);
+    await s.aiui.gate.recordAge(false);
+    await s.aiui.gate.giveConsent('groq', 1);
+    expect(await transcriptionAllowed(false, s.aiui)).toBe(false);
+  });
+
+  it('development builds keep the P0 spike screens working', async () => {
+    const { a } = adapters({ isDev: true });
+    const s = createServicesWith(a);
+    expect(await transcriptionAllowed(true, s.aiui)).toBe(true);
   });
 });

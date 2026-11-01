@@ -74,6 +74,10 @@ only in the `ai.groq.apiKey` / `ai.mistral.apiKey` slots.
 - **The preview is plain text.** The AI's words go into `<Text>`, never HTML. Stale changes are locked off.
   Apply goes through `applyProposal` (P3a) and then P1's `runEditorAction` (schema, cloud caps, version,
   exact Undo).
+- **Empty-document guard** (P1 bug, Nov 1): the action refuses to run if the editor hands over a document
+  with no text while the stored note has text, and Apply refuses a result that would remove all the text.
+- **Groq only through the gate:** in release builds, composition gives the Groq transcriber the key only
+  after the 18+ answer and the current Groq consent (`transcriptionAllowed` in `services.ts`).
 - **Demo AI** works only in development builds, is labelled DEMO on every screen, sends nothing, and keeps its
   usage in memory.
 

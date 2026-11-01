@@ -10,7 +10,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useMemo } from 'react';
 
-import { AiFlowHost, createAiEditorAction, type AiScreenPorts, type ClipboardPort } from '@/modules/aiui';
+import { AiFlowHost, createAiEditorAction, docHasText, type AiScreenPorts, type ClipboardPort } from '@/modules/aiui';
 import type { Store } from '@/modules/store';
 
 import { useStore } from './AppDataContext';
@@ -31,6 +31,12 @@ export async function subjectAiAllowed(store: Store, subjectId: string | null): 
   return s ? s.aiAllowed !== false : true; // a missing subject can't forbid it; a read error throws -> blocked
 }
 
+/** P1 bug guard: does the stored note have text? (A missing note counts as "no".) */
+export async function storedNoteHasText(store: Store, noteId: string): Promise<boolean> {
+  const n = await store.notes.get(noteId);
+  return !!n && !n.deleted && docHasText(n.document);
+}
+
 export function useAiScreenPorts(): AiScreenPorts {
   const { links } = useServices();
   return useMemo(() => ({ openLink: (url: string) => void links(url), clipboard: expoClipboard }), [links]);
@@ -42,7 +48,14 @@ export function AiWiring() {
   const ports = useAiScreenPorts();
 
   useEffect(
-    () => editorActions.register(createAiEditorAction({ flow: aiui.flow, subjectAiAllowed: (id) => subjectAiAllowed(store, id) })),
+    () =>
+      editorActions.register(
+        createAiEditorAction({
+          flow: aiui.flow,
+          subjectAiAllowed: (id) => subjectAiAllowed(store, id),
+          storedNoteHasText: (id) => storedNoteHasText(store, id),
+        }),
+      ),
     [editorActions, aiui, store],
   );
 

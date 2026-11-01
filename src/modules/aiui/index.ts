@@ -11,7 +11,7 @@
  * Docs: docs/modules/aiui.md. Rules and maths: src/modules/aiui/ALGORITHMS.md.
  */
 export { createAiUi, type AiUi, type AiUiDeps, type AiFileName } from './create';
-export { createAiEditorAction, AI_ACTION_ID } from './flow/action';
+export { createAiEditorAction, AI_ACTION_ID, docHasText } from './flow/action';
 export { createAiFlow, visibleActions, AI_CARDS_ENABLED, ACTION_ORDER, type AiFlow, type AiFlowDeps } from './flow/controller';
 export { testAndSaveKey } from './flow/keys';
 export { errorView } from './flow/messages';

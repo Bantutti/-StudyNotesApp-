@@ -35,6 +35,9 @@ export const AI_EN = {
   'ai.action.expand': 'Add short background where it helps (marked as AI-added).',
   'ai.action.keyTerms': 'List the important terms with short definitions.',
 
+  'ai.guard.emptyDoc': 'This note couldn’t be read just now, so AI didn’t run. Nothing was changed. Close the note, open it again and retry.',
+  'ai.guard.emptyResult': 'This would have removed all the text in your note, so it wasn’t applied. Nothing was changed.',
+
   'ai.notice.cancelled': 'Cancelled. Nothing was changed.',
   'ai.notice.notSent': 'Nothing was sent.',
   'ai.notice.discarded': 'Discarded. Your note wasn’t changed.',

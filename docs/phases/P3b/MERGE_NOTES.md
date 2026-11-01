@@ -23,6 +23,11 @@ For the Lead when merging PR #7 (P3b AI screens).
   transcription with `services.aiui.gate.isAdultConfirmed()` (and the same consent screen: reuse
   `ConsentStep`, or add a transcription consent version to the catalog). The age helpers are exported from
   `@/modules/aiui`.
+- **P4 (voice), required:** release builds already gate the transcriber (`transcriptionAllowed` in
+  `services.ts`: 18+ answer plus the current Groq consent). Before shipping transcription, extend the Groq
+  consent's `dataSent` to cover audio and bump its version, so students are asked again.
+- **P1's empty-document fix:** once it lands, keep P3b's guard anyway (defence in depth; test
+  `aiWiring.test.ts` "P1 empty-document bug guard").
 - **P4c (review):** turn on `AI_CARDS_ENABLED` in `src/modules/aiui/flow/controller.ts`, add a preview for
   `proposal.cards` / `proposal.quiz`, and save through the cards repo. Cloze format: P3a `docs/modules/ai.md`.
 - **P2b (sync):** `documents/ai/*.json` is **device-local and never synced** (the age result and consent are

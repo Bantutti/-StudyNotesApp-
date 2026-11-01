@@ -32,6 +32,7 @@ runs in Expo Go (Android and iPhone) and in the Android APK. Nothing is publishe
 | Report | "Report this AI result": reason and optional 200-character comment, **local only**, metadata only (no note or AI text); listed and deletable in settings |
 | Me → AI | Age status (and the age check itself), masked keys, Test / Replace / Remove, consent Withdraw, usage and tokens today with the limits' check date, default provider, **Never send to AI** per subject, reports, Demo AI (dev builds) |
 | Demo AI | Development builds only, labelled DEMO everywhere: the real flow with made-up answers from your own text, no network |
+| Guards (Lead, Nov 1) | The AI won't run on an empty hand-over while the stored note has text, and won't apply a result that removes all the text. In release builds Groq (including the transcriber) is reachable only after the 18+ answer and Groq consent |
 | Fixes in shared files | Delete all data removes **both** keys (the Mistral key used to survive) and the `ai/` folder, and drops cached AI state. Closing an editor action no longer shows an error alert |
 
 New module: `aiui` (`src/modules/aiui`, public `index.ts`, companion `ALGORITHMS.md`). Changed: `ai` (Track B:
@@ -51,8 +52,8 @@ Developer > **Demo AI**. Full steps: `TESTING_ON_DEVICE.md` §7, checklist **P3b
 
 | Check | Result |
 |---|---|
-| `npm run verify` | Pass: editor page up to date, types, lint (0 warnings), **582 passed / 10 skipped** (58 suites; P1 base 430), secret scan clean, prod audit 0 |
-| New tests | 152 in P3b: aiui 139 (age rule, gate, reports, flow, diff and wording, demo, screens, settings, static security), composition 7 (the action through `runEditorAction` on real SQLite; Delete all data), ai 6 (candidate key, reload) |
+| `npm run verify` | Pass: editor page up to date, types, lint (0 warnings), **590 passed / 10 skipped** (58 suites; P1 base 430), secret scan clean, prod audit 0 |
+| New tests | 160 in P3b: aiui 139 (age rule, gate, reports, flow, diff and wording, demo, screens, settings, static security), composition 15 (the action through `runEditorAction` on real SQLite; Delete all data; empty-document guard; Groq only through the gate), ai 6 (candidate key, reload) |
 | Production dependency audit | **0 vulnerabilities** |
 | Full audit (incl. dev tools) | 7 low (deepmerge via Jest, dev-only, no fix): unchanged from P1, accepted as P0-S6 |
 | `npm run bundle:check` | Pass: Android 8.2 MB, iOS 8.3 MB (P1: 8.1 MB) |
@@ -76,6 +77,8 @@ app, and a live run with your real Groq and Mistral keys (P3a's live check is st
 | P3b-S8 | Low | Demo AI in release | **Fixed** (dev only; test) |
 | P3b-S9 | Info | `gate.json` editable on a rooted phone | Accepted |
 | P3b-S10 | Info | The subject switch lookup failing | **Fixed** (fail closed) |
+| P3b-S11 | Medium | P1 bug: an empty doc handed to an action could be saved over the note | **Guarded** (the AI refuses to run or apply; tests); P1 fixes the root cause |
+| P3b-S12 | Medium | Developer screens could reach Groq outside the gate | **Fixed** (release: the transcriber needs 18+ and Groq consent; tests); P1 locks the developer menu |
 
 **No high-severity findings are open.** Keys are never logged, stored outside secure storage, put in state or
 navigation params, or shown in full (tests cover the success and failure paths).

@@ -509,6 +509,10 @@ work with **Demo AI** (no key). Steps 13 to 17 need your real free Groq key (sec
     Me > **Delete all data**. *Expected:* Me > AI shows no keys, the age check "Not checked yet", and no
     reports.
 
+18. *Safety:* open a note with text and tap the sparkle right after opening it. *Expected:* the panel opens
+    normally. (If the editor ever hands over an empty page, you'd see "This note couldn't be read just now,
+    so AI didn't run" and the note stays as it is: tell me if you ever see it.)
+
 **Under-18 path (any phone):** Me > Delete all data, open a note > sparkle > Beautify > type a year less than
 17 years ago. *Expected:* "AI isn't available" with one **Done** button and a pointer to Beautify Lite. Tapping
 the sparkle again shows the same panel without asking again. Me > AI shows "AI isn't available to you" with no

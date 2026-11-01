@@ -16,7 +16,7 @@ import {
   type ResultsStore,
   type TextFilePort,
 } from '@/core';
-import { createKeyVault, expoSecretStore, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createKeyVault, expoSecretStore, PROVIDER_CATALOG, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
 import { createAiUi, type AiFileName, type AiUi } from '@/modules/aiui';
 import {
   createDocxExporter,
@@ -105,7 +105,9 @@ export function createServicesWith(a: Adapters): Services {
     packs: createPackRegistry(),
     keyVault,
     transcriber: createGroqTranscriber({
-      getKey: () => keyVault.get('groq'),
+      // P3b: in release builds Groq gets the key only after the 18+ check and Groq consent
+      // (the AI gate is the only route to any Groq call). Dev builds keep the P0 spikes working.
+      getKey: async () => ((await transcriptionAllowed(a.isDev, aiui)) ? keyVault.get('groq') : null),
       fetchFn: a.fetchFn,
       fileSize: a.fileSize,
       logger,
@@ -147,6 +149,16 @@ export function createServicesWith(a: Adapters): Services {
       return p;
     },
   };
+}
+
+/**
+ * Release builds: Groq transcription only after the 18+ answer and the
+ * current Groq consent. P4 must extend the Groq consent wording to audio
+ * (and bump its version) before shipping lecture transcription.
+ */
+export async function transcriptionAllowed(isDev: boolean, aiui: AiUi): Promise<boolean> {
+  if (isDev) return true;
+  return (await aiui.gate.isAdultConfirmed()) && (await aiui.gate.hasConsent('groq', PROVIDER_CATALOG.groq.consent.version));
 }
 
 export function createServices(): Services {
