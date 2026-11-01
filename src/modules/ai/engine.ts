@@ -24,7 +24,7 @@ import { canonicalJson, hasCompleteIds } from './document/nodes';
 import { chunkTokens, chunkUnits, estimateTokens } from './document/tokens';
 import { extractUnits, type AiScope, type Unit } from './document/units';
 import { AiError, isAiError, type AiErrorKind } from './errors';
-import { isProvider, type Provider } from './keyFormat';
+import { isProvider, normalizeKey, type Provider } from './keyFormat';
 import type { KeyVault } from './keyVault';
 import {
   buildCards,
@@ -37,7 +37,7 @@ import {
   type NewChange,
 } from './proposal/build';
 import type { CardDraft, Proposal, QuizDraft } from './proposal/types';
-import { modelTpm, PROVIDER_CATALOG, providerModels, type ProviderInfo } from './providers/catalog';
+import { modelTpm, PROVIDER_CATALOG, providerModels, type ConsentKind, type ProviderInfo } from './providers/catalog';
 import { createOpenAiCompatibleProvider, GROQ_CONFIG, MISTRAL_CONFIG } from './providers/openaiCompatible';
 import type { ChatProvider, ChatResult, KeyTestResult } from './providers/types';
 import { createTokenPacer, MAX_PACE_WAIT_MS, type TokenPacer } from './transport/pacer';
@@ -61,7 +61,7 @@ export interface AiGatePort {
    * and this consent version (PROVIDER_CATALOG[p].consent.version). Apple
    * guideline 5.1.2(i): a stored "yes" for an older version must return false.
    */
-  hasConsent(provider: Provider, consentVersion: number): Promise<boolean>;
+  hasConsent(provider: Provider, consentVersion: number, kind: ConsentKind): Promise<boolean>;
 }
 
 export interface AiEngineDeps {
@@ -103,7 +103,12 @@ export interface RunOptions {
 
 export interface AiEngine {
   run(req: RunRequest, opts?: RunOptions): Promise<Proposal>;
-  testKey(provider: Provider, signal?: AbortSignal): Promise<KeyTestResult>;
+  /**
+   * Checks a key with a cheap read-only call. With `candidateKey` (P3b key
+   * wizard) the NEW key is tested without storing it, so a rejected key never
+   * replaces a working one; without it, the stored key is tested.
+   */
+  testKey(provider: Provider, signal?: AbortSignal, candidateKey?: string): Promise<KeyTestResult>;
   readonly usage: UsageMeter;
   readonly providers: readonly ProviderInfo[];
 }
@@ -174,7 +179,8 @@ export function createAiEngine(deps: AiEngineDeps): AiEngine {
 
     if (req.aiAllowed !== true) throw new AiError('blocked', label);
     if (!(await deps.gate.isAdultConfirmed())) throw new AiError('age_required', label);
-    if (!(await deps.gate.hasConsent(req.provider, info.consent.version))) throw new AiError('consent_required', label);
+    // Every engine run sends note TEXT, so only a text consent counts (P3b: kinds are separate).
+    if (!(await deps.gate.hasConsent(req.provider, info.consent.version, 'text'))) throw new AiError('consent_required', label);
     if (!(await deps.keyVault.has(req.provider))) throw new AiError('missing_key', label);
     if (deps.isOnline && !(await deps.isOnline())) throw new AiError('offline', label);
 
@@ -386,9 +392,22 @@ export function createAiEngine(deps: AiEngineDeps): AiEngine {
 
   return {
     run,
-    testKey: async (provider, signal) => {
+    testKey: async (provider, signal, candidateKey) => {
       if (!isProvider(provider)) throw new AiError('invalid_input', { reason: 'unknown_provider' });
-      return adapterFor(provider).testKey(signal);
+      if (candidateKey === undefined) return adapterFor(provider).testKey(signal);
+      // P3b: test a key the student just pasted, without storing it.
+      const n = normalizeKey(provider, candidateKey);
+      if (!n.ok) return { ok: false, reason: 'invalid_key' };
+      const override = deps.providers?.[provider];
+      if (override) return override.testKey(signal); // fake adapter (tests, dev demo)
+      const candidate = n.value; // lives only in this closure for the one request
+      return createOpenAiCompatibleProvider(provider === 'groq' ? GROQ_CONFIG : MISTRAL_CONFIG, {
+        getKey: async () => candidate,
+        fetchFn: deps.fetchFn,
+        logger: deps.logger,
+        now,
+        timeoutMs: deps.timeoutMs,
+      }).testKey(signal);
     },
     usage,
     providers: Object.values(PROVIDER_CATALOG),
