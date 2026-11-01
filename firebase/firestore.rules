@@ -1,0 +1,432 @@
+rules_version = '2';
+
+// =============================================================================
+// Study Notes App — Cloud Firestore Security Rules (P2a)
+// -----------------------------------------------------------------------------
+// Model:   TOP-LEVEL collections; every doc has an `owner` field (decision, Nov 1 2026).
+// Default: DENY. Nothing is reachable unless a match block below allows it.
+// Mirror:  Every number here is copied from src/schemas/limits.ts (§L.x refers to
+//          docs/backend/LIMITS.md). tests/rules/agreement.test.ts fails if the
+//          zod schemas and these rules disagree on any field boundary.
+// Costs:   get()/exists() calls are billed as document reads. Cheap checks come
+//          first so && short-circuits before any get() runs.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // 1. Identity helpers
+    // -------------------------------------------------------------------------
+
+    // Signed in AND email verified. Apple and Google tokens arrive verified; an
+    // email/password user must click the verification link before syncing
+    // (Plan v0.2 F1: "email with verification"). Anonymous users never pass:
+    // guest mode is local-only and never touches the cloud.
+    function verified() {
+      return request.auth != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Path of the caller's profile doc.
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // The profile must exist and must NOT be mid-deletion for any write to be
+    // accepted (§D.6). This stops a second, still-signed-in device from
+    // re-uploading data while (or after) the account is being deleted.
+    // Cost: 1 read per write request.
+    function userActive() {
+      return exists(userPath())
+        && get(userPath()).data.deletionRequestedAt == null;
+    }
+
+    // Account deletion has started (deletionRequestedAt holds a timestamp).
+    function deletionInProgress() {
+      return exists(userPath())
+        && get(userPath()).data.deletionRequestedAt != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Value helpers (types, lengths, patterns)
+    // -------------------------------------------------------------------------
+
+    // string.size() counts characters (verified in tests/rules/limits-probe.test.ts).
+    function strIn(s, min, max) {
+      return s is string && s.size() >= min && s.size() <= max;
+    }
+
+    function intIn(v, min, max) {
+      return v is int && v >= min && v <= max;
+    }
+
+    // §L.2 — ids the app creates (16..64 chars) vs refs that may name built-ins (1..64).
+    function entityId(s) {
+      return s is string && s.matches('^[A-Za-z0-9_-]{16,64}$');
+    }
+    function entityIdOrNull(s) {
+      return s == null || entityId(s);
+    }
+    function refId(s) {
+      return s is string && s.matches('^[A-Za-z0-9_-]{1,64}$');
+    }
+    function refIdOrNull(s) {
+      return s == null || refId(s);
+    }
+
+    // Exact key set: no unknown fields (hasOnly) and no missing ones (hasAll).
+    function exactKeys(d, keys) {
+      return d.keys().hasOnly(keys) && d.keys().hasAll(keys);
+    }
+
+    // Rules have no loops, so small lists are checked element by element
+    // ("unrolled"). The caps (§L.5) were chosen small enough for this.
+    function tagAt(l, i) {
+      return l.size() <= i || (l[i] is string && l[i].size() >= 1 && l[i].size() <= 40);
+    }
+    function tagsOk(l) {
+      return l is list && l.size() <= 20 && l.toSet().size() == l.size()
+        && tagAt(l, 0) && tagAt(l, 1) && tagAt(l, 2) && tagAt(l, 3) && tagAt(l, 4)
+        && tagAt(l, 5) && tagAt(l, 6) && tagAt(l, 7) && tagAt(l, 8) && tagAt(l, 9)
+        && tagAt(l, 10) && tagAt(l, 11) && tagAt(l, 12) && tagAt(l, 13) && tagAt(l, 14)
+        && tagAt(l, 15) && tagAt(l, 16) && tagAt(l, 17) && tagAt(l, 18) && tagAt(l, 19);
+    }
+
+    function tsAt(l, i) {
+      return l.size() <= i || l[i] is timestamp;
+    }
+    function examDatesOk(l) {
+      return l is list && l.size() <= 10
+        && tsAt(l, 0) && tsAt(l, 1) && tsAt(l, 2) && tsAt(l, 3) && tsAt(l, 4)
+        && tsAt(l, 5) && tsAt(l, 6) && tsAt(l, 7) && tsAt(l, 8) && tsAt(l, 9);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Shared lifecycle checks for synced docs (§D.3)
+    // -------------------------------------------------------------------------
+
+    // Create: id == doc id, owner == caller, schemaVersion 1, server times, rev 1,
+    // and not born as a tombstone (a deleted-on-arrival doc is never useful).
+    function createMetaOk(docId) {
+      let n = request.resource.data;
+      return n.id == docId
+        && n.owner == uid()
+        && n.schemaVersion == 1
+        && n.created == request.time
+        && n.updated == request.time
+        && n.rev == 1
+        && n.deleted == false;
+    }
+
+    // Update: id, owner, created are immutable; updated is server time; rev is
+    // exactly old + 1. A queued offline write built on an older rev is rejected,
+    // which is the signal for the sync module's conflict copy (Plan §12 sync rules).
+    function updateMetaOk() {
+      let n = request.resource.data;
+      let o = resource.data;
+      return n.id == o.id
+        && n.owner == o.owner
+        && n.schemaVersion == 1
+        && n.created == o.created
+        && n.updated == request.time
+        && n.rev is int
+        && n.rev == o.rev + 1
+        && n.rev <= 1000000000
+        && n.deleted is bool;
+    }
+
+    // Read one doc: it must exist and belong to the caller.
+    // (A missing doc returns permission-denied, which hides whether an id exists.)
+    function canGet() {
+      return verified() && resource.data.owner == uid();
+    }
+
+    // Queries must filter `where owner == uid` (rules check the query can only
+    // return the caller's docs) and must page with limit <= 500 (§L.9), which
+    // bounds the read cost of any single request.
+    function canList() {
+      return verified()
+        && resource.data.owner == uid()
+        && request.query.limit <= 500;
+    }
+
+    function canCreate(docId) {
+      return verified() && createMetaOk(docId) && userActive();
+    }
+
+    function canUpdate() {
+      return verified() && resource.data.owner == uid() && updateMetaOk() && userActive();
+    }
+
+    // Hard delete only for tombstones (so last-writer-wins sync can't resurrect
+    // a doc another device still holds) or during account deletion.
+    function canHardDelete() {
+      return verified()
+        && resource.data.owner == uid()
+        && (resource.data.deleted == true || deletionInProgress());
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Per-collection field validators (field names from Plan v0.2 §12)
+    // -------------------------------------------------------------------------
+
+    function validSubject(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'name', 'color', 'icon', 'defaultPack', 'defaultTemplate', 'examDates',
+                           'aiAllowed', 'autoMakeCards'])
+        && strIn(n.name, 1, 80)                                   // §L.4
+        && n.color is string && n.color.matches('^[0-9a-fA-F]{6}$') // §L.3
+        && n.icon is string && n.icon.matches('^[a-z0-9-]{1,40}$')
+        && refIdOrNull(n.defaultPack)
+        && refIdOrNull(n.defaultTemplate)
+        && examDatesOk(n.examDates)                                // §L.5
+        && n.aiAllowed is bool
+        && n.autoMakeCards is bool;
+    }
+
+    function validFolder(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'subject', 'name', 'parent'])
+        && entityIdOrNull(n.subject)
+        && strIn(n.name, 1, 80)
+        && entityIdOrNull(n.parent);
+    }
+
+    function validNote(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'subject', 'folder', 'title', 'document', 'inkLayerRef', 'stylePackId',
+                           'templateId', 'tags'])
+        && entityIdOrNull(n.subject)
+        && entityIdOrNull(n.folder)
+        && strIn(n.title, 0, 200)
+        && strIn(n.document, 2, 600000)       // §L.6 capped JSON string; inner shape = zod on load
+        && entityIdOrNull(n.inkLayerRef)
+        && refId(n.stylePackId)
+        && refIdOrNull(n.templateId)
+        && tagsOk(n.tags);
+    }
+
+    function validCard(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'subject', 'note', 'sourceBlockId', 'type', 'front', 'back', 'source',
+                           'sourceChanged', 'suspended'])
+        && entityIdOrNull(n.subject)
+        && entityIdOrNull(n.note)
+        && (n.sourceBlockId == null || refId(n.sourceBlockId))   // block id pattern == ref pattern
+        && n.type in ['basic', 'reversed', 'cloze']
+        && strIn(n.front, 1, 2000)
+        && strIn(n.back, 0, 2000)
+        && n.source in ['definition', 'highlight', 'bookmark', 'ai', 'manual']
+        && n.sourceChanged is bool
+        && n.suspended is bool;
+    }
+
+    function validRecording(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'note', 'asset', 'duration', 'language', 'segments', 'bookmarks'])
+        && entityId(n.note)
+        && entityIdOrNull(n.asset)
+        && intIn(n.duration, 0, 21600000)                         // §L.7.1 six hours in ms
+        && (n.language == null || (n.language is string && n.language.matches('^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$')))
+        && strIn(n.segments, 2, 400000)                           // §L.6
+        && n.bookmarks is list && n.bookmarks.size() <= 500;      // §L.5: items checked by zod only
+    }
+
+    // Asset type -> Storage folder / byte cap / allowed extensions (§L.8).
+    function assetFolder(t) {
+      return {'audio': 'audio', 'image': 'images', 'sticker': 'images', 'ink': 'ink', 'pdf': 'attachments'}[t];
+    }
+    function assetMaxBytes(t) {
+      return {'audio': 67108864, 'image': 5242880, 'sticker': 5242880, 'ink': 5242880, 'pdf': 20971520}[t];
+    }
+    function assetExts(t) {
+      return {'audio': 'm4a|aac|mp4', 'image': 'jpg|jpeg|png|webp', 'sticker': 'jpg|jpeg|png|webp',
+              'ink': 'json', 'pdf': 'pdf'}[t];
+    }
+
+    function validAsset(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'type', 'cloudPath', 'size'])
+        && n.type in ['audio', 'image', 'sticker', 'ink', 'pdf']
+        && intIn(n.size, 0, assetMaxBytes(n.type))
+        // Exact path inside the owner's own folder, file named after the asset id.
+        && (n.cloudPath == null
+            || (strIn(n.cloudPath, 1, 300)
+                && n.cloudPath.matches('^users/' + n.owner + '/' + assetFolder(n.type) + '/'
+                                       + n.id + '[.](' + assetExts(n.type) + ')$')));
+    }
+
+    function validStylePack(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'version', 'definition', 'createdFromReference'])
+        && intIn(n.version, 1, 10000)
+        && strIn(n.definition, 2, 50000)
+        && n.createdFromReference is bool;
+    }
+
+    function validTemplate(n) {
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev', 'deleted',
+                           'version', 'definition'])
+        && intIn(n.version, 1, 10000)
+        && strIn(n.definition, 2, 50000);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. users/{userId} — the profile doc, keyed by uid
+    // -------------------------------------------------------------------------
+
+    function validUser(userId) {
+      let n = request.resource.data;
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'updated', 'rev',
+                           'settings', 'deletionRequestedAt'])
+        && n.id == userId
+        && n.owner == userId
+        && n.schemaVersion == 1
+        && strIn(n.settings, 2, 8000)
+        && (n.deletionRequestedAt == null || n.deletionRequestedAt is timestamp);
+    }
+
+    match /users/{userId} {
+      // The owner may read their own profile (also used to check it exists).
+      allow get: if verified() && userId == uid();
+      // Nobody can list profiles.
+      allow list: if false;
+
+      allow create: if verified() && userId == uid() && validUser(userId)
+        && request.resource.data.created == request.time
+        && request.resource.data.updated == request.time
+        && request.resource.data.rev == 1
+        && request.resource.data.deletionRequestedAt == null;
+
+      // deletionRequestedAt may stay as it is, be cleared (cancel), or be set to
+      // the server time (start deletion). It can never be backdated.
+      allow update: if verified() && userId == uid() && validUser(userId)
+        && request.resource.data.created == resource.data.created
+        && request.resource.data.updated == request.time
+        && request.resource.data.rev is int
+        && request.resource.data.rev == resource.data.rev + 1
+        && (request.resource.data.deletionRequestedAt == null
+            || request.resource.data.deletionRequestedAt == request.time
+            || request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt);
+
+      // The profile is deleted LAST in account deletion, and only once marked.
+      allow delete: if verified() && userId == uid()
+        && resource.data.deletionRequestedAt != null;
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Synced entity collections
+    // -------------------------------------------------------------------------
+
+    match /subjects/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validSubject(request.resource.data);
+      allow update: if canUpdate() && validSubject(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /folders/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validFolder(request.resource.data);
+      allow update: if canUpdate() && validFolder(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /notes/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validNote(request.resource.data);
+      allow update: if canUpdate() && validNote(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /cards/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validCard(request.resource.data);
+      allow update: if canUpdate() && validCard(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /recordings/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validRecording(request.resource.data);
+      allow update: if canUpdate() && validRecording(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /assets/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validAsset(request.resource.data);
+      allow update: if canUpdate() && validAsset(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /stylePacks/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validStylePack(request.resource.data);
+      allow update: if canUpdate() && validStylePack(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    match /templates/{docId} {
+      allow get: if canGet();
+      allow list: if canList();
+      allow create: if canCreate(docId) && validTemplate(request.resource.data);
+      allow update: if canUpdate() && validTemplate(request.resource.data);
+      allow delete: if canHardDelete();
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. reviewLogs/{logId} — APPEND-ONLY (Plan §12: merged by union)
+    // -------------------------------------------------------------------------
+
+    // The referenced card exists, is the caller's, and is tombstoned.
+    function cardTombstoned(cardId) {
+      let p = /databases/$(database)/documents/cards/$(cardId);
+      return exists(p) && get(p).data.owner == uid() && get(p).data.deleted == true;
+    }
+
+    function validReviewLog(logId) {
+      let n = request.resource.data;
+      return exactKeys(n, ['id', 'owner', 'schemaVersion', 'created', 'card', 'rating',
+                           'reviewedAt', 'device'])
+        && n.id == logId
+        && n.owner == uid()
+        && n.schemaVersion == 1
+        && n.created == request.time
+        && entityId(n.card)
+        && intIn(n.rating, 1, 4)                                    // FSRS Again..Easy
+        && n.reviewedAt is timestamp
+        && n.reviewedAt <= request.time + duration.value(5, 'm')    // §L.10 clock skew
+        && n.device is string && n.device.matches('^[A-Za-z0-9_-]{1,64}$');
+    }
+
+    match /reviewLogs/{logId} {
+      allow get: if canGet();
+      allow list: if canList();
+      // Writing an id that already exists is evaluated as an UPDATE, which is
+      // always denied — so re-uploading the same log is a no-op failure, and
+      // union merge stays idempotent.
+      allow create: if verified() && validReviewLog(logId) && userActive();
+      allow update: if false;
+      // Decision 4: delete only during account deletion or once the card is tombstoned.
+      allow delete: if verified()
+        && resource.data.owner == uid()
+        && (deletionInProgress() || cardTombstoned(resource.data.card));
+    }
+
+    // Everything else (noteVersions, aiJobs — local-only per the plan — and any
+    // unknown path) falls through to the implicit DENY.
+  }
+}
