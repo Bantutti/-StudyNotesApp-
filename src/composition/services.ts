@@ -16,7 +16,8 @@ import {
   type ResultsStore,
   type TextFilePort,
 } from '@/core';
-import { createKeyVault, expoSecretStore, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createKeyVault, expoSecretStore, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createAiUi, type AiFileName, type AiUi } from '@/modules/aiui';
 import {
   createDocxExporter,
   createPdfExporter,
@@ -63,8 +64,11 @@ export interface Services {
   links: LinkOpener;
   /** Built-in note templates (validated data). */
   templates: TemplateRegistry;
-  /** Editor actions (Beautify Lite now; P3b registers AI actions here). */
+  /** Editor actions (Beautify Lite; P3b's "ai" action is registered by AiWiring). */
   editorActions: EditorActionRegistry;
+  /** P3b: the AI engine (P3a) and everything its screens need (gate, reports, flow). */
+  ai: AiEngine;
+  aiui: AiUi;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
@@ -72,6 +76,8 @@ export interface Services {
 
 export interface Adapters {
   resultsFile: TextFilePort;
+  /** P3b: files in documents/ai/ (usage meter, gate answers, local reports). */
+  aiFile: (name: AiFileName) => TextFilePort;
   secretStore: SecretStorePort;
   print: PrintPort;
   files: FileWriterPort;
@@ -90,6 +96,7 @@ export function createServicesWith(a: Adapters): Services {
   const logger = createLogger({ sink: consoleSink(a.isDev), minLevel: a.isDev ? 'debug' : 'warn' });
   const ids = createIdGenerator(a.randomBytes);
   const keyVault = createKeyVault(a.secretStore);
+  const aiui = createAiUi({ keyVault, fetchFn: a.fetchFn, logger, ids, aiFile: a.aiFile, isDev: a.isDev });
   const faceCache = new Map<string, Promise<FontFaceData[]>>();
   return {
     logger,
@@ -113,9 +120,17 @@ export function createServicesWith(a: Adapters): Services {
     links: createLinkOpener(a.linkPorts),
     templates: createTemplateRegistry(),
     editorActions: createEditorActionRegistry([beautifyLiteAction]),
+    ai: aiui.engine,
+    aiui,
     appData: {
       ...a.database,
-      wipeSecrets: () => keyVault.remove('groq'),
+      // P3b fix: also drop the AI module's in-memory copies once the ai folder is gone.
+      wipeFiles: async () => {
+        await a.database.wipeFiles();
+        aiui.forget();
+      },
+      // P3b fix: every AI provider key (was Groq only, so a Mistral key survived Delete all data).
+      wipeSecrets: () => aiui.wipeSecrets(),
       ids,
       logger,
     },
@@ -137,6 +152,7 @@ export function createServicesWith(a: Adapters): Services {
 export function createServices(): Services {
   return createServicesWith({
     resultsFile: expoTextFile('p0', 'spike-results.jsonl'),
+    aiFile: (name) => expoTextFile('ai', name),
     secretStore: expoSecretStore,
     print: expoPrint,
     files: expoFiles,
@@ -152,8 +168,12 @@ export function createServices(): Services {
   });
 }
 
-/** App-made folders outside the database. Fixed names only, never user input. */
-const APP_FOLDERS = ['p0', 'recordings'] as const;
+/**
+ * App-made folders outside the database. Fixed names only, never user input.
+ * P3b fix: 'ai' (usage meter, gate answers, reports) was missing, so
+ * Delete all data left ai/usage.json behind.
+ */
+export const APP_FOLDERS = ['p0', 'recordings', 'ai'] as const;
 
 async function wipeAppFiles(): Promise<void> {
   for (const name of APP_FOLDERS) {

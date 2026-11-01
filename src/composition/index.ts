@@ -1,5 +1,5 @@
 export { ServicesProvider, useServices } from './ServicesContext';
-export { createServices, createServicesWith, type Services, type Adapters } from './services';
+export { createServices, createServicesWith, APP_FOLDERS, type Services, type Adapters } from './services';
 export { usePackFaces, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
@@ -10,3 +10,4 @@ export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOIN
 export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
 export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
 export { createNoteSession, type NoteSession } from './noteSession';
+export { AiWiring, useAiScreenPorts, subjectAiAllowed, expoClipboard } from './aiWiring';
