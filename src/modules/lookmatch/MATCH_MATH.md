@@ -368,4 +368,37 @@ highlighter at the same position when there is one.
 Every step is repaired (§8) and validated, so all 11 positions are valid packs (tested). The id,
 name and meta always come from the matched side.
 
-## §10 Vision merge (M6)
+## §10 Vision pass and merge (M6, optional)
+Rey approved this on Nov 1 (Q3 = A): Groq only, with `qwen/qwen3.8-27b`.
+
+### §10.1 What the AI may say
+The answer is a JSON object with exactly ten fields. Each one is a schema enum or `"unsure"`:
+header style, divider, callout, definition box, bullet, washi, corner, doodle, columns
+(`one`/`two`) and a font mood (13 moods, each mapped to a pairing that a built-in pack already
+uses). There are no colours, numbers, names, text or URLs. The zod schema is strict, so unknown keys
+fail. Groq gets the same schema as a strict JSON schema (constrained decoding), and a test checks that
+the two list identical values.
+
+Merge rule: a field the AI answers overrides the photo analysis and the nearest pack, but never
+the student's chip choice (§7.3). `"unsure"` changes nothing. **Colours, paper and highlighters
+always come from the on-device pass** (§2-§6): the AI only chooses design options.
+
+### §10.2 Gates and limits (engine.describeImages)
+Checked in this order, all before anything is sent:
+1. the provider has a vision model and an image consent block (Groq only);
+2. 1 to 3 images;
+3. 18+ (P3b's birth-year gate);
+4. the **image** consent for Groq at the catalog's current version (a text consent or an older version
+   never counts);
+5. a key;
+6. online.
+
+The adapter also refuses non-base64 images and images over 1.5 M characters. Each image counts as
+2,048 input tokens on Groq: 3 images ≈ 6,144 tokens plus a short prompt and a 400-token answer,
+inside the free plan's 8,000 tokens per minute.
+
+### §10.3 Validation
+`parseModelJson` (fences stripped), then zod. An invalid answer is asked once more, with a line
+saying it didn't match. A second failure is an `invalid_output` error, and the screen keeps the
+on-device look. Reasoning is off (`reasoning_effort: none`, `reasoning_format: hidden`), so the
+content is only the JSON.

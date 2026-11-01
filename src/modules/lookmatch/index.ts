@@ -31,3 +31,16 @@ export { newCustomPackId } from './build/ids';
 export { chipOptions, enumLabel, type ChipOptions, type ColorOption, type FontOption } from './chips';
 export { runMatch, type MatchResult } from './flow';
 export { BlendStepper } from './BlendStepper';
+export {
+  VISION_MATCH_ENABLED,
+  VISION_PROVIDER,
+  VISION_PROMPT_VERSION,
+  FONT_MOODS,
+  visionAnswerSchema,
+  visionJsonSchema,
+  toVisionHints,
+  describeHints,
+  runVisionPass,
+  type VisionAnswer,
+  type VisionEnginePort,
+} from './vision';

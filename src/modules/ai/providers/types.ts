@@ -16,6 +16,11 @@ export interface ChatRequest {
   jsonSchema: Record<string, unknown>;
   maxOutputTokens: number;
   temperature: number;
+  /**
+   * P5 vision pass: clean, downsized JPEGs as base64 (lookmatch strips all
+   * metadata first). Only sent with a model the catalog marks as vision.
+   */
+  images?: readonly string[];
 }
 
 export interface ChatUsage {

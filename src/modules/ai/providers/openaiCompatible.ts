@@ -39,7 +39,14 @@ export interface OpenAiCompatibleConfig {
 export const GROQ_CONFIG: OpenAiCompatibleConfig = {
   id: 'groq',
   maxTokensParam: 'max_completion_tokens',
-  extraBody: (model) => (model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low', include_reasoning: false } : {}),
+  // gpt-oss: low reasoning, none in the answer. Qwen 3.8 (P5 vision): no reasoning at all, and
+  // reasoning_format "hidden" (required with JSON output) keeps only the final answer.
+  extraBody: (model) =>
+    model.startsWith('openai/gpt-oss')
+      ? { reasoning_effort: 'low', include_reasoning: false }
+      : model.startsWith('qwen/')
+        ? { reasoning_effort: 'none', reasoning_format: 'hidden' }
+        : {},
 };
 
 export const MISTRAL_CONFIG: OpenAiCompatibleConfig = {
@@ -60,6 +67,23 @@ export interface AdapterDeps {
 }
 
 export const CHAT_TIMEOUT_MS = 30_000;
+/** Vision requests (P5): at most 3 images (Groq's limit for qwen3.8-27b), each at most 1.5 M base64 chars. */
+export const MAX_REQUEST_IMAGES = 3;
+export const MAX_IMAGE_BASE64 = 1_500_000;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/** The user message: plain text, or text plus image parts (OpenAI-compatible "image_url" with a data URL). */
+function userContent(req: ChatRequest, providerLabel: string): string | Record<string, unknown>[] {
+  const images = req.images ?? [];
+  if (images.length === 0) return req.user;
+  if (images.length > MAX_REQUEST_IMAGES || images.some((b) => b.length > MAX_IMAGE_BASE64 || !BASE64.test(b))) {
+    throw new AiError('invalid_input', { providerLabel, reason: 'bad_images' });
+  }
+  return [
+    { type: 'text', text: req.user },
+    ...images.map((b64) => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${b64}` } })),
+  ];
+}
 export const TEST_TIMEOUT_MS = 15_000;
 
 /** The parts of a chat completion we use. Extra fields are ignored (stripped). */
@@ -104,7 +128,7 @@ export function createOpenAiCompatibleProvider(cfg: OpenAiCompatibleConfig, deps
         model: req.model,
         messages: [
           { role: 'system', content: req.system },
-          { role: 'user', content: req.user },
+          { role: 'user', content: userContent(req, info.label) },
         ],
         temperature: req.temperature,
         [cfg.maxTokensParam]: req.maxOutputTokens,

@@ -12,9 +12,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { applyPackToNote, cleanPackName, saveCustomPack, setSubjectPack, useAppData, useServices } from '@/composition';
+import { applyPackToNote, cleanPackName, saveCustomPack, setSubjectPack, useAiScreenPorts, useAppData, useServices } from '@/composition';
 import { SAMPLE_NOTE, userMessage, type NoteDoc } from '@/core';
 import { AppButton, AppScreen, BodyText, Caption, Icon, SectionHeader, Spinner, Swatch, TextField, useTheme } from '@/core/ui';
+import { consentBlock, isAiError } from '@/modules/ai';
+import { checkCanSend, ConsentStep } from '@/modules/aiui';
 import { PagePreview } from '@/modules/editor';
 import {
   BLEND_STEPS,
@@ -29,9 +31,14 @@ import {
   pickFromLibrary,
   runMatch,
   takePhoto,
+  describeHints,
+  runVisionPass,
+  VISION_MATCH_ENABLED,
+  VISION_PROVIDER,
   type MatchChoices,
   type MatchResult,
   type PickOutcome,
+  type VisionHints,
 } from '@/modules/lookmatch';
 import type { Note } from '@/modules/store';
 import type { FontFaceData, StylePack } from '@/modules/stylepacks';
@@ -160,7 +167,8 @@ export default function MatchALook() {
         builtIns: packs.builtIn(),
         randomBytes,
         name: `My look ${packs.custom().length + 1}`,
-        keepVisionCopies: false, // M6 turns this on when the vision pass is available
+        // Clean 1,024 px copies kept IN MEMORY only, for the optional vision pass (sent only after an explicit tap).
+        keepVisionCopies: VISION_MATCH_ENABLED,
         signal: ctl.signal,
         onProgress: (p) => setPhase({ kind: 'working', label: PROGRESS[p.stage] ?? 'Working…' }),
       });
@@ -223,6 +231,103 @@ export default function MatchALook() {
   );
 }
 
+type VisionState =
+  | { kind: 'idle'; note?: string }
+  | { kind: 'consent' }
+  | { kind: 'needsSetup'; message: string }
+  | { kind: 'running' }
+  | { kind: 'done'; summary: string }
+  | { kind: 'error'; message: string };
+
+/**
+ * "Improve with AI (sends your photo to Groq)" (P5 M6). Nothing is sent
+ * until the student taps it, is 18+ (P3b's birth-year gate) and has said yes
+ * to the separate Groq PHOTO consent. The on-device look stays if anything
+ * fails or the student says no.
+ */
+function VisionPanel(props: { images: readonly string[]; onHints: (h: VisionHints) => void }) {
+  const { aiui, packs, logger } = useServices();
+  const ports = useAiScreenPorts();
+  const [state, setState] = useState<VisionState>({ kind: 'idle' });
+  const abort = useRef<AbortController | null>(null);
+  useEffect(() => () => abort.current?.abort(), []);
+  if (!VISION_MATCH_ENABLED || props.images.length === 0) return null;
+
+  const run = async () => {
+    setState({ kind: 'running' });
+    const ctl = new AbortController();
+    abort.current = ctl;
+    try {
+      const engine = await aiui.activeEngine();
+      const { hints } = await runVisionPass({ engine, images: props.images, builtIns: packs.builtIn(), signal: ctl.signal });
+      props.onHints(hints);
+      setState({ kind: 'done', summary: describeHints(hints) });
+    } catch (e) {
+      if (isAiError(e) && e.kind === 'cancelled') return setState({ kind: 'idle' });
+      logger.warn('match.vision_failed', { kind: isAiError(e) ? e.kind : 'unknown' }); // never the photo or the answer
+      if (isAiError(e) && (e.kind === 'missing_key' || e.kind === 'age_required')) {
+        setState({ kind: 'needsSetup', message: e.message });
+      } else setState({ kind: 'error', message: isAiError(e) ? e.message : 'The AI could not read your photos. Your look from this phone is kept.' });
+    }
+  };
+
+  const start = async () => {
+    const check = await checkCanSend(aiui.gate, { provider: VISION_PROVIDER, kind: 'image' });
+    if (check.ok) return run();
+    if (check.error.kind === 'consent_required') return setState({ kind: 'consent' });
+    if (check.error.kind === 'age_required') return setState({ kind: 'needsSetup', message: 'AI features are for people 18 and older. Open Me > AI to check your age and add a free Groq key.' });
+    setState({ kind: 'error', message: check.error.message });
+  };
+
+  if (state.kind === 'consent') {
+    return (
+      <ConsentStep
+        provider={VISION_PROVIDER}
+        kind="image"
+        busy={false}
+        ports={ports}
+        onAnswer={async (yes) => {
+          if (!yes) return setState({ kind: 'idle', note: 'Nothing was sent. Your look from this phone is kept.' });
+          const block = consentBlock(VISION_PROVIDER, 'image');
+          if (!block) return setState({ kind: 'error', message: 'Photos can only be sent to Groq.' });
+          await aiui.gate.giveConsent(VISION_PROVIDER, block.version, 'image');
+          await start(); // re-checks age, consent version and kind before sending
+        }}
+      />
+    );
+  }
+  return (
+    <View style={{ gap: 8 }}>
+      <SectionHeader>Closer match with AI (optional)</SectionHeader>
+      {state.kind === 'done' ? <Caption>{`The AI suggested: ${state.summary}. Colours and paper still come from this phone.`}</Caption> : null}
+      {state.kind === 'idle' && state.note ? <Caption>{state.note}</Caption> : null}
+      {state.kind === 'error' ? <BodyText>{state.message}</BodyText> : null}
+      {state.kind === 'needsSetup' ? (
+        <>
+          <BodyText>{state.message}</BodyText>
+          <AppButton kind="secondary" icon="settings-outline" label="Open AI settings" onPress={() => router.push('/ai/settings')} />
+        </>
+      ) : null}
+      {state.kind === 'running' ? (
+        <>
+          <Spinner />
+          <AppButton kind="plain" label="Cancel" onPress={() => abort.current?.abort()} />
+        </>
+      ) : (
+        <AppButton
+          kind="secondary"
+          icon="sparkles-outline"
+          label="Improve with AI (sends your photo to Groq)"
+          onPress={start}
+          disabled={state.kind === 'done'}
+          testID="match-vision"
+        />
+      )}
+      <Caption>Sends your {props.images.length === 1 ? 'photo' : `${props.images.length} photos`} (made smaller, with location and camera details removed) straight from this phone to Groq. For people 18 and older, with your permission. Nothing is kept by NotedPo.</Caption>
+    </View>
+  );
+}
+
 function MatchResultView(props: {
   match: MatchResult;
   note: Note | null;
@@ -238,11 +343,12 @@ function MatchResultView(props: {
   const [name, setName] = useState(match.matched.name);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [hints, setHints] = useState<VisionHints | undefined>(undefined);
   const options = useMemo(() => chipOptions(match.analysis, base, packs.builtIn()), [match.analysis, base, packs]);
 
   const notePack = note ? packs.getOrDefault(note.stylePackId) : null;
   const target = towardNote && notePack ? notePack : base;
-  const matched = useMemo(() => buildPack({ id: match.id, name: match.matched.name, analysis: match.analysis, base, choices }), [match, base, choices]);
+  const matched = useMemo(() => buildPack({ id: match.id, name: match.matched.name, analysis: match.analysis, base, choices, hints }), [match, base, choices, hints]);
   const shown = useMemo(() => blendPacks(matched, target, step / (BLEND_STEPS - 1)), [matched, target, step]);
   const faces = usePreviewFaces(shown);
   const doc: NoteDoc = note?.document ?? SAMPLE_NOTE;
@@ -331,6 +437,8 @@ function MatchResultView(props: {
       <Chip title="Header style" value={enumLabel(matched.header.style)} open={open === 'header'} onToggle={() => toggle('header')}>
         <Options values={options.headerStyles} selected={matched.header.style} onSelect={(v) => choose({ headerStyle: v })} />
       </Chip>
+
+      <VisionPanel images={match.visionImages} onHints={setHints} />
 
       <TextField label="Name of your look" value={name} onChangeText={setName} maxLength={40} testID="match-name" />
       {note ? <AppButton icon="checkmark-circle-outline" label="Save and use on this note" onPress={() => save('note')} busy={busy} testID="match-save-note" /> : null}

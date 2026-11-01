@@ -75,6 +75,8 @@ export interface ProviderInfo {
     primary: string;
     /** Tried once when the primary model is rate limited (not auto-retried). */
     fallbacks: string[];
+    /** Model that reads images (P5 Match a look), or null when the provider is never sent photos. */
+    vision: string | null;
   };
   freeTier: {
     isFree: true;
@@ -141,14 +143,18 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
       dataSent: 'The reference photos you picked for matching a look, and your Groq API key. Nothing else from the app: no notes.',
       purpose: 'To describe the look of your photos (colours, paper, headings, layout) so the app can suggest a matching style pack for you to review.',
     },
-    capabilities: { text: true, structuredOutput: 'strict', vision: false, transcription: true },
-    models: { primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'] },
+    // P5: Groq reads photos for Match a look (Rey, Nov 1) with qwen/qwen3.8-27b: images and strict
+    // JSON schema output (console.groq.com/docs/vision and /docs/structured-outputs, read 2026-11-01).
+    capabilities: { text: true, structuredOutput: 'strict', vision: true, transcription: true },
+    models: { primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'], vision: 'qwen/qwen3.8-27b' },
     freeTier: {
       isFree: true,
       needsCard: false,
       limits: {
         'openai/gpt-oss-120b': GROQ_FREE_CHAT,
         'openai/gpt-oss-20b': GROQ_FREE_CHAT,
+        // Same free plan limits (P3a's 2026-11-01 check). Each image counts as 2,048 input tokens.
+        'qwen/qwen3.8-27b': GROQ_FREE_CHAT,
       },
       note: 'Free plan: about 1,000 AI requests a day per model. Your exact limits are on your Groq Limits page.',
       checkedOn: '2026-11-01',
@@ -190,7 +196,7 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
     // Photos go to Groq only (Rey, Nov 1). Mistral is never sent images.
     imageConsent: null,
     capabilities: { text: true, structuredOutput: 'schema', vision: false, transcription: false },
-    models: { primary: 'mistral-small-latest', fallbacks: [] },
+    models: { primary: 'mistral-small-latest', fallbacks: [], vision: null },
     freeTier: {
       isFree: true,
       needsCard: false,

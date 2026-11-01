@@ -5,7 +5,7 @@ style pack (schema v3), shown as matched chips with a slider toward the nearest 
 then saved as a custom pack. The output is always pack DATA that `validatePack` accepts; never CSS,
 HTML or URLs. Maths with derivations: `src/modules/lookmatch/MATCH_MATH.md` (code comments cite §X.Y).
 
-Status: P5 in progress. M2 (image intake), M3 (on-device analysis), M4 (pack builder) and M5 (screens and saving) are done; M6 (vision pass) is coming.
+Status: P5 complete (M1-M6); the phase gate is M7.
 
 ## Public interface (so far)
 - `intakeImages(picked, ports, { vision })`: checks, re-encodes, strips metadata, decodes, and
@@ -102,3 +102,22 @@ strip is the backup, tested on Pillow-made JPEGs carrying Exif GPS, XMP and a co
   definition capped at 50,000 characters; only `ref-` ids). P2b's triggers sync it. Every load
   re-validates each definition (`loadCustomPacks` -> `registry.setCustom`); tampered or unreadable rows
   are skipped and counted. `CustomPackLoader` reloads on every data change, including synced packs.
+
+## Optional vision pass (M6, Rey approved Q3 = A on Nov 1)
+- Shown on the result screen as **"Improve with AI (sends your photo to Groq)"** when
+  `VISION_MATCH_ENABLED` is true (it is on; set it to false to remove the button). It never runs on its
+  own: the on-device look always comes first and works with no key.
+- **Gates** (P3b's gate, checked again inside `engine.describeImages`): 18+ (birth-year gate) and a
+  **separate, versioned photo consent for Groq** (P3b `ConsentStep kind="image"`; a text consent never
+  counts). A missing age answer or key opens Me > AI.
+- **What is sent:** at most 3 clean JPEGs (1,024 px, quality 0.8, every metadata segment removed by
+  `stripJpegMetadata`, at most 1.5 M base64 characters each), the versioned prompt and the Groq key,
+  straight from the phone to `api.groq.com` over HTTPS. Nothing goes to our backend. The vision copies
+  live only in memory while the screen is open.
+- **What comes back:** enum-only JSON (§10.1), checked with zod with one re-ask, then turned into
+  `VisionHints`. The AI chooses design options only (header, divider, boxes, bullets, decorations,
+  columns, font pairing); colours and paper stay from the phone. The final pack is repaired and
+  validated like any other.
+- **Logs:** counts and error kinds only, never the photo, the prompt or the answer (tested).
+- **UNVERIFIED until Rey's live check:** a real Groq call with a real key (the request shape follows
+  `console.groq.com/docs/vision` and `/docs/structured-outputs`, read 2026-11-01).
