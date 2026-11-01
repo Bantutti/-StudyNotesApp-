@@ -22,7 +22,7 @@ import {
   usePackFaces,
   useServices,
 } from '@/composition';
-import { AppError, countWords, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
+import { AppError, countWords, errorCode, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
 import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
 import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
@@ -118,7 +118,8 @@ export default function NoteScreen() {
       if (outcome) showActionUndo(outcome.message, outcome.undo);
       else Alert.alert(action.label, 'Nothing to change here.');
     },
-    onError: (action, e) => Alert.alert(action.label, userMessage(e)),
+    // P3b: closing the AI panel is a cancel, not an error (core: 'cancelled' shows no message).
+    onError: (action, e) => void (errorCode(e) !== 'cancelled' && Alert.alert(action.label, userMessage(e))),
   });
   const actionContext = useMemo(
     () => (note ? { noteId: note.id, subjectId: note.subject, title: note.title, stylePackId: note.stylePackId, selection: null } : null),
