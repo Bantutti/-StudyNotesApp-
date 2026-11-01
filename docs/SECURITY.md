@@ -52,6 +52,14 @@ user's data, sync integrity, account deletion, cost and abuse, Storage, secrets)
 injection through note content; AI output tampering with block ids; key leakage via logs or error bodies;
 free-tier training on notes (Mistral opt-out, Gemini not used).
 
+### Additions in P5 (style packs, Match a look)
+| Area | Threat | Controls |
+|---|---|---|
+| Reference photos | Location or camera data leaking; decompression bombs; hostile files; photos kept or uploaded | System picker (no photo permission), at most 3 images, 25 MiB and 50 MP checked from metadata before decoding, decoder downsamples while reading, re-encode, then a pure-TS JPEG strip of APP1-APP15 and COM anywhere in the file plus a re-check; decoded size checked; temp files and the picker's cache copies deleted in `finally`; errors carry no decoder text |
+| Custom packs (local and synced) | Tampered sync data injecting CSS or URLs, unreadable contrast, replacing other packs, flooding | Packs are data only (schema v3: enums, hex, bundled fonts, clamped numbers, text without markup/CSS/URLs). `validatePack` on save AND on every load; definition id must equal the row id; only `ref-` ids; never shadows a built-in; at most 200 loaded; 50,000-char cap; delete erases the definition (tombstone) |
+| Vision pass (Groq) | Photos sent without permission; minors; prompt injection written in a photo; hostile model output | Explicit tap only; 18+ birth-year gate; a separate, versioned photo consent for Groq (text consent never counts; Mistral can never receive photos); engine re-checks before sending; enum-only strict schema (zod + strict JSON schema), one re-ask; the AI changes design options only, never colours or text; final pack repaired and validated; nothing photo-related logged |
+| Fonts | Tampered font files; licence breaches | Subset sources pinned by SHA-256; `check:fonts` in `verify`; Reserved Font Name families never subset; OFL notices in Me > Font licences; `MAX_FONT_BASE64` back to 3 M |
+
 ## 2. Controls in place
 
 ### Editor WebView (MASVS-PLATFORM)
@@ -255,6 +263,19 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 
 No high-severity findings are open.
 
+## 4e. Findings and fixes (P5)
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P5-S1 | Low | A tampered stylePacks row could carry a definition naming ANOTHER custom pack's id and replace it in the registry (both are the user's own data, but a synced row should never redirect another). | **Fixed:** `loadCustomPacks` skips rows whose pack id differs from the row id, and `renameCustomPack` refuses them; test. |
+| P5-S2 | Low | No cap on custom packs: a sync flood (thousands of rows) would make the picker and every registry lookup slow. | **Fixed:** at most `MAX_CUSTOM_PACKS` = 200 (newest) load; test. |
+| P5-S3 | Info | The pre-decode pixel check trusts the picker's width and height. | **Accepted:** the decoder still downsamples while reading (`maxWidth`/`maxHeight`), the decoded size is checked, and the analysis copy is at most 384 px. |
+| P5-S4 | Info | expo-image-picker adds the Android CAMERA permission (asked only when "Take a photo" is tapped). | **Accepted:** listed for C1's store forms and P7 (MERGE_NOTES). No photo or media-library permission is requested. |
+| P5-S5 | Info | Deleting a custom pack moves its notes to the default pack without a "before style change" version. | **Accepted:** content and block ids are unchanged; only the look moves. |
+| P5-S6 | Low | P1 PR #9 had raised `MAX_FONT_BASE64` to 4.5 M for the full Gaegu files. | **Fixed:** Latin subsets; cap back to 3 M (largest face 2,763,184 chars); test pins it. |
+
+No high-severity findings are open.
+
 ## 5. OWASP MASVS check
 
 | Group | Status (P1) |
@@ -266,7 +287,7 @@ No high-severity findings are open.
 | MASVS-PLATFORM | WebViews hardened (section 2), previews with JavaScript off; links open only in the OS browser after a confirm; deep links validated by route params and the developer menu is gated; minimal permissions. |
 | MASVS-CODE | Pinned deps, lockfile, audits, input validation at every boundary (documents, bridge, templates, search, synced text), parameterized SQL, no dynamic code in the WebView. |
 | MASVS-RESILIENCE | P7 (release hardening). |
-| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. P3b: explicit per-provider, versioned consent before any note is sent; 18+ result-only storage; per-subject "Never send to AI"; local-only reports. |
+| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. P3b: explicit per-provider, versioned consent before any note is sent; 18+ result-only storage; per-subject "Never send to AI"; local-only reports. P5: reference photos stripped of Exif/GPS and never kept; photos to Groq only after a tap, 18+ and a separate photo consent. |
 
 ## 6. Per-phase security gate
 

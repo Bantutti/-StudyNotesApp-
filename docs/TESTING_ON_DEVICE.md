@@ -532,6 +532,68 @@ work with **Demo AI** (no key). Steps 13 to 17 need your real free Groq key (sec
 the sparkle again shows the same panel without asking again. Me > AI shows "AI isn't available to you" with no
 Add key button.
 
+### P5: style packs and Match a look (Expo Go or APK)
+
+Everything in P5 works in **Expo Go** on Android and iPhone. The photo picker, the image tools and Skia
+are all built into Expo Go, so no paid Apple account is needed. Steps 1 to 14 need no AI key; steps 15 to
+19 need your free Groq key (section 7). Before you start, take two photos with your phone: one of a page
+in a **lined** notebook with some writing, and one of a page with **highlighter** marks. A screenshot of a
+notes picture you like also works. Write PASS / FAIL for each step.
+
+1. Me > Default look (or a new install's "Pick your look"). *Expected:* 13 looks as small cards (Pastel
+   Highlight first, then Color Code ... Chalkboard), with one live preview above them that changes when
+   you tap a card.
+2. Pick **Seoul Minimal**, then **Kawaii Pop**, then **Pastel Highlight** and open a note in each.
+   *Expected:* the headings use the pack's own handwriting or rounded font, not your phone's normal font.
+   In Pastel Highlight the headings are Gaegu (round handwriting). Known gap: Gaegu has no "ñ" or accented
+   letters, so a heading like "Niño" shows the "ñ" in a plain font. The same goes for Seoul Minimal's body
+   text.
+3. Open a note > Style. *Expected:* the note itself at the top in its current look, the 13 looks below,
+   and **Match a look from a photo**. Tap Dark Academia. *Expected:* the note turns dark, the text is
+   unchanged, and History shows "Before style change".
+4. Me > **Font licences**. *Expected:* 22 fonts, each with its copyright line, and the full SIL Open Font
+   License text. Gaegu, Gowun Dodum, Mochiy Pop One and Zen Maru Gothic say "(Latin subset)".
+5. Tap the centre **+** > **Match a look**. *Expected:* a short explanation saying the photos stay on this
+   phone, plus **Choose photos** and **Take a photo**. No permission pop-up yet.
+6. Tap **Choose photos**. *Expected:* the phone's own photo picker. On Android there is **no** "allow access
+   to photos" pop-up. Pick your lined-paper photo.
+7. *Expected:* "Cleaning your photos (removing location and camera details)..." and then "Finding the
+   paper..." for a few seconds, then the result screen. Write down roughly how many seconds it took
+   (target: under 2 seconds per photo).
+8. *Expected:* the preview shows a page with ruled lines and colours like your photo. The **Paper** chip
+   says "Lined". Below it says "Closest built-in look: ...".
+9. Tap the **+** on the slider several times. *Expected:* the preview moves step by step toward the
+   closest built-in look. At the far right it looks exactly like that pack. Tap **-** back to the left.
+10. Tap the **Paper** chip > **Grid**. *Expected:* the preview switches to grid paper. Tap **Header
+    colour** and pick another swatch. *Expected:* the headings change colour and stay readable (the app
+    darkens a colour that would be too pale).
+11. Tap **Highlighters** and switch one off. *Expected:* that highlighter colour is no longer used.
+12. Name it "Test look" > **Just save**. *Expected:* the screen closes. Open a note > Style: "Test look"
+    is in the grid with the tag "Yours". Tap it. *Expected:* the note uses your look.
+13. Style > **Rename or delete your looks** > rename it > Save name, then **Delete look** > Delete.
+    *Expected:* it disappears, and the note that used it goes back to Pastel Highlight.
+14. **Security checks:**
+    - **Size limit:** + > Match a look > pick **4** photos. *Expected:* at most 3 can be selected, or
+      the message "Pick 1 to 3 photos."
+    - **Bad name:** type the name `<b>hi</b>` and save. *Expected:* "Use letters, numbers and simple
+      punctuation for the name."
+    - **No location data:** (Android, optional) after a match, check your phone's Files app >
+      Android/data/io.github.bantutti.notedpo/cache. *Expected:* no copies of your photo are left.
+15. With your Groq key set up (P3b steps), run Match a look again. On the result screen tap **Improve with
+    AI (sends your photo to Groq)**. *Expected:* **"Send photos to Groq?"**, a consent screen that is
+    separate from the one for notes. It says what is sent (the reference photos and your key, no notes)
+    and why.
+16. Tap **No**. *Expected:* "Nothing was sent. Your look from this phone is kept." Tap the button again >
+    **Yes**. *Expected:* a spinner, then "The AI suggested: header ..., ..." and the preview changes only
+    its design (header style, bullets, fonts). The colours and paper stay the same.
+17. Me > AI. *Expected:* the photo consent for Groq is listed separately from note text, and you can
+    withdraw it. Withdraw it and tap **Improve with AI** again. *Expected:* the photo consent screen
+    appears again.
+18. If you answered the age question with an under-18 year in P3b: *Expected:* **Improve with AI** says
+    AI is for people 18 and older and points to Me > AI. Nothing is sent.
+19. Turn on airplane mode and tap **Improve with AI**. *Expected:* an offline message. The look from the
+    phone is still there and **Just save** still works.
+
 ## 9. Troubleshooting
 
 | Problem | Fix |
@@ -565,6 +627,14 @@ Add key button.
 | AI says "AI isn't available" but you are 18+ | You entered a year that made you under 18. Me > Delete all data (this wipes your notes too), or wait for "Check my age again" (offered after a year). |
 | AI live check: 401 with your real key | Copy the key again from the provider's key page (no spaces). |
 | AI live check: 429 | You used the free limit; wait or try tomorrow. Mistral 400 on Beautify: report it (schema field names). |
+
+### P5 troubleshooting
+| Problem | Fix |
+|---|---|
+| "Photo 1 couldn't be read" | Try a JPEG or a screenshot. Some cloud-only photos must download first: open the photo in your gallery once, then pick it again. |
+| The paper type is wrong (for example "Plain" for lined paper) | Tap the Paper chip and choose the right one. Photos taken from very far away make thin lines too faint to find. |
+| "Improve with AI" says to open AI settings | Set your age and Groq key in Me > AI (section 7), then come back. |
+| Match a look is slow | Note the phone model and the seconds in your report (step 7). Using 1 photo instead of 3 is about 3 times faster. |
 
 ## 10. Reporting problems
 

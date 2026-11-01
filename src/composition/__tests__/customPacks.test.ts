@@ -8,7 +8,7 @@ import { openStore } from '@/modules/store';
 import { createPackRegistry, DEFAULT_PACK_ID, validatePack, type StylePack } from '@/modules/stylepacks';
 
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
-import { cleanPackName, deleteCustomPack, loadCustomPacks, renameCustomPack, saveCustomPack } from '../customPacks';
+import { cleanPackName, deleteCustomPack, loadCustomPacks, MAX_CUSTOM_PACKS, renameCustomPack, saveCustomPack } from '../customPacks';
 import { applyPackToNote, setSubjectPack } from '../useCases';
 // Test-only helpers from lookmatch (a SYNTHETIC page and a metadata-laden JPEG fixture).
 import { BASELINE_WITH_METADATA } from '../../modules/lookmatch/__tests__/fixtures/jpegs';
@@ -54,6 +54,25 @@ describe('custom packs: save, load, apply, rename, delete', () => {
     // Applying an id that isn't a live pack is refused.
     const n = await store.notes.create({ stylePackId: DEFAULT_PACK_ID });
     await expect(applyPackToNote(store, n.id, 'ref-zzzzzzzzzzzzzzzzzzzz')).rejects.toMatchObject({ code: 'validation_failed' });
+  });
+
+  it('a row whose pack names a different id is skipped (P5-S1), and at most MAX_CUSTOM_PACKS load (P5-S2)', async () => {
+    const { store, packs, driver } = await setup();
+    await saveCustomPack(store, packs, customPack());
+    // A tampered row "ref-ddd..." whose definition claims to be ID: must not replace ID.
+    const evil = { ...customPack(ID, 'Hijacked') };
+    driver.raw.exec(`INSERT INTO stylePacks (id, created, updated, version, definition) VALUES ('ref-dddddddddddddddddddd', 9e12, 9e12, 1, '${JSON.stringify(evil)}')`);
+    const fresh = createPackRegistry();
+    expect(await loadCustomPacks(store, fresh)).toEqual({ accepted: 1, rejected: 1 });
+    expect(fresh.get(ID)?.name).toBe('Blue cottage');
+    for (let i = 0; i < MAX_CUSTOM_PACKS + 5; i++) {
+      const id = `ref-${String(i).padStart(4, 'a').replace(/[0-9]/g, (d) => 'abcdefghij'[Number(d)]!)}${'e'.repeat(16)}`;
+      driver.raw.exec(`INSERT INTO stylePacks (id, created, updated, version, definition) VALUES ('${id}', 1, ${i + 2}, 1, '${JSON.stringify(customPack(id, `P${i}`))}')`);
+    }
+    const many = createPackRegistry();
+    const r = await loadCustomPacks(store, many);
+    expect(r.accepted + r.rejected).toBe(MAX_CUSTOM_PACKS);
+    expect(many.custom().length).toBeLessThanOrEqual(MAX_CUSTOM_PACKS);
   });
 
   it('refuses to save an invalid pack or a built-in id', async () => {

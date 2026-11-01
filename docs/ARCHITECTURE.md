@@ -29,7 +29,7 @@ and the rules every later phase follows.
           src/composition ── the ONLY place adapters are chosen; app use cases live here
    ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬──────┬────┐
    ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼      ▼
- store  editor  templates  beautify  stylepacks  export   review   voice   ink   aiui ─► ai
+ store  editor  templates  beautify  stylepacks◄─lookmatch  export   review   voice   ink   aiui ─► ai
    │      │                                                                       │      │
  SQLite  editor-web (TipTap page inside the WebView)                  AI screens  provider HTTPS
    │
@@ -43,12 +43,13 @@ and the rules every later phase follows.
 | `editor` | WebView host, bridge protocol, WebView hardening, links opened outside the app, page previews, the **editor action hook** for P3b, generated CSP-pinned page | [modules/editor.md](modules/editor.md) |
 | `templates` | Template schema v1 (validated data), 7 built-ins, instantiate/apply with fresh block ids | [modules/templates.md](modules/templates.md) |
 | `beautify` | Beautify Lite: on-device rules that never change words and keep block ids | [modules/beautify.md](modules/beautify.md) |
-| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts; P1 packs Pastel Highlight + Clear Read v2 | [modules/stylepacks.md](modules/stylepacks.md) |
+| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts (22 OFL families, 4 as generated Latin subsets); the 13 v1 packs plus validated custom packs (registry), PackPicker | [modules/stylepacks.md](modules/stylepacks.md) |
 | `export` | PDF / DOCX / print exporters behind `Exporter` + ports (P1 blocks render; P6 polishes) | [modules/export.md](modules/export.md) |
 | `review` | FSRS scheduler wrapper, append-only logs, rebuild, on-device self-test (P4c builds on it) | [modules/review.md](modules/review.md) |
 | `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
 | `ink` | Skia ink surface, palm-rejection policy, smoothness stats (P4b builds on it) | [modules/ink.md](modules/ink.md) |
 | `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
+| `lookmatch` | Match a look (P5): reference photo intake (caps, metadata strip), on-device analysis (OKLab palette, paper pattern, roles, multi-photo), nearest pack, contrast repair, blend slider, chips, optional Groq vision pass (enum-only). Maths in `MATCH_MATH.md` | [modules/lookmatch.md](modules/lookmatch.md) |
 | `aiui` | AI screens (P3b): the 18+ birth-year check, key wizard (test before save), consent per provider and version, action sheet, run progress with Cancel, diff preview with per-block toggles, local reports, Me → AI settings, Demo AI (dev builds only). One `ai` editor action in the sparkle slot; the flow is a modal state machine. | [modules/aiui.md](modules/aiui.md) |
 | `auth`, `sync` | **Planned for P2b.** Not created yet. | |
 

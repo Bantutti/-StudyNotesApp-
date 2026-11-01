@@ -30,14 +30,25 @@ export function cleanPackName(input: string, fallback = 'My look'): string {
   return name || fallback;
 }
 
+/**
+ * Most custom packs loaded into the registry (newest first). A sync flood of
+ * packs can't make the picker unusable (security review P5-S2); older
+ * packs stay in the database and reappear when newer ones are deleted.
+ */
+export const MAX_CUSTOM_PACKS = 200;
+
 /** Reads every live custom pack from the store into the registry (validated). */
 export async function loadCustomPacks(store: Store, packs: PackRegistry, logger?: Logger): Promise<{ accepted: number; rejected: number }> {
-  const rows = await store.stylePacks.list();
+  const rows = (await store.stylePacks.list()).slice(0, MAX_CUSTOM_PACKS); // list() is newest first
   const defs: unknown[] = [];
   let unreadable = 0;
   for (const r of rows) {
     try {
-      defs.push(JSON.parse(r.definition));
+      const def: unknown = JSON.parse(r.definition);
+      // P5-S1: the pack inside must carry its own row's id, so a tampered row can't
+      // replace another pack in the registry by naming that pack's id.
+      if (typeof def === 'object' && def !== null && (def as { id?: unknown }).id === r.id) defs.push(def);
+      else unreadable++;
     } catch {
       unreadable++;
     }
@@ -68,7 +79,7 @@ async function liveCustom(store: Store, id: string): Promise<StylePack> {
     def = null;
   }
   const report = validatePack(def);
-  if (!report.ok || !report.pack) throw new AppError('validation_failed', 'That look is damaged. Delete it and match it again.');
+  if (!report.ok || !report.pack || report.pack.id !== id) throw new AppError('validation_failed', 'That look is damaged. Delete it and match it again.');
   return report.pack;
 }
 
