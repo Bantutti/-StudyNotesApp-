@@ -10,7 +10,14 @@ export interface FontFaceData {
   base64: string;
 }
 
-export const MAX_FONT_BASE64 = 3_000_000;
+/**
+ * Largest accepted font face, in base64 characters (validated on both sides of the bridge).
+ * 4.5 M fits Gaegu (Pastel Highlight's header font, the default pack): Gaegu_400Regular is
+ * 4,219,900 chars, Gaegu_700Bold 3,949,040. Trade-off: a WebView may now hold ~8.5 MB of font
+ * CSS for that pack (still under the 6 M-char bridge limit per message, as faces are sent one
+ * per message). TODO(P5): replace Gaegu with a Latin subset and lower this cap again.
+ */
+export const MAX_FONT_BASE64 = 4_500_000;
 
 export const fontFaceDataSchema = z.object({
   family: z.enum(FONTS),

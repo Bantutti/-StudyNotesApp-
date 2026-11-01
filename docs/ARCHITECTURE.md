@@ -18,7 +18,7 @@ and the rules every later phase follows.
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX |
+| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX. Gaegu (Pastel Highlight's header, ~3 MB per weight, full Korean set) is why `MAX_FONT_BASE64` is 4.5 M and fonts cross the bridge one face per message; P5 replaces it with a Latin subset |
 
 ## Modules
 
@@ -148,7 +148,9 @@ note. Tapping opens the note at the block (`scrollToBlock`).
 
 **Editor.** `EditorView` loads `generated/editorHtml.ts` (built by `scripts/build-editor.mjs`
 from `editor-web/`). The page has one inline script pinned by a SHA-256 CSP hash and no network.
-Native sends `load` (doc), `setPack` (pack JSON), `setFonts` (base64 faces), `command`, `requestDoc`
+Native sends `load` (doc), `setPack` (pack JSON), `setFonts` (base64 faces, **one face per message**: the
+first replaces, the rest carry `append: true`, because Pastel's faces together exceed the 6 M-char bridge
+limit), `command`, `requestDoc`
 and `ping`. The WebView re-validates each, applies it, and sends `ready`, `doc` (debounced 400 ms),
 `metric`, `pong` and `error`. Native validates every inbound message and every document again.
 

@@ -12,7 +12,7 @@ interface FaceState {
 
 /** Current pack + its bundled font faces (loaded once, cached in Services). */
 export function usePackFaces(packId: string) {
-  const { packs, getFaces, logger } = useServices();
+  const { packs, getFaces, fontSkips, logger } = useServices();
   const pack: StylePack = packs.getOrDefault(packId || DEFAULT_PACK_ID);
   const [loaded, setLoaded] = useState<FaceState | null>(null);
 
@@ -31,7 +31,10 @@ export function usePackFaces(packId: string) {
 
   // Faces from a previous pack are never shown for the current one.
   const current = loaded && loaded.key === pack.id ? loaded : null;
-  return { pack, faces: current ? current.faces : null, fontError: current?.error ?? false, missing: missingFamilies(pack) };
+  const families = new Set([pack.fonts.header, pack.fonts.body]);
+  // Faces of this pack that were bundled but not loaded (too large / not base64): shown in the developer screens.
+  const skipped = current ? fontSkips().filter((s) => families.has(s.family)) : [];
+  return { pack, faces: current ? current.faces : null, fontError: current?.error ?? false, missing: missingFamilies(pack), skipped };
 }
 
 /** Template dependencies for createNoteIn / applyTemplateToNote. */

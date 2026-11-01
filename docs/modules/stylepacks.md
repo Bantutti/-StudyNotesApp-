@@ -10,7 +10,8 @@ Highlight (light) and Dark Academia (dark).
 - `packCss(pack)` (CSS variables + static `BASE_CSS`), `packVars`, `packAttrs`, `highlighterColor`
 - `cornerSvg`, `doodleSvg` (export-only decorations)
 - `createPackRegistry()`, `DEFAULT_PACK_ID`, `P0_PACK_IDS`
-- Fonts: `BUNDLED_FACES`, `facesForPack`, `missingFamilies`, `loadFaces(pack, reader)`,
+- Fonts: `BUNDLED_FACES`, `facesForPack`, `missingFamilies`, `loadFaces(pack, reader, onSkip?)` (a face over
+  `MAX_FONT_BASE64` = 4.5 M chars or not base64 is skipped and reported as a `FaceSkip`, never silently),
   `fontFaceCss`, `fontFaceDataSchema`, `expoAssetReader`
 - `web.ts`: Expo-free subset used by the editor WebView bundle.
 
