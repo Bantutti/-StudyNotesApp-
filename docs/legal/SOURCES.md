@@ -88,3 +88,10 @@ Every fact about Google Play, Apple, Groq, Mistral, Firebase, GitHub and the Phi
 | Noted. (Parth Antala), App Store | https://apps.apple.com/us/app/noted/id6744000834 |
 | Noted - Notes and Todos (Phoenixstudio), Google Play | https://play.google.com/store/apps/details?id=com.phoenixstudio.noted |
 | InkWise - PKM, Google Play | https://play.google.com/store/apps/details?id=com.originb.inkwisenote2 |
+| Notee: AI Note Taker (GM UniverseApps), App Store | https://apps.apple.com/us/app/notee-ai-note-taker/id6745517667 |
+| noteE: AI Notes & Docs, App Store | https://apps.apple.com/us/app/notee-ai-notes-docs/id1669201695 |
+| notee website | https://ainotee.com/ |
+| Notee (Tarek Allam), Google Play | https://play.google.com/store/apps/details?id=com.notee.notee |
+| Notee: Minimal Notes, Journals (LevenAliens), Google Play | https://play.google.com/store/apps/details?id=com.levenaliens.notee&hl=en_US |
+| Notee AI: Notes & Reminders, Google Play | https://play.google.com/store/apps/details?id=com.flassh.notepad |
+| Note Pro: AI Note Taker, App Store (closest to NotedPo) | https://apps.apple.com/us/app/note-pro-ai-note-taker/id6569242915 |

@@ -12,7 +12,7 @@ import {
 
 const baseConfig = {
   status: 'draft',
-  placeholders: { APP_NAME: 'Noted', DEVELOPER_LEGAL_NAME: '', CONTACT_EMAIL: '', EFFECTIVE_DATE: '', SITE_BASE_URL: '' },
+  placeholders: { APP_NAME: 'NotedPo', DEVELOPER_LEGAL_NAME: '', CONTACT_EMAIL: '', EFFECTIVE_DATE: '', SITE_BASE_URL: '' },
   flags: { FILE_SYNC: false, VISION_AI: false, APP_CHECK: false },
 };
 
@@ -53,7 +53,7 @@ test('§2.3 review markers are removed with their leading space', () => {
 // §2.4 -----------------------------------------------------------------------
 test('§2.4 empty placeholders stay visible and are reported', () => {
   const { text, unfilled } = fillPlaceholders('{{APP_NAME}} by {{DEVELOPER_LEGAL_NAME}}', baseConfig.placeholders);
-  assert.equal(text, 'Noted by {{DEVELOPER_LEGAL_NAME}}');
+  assert.equal(text, 'NotedPo by {{DEVELOPER_LEGAL_NAME}}');
   assert.deepEqual(unfilled, ['DEVELOPER_LEGAL_NAME']);
 });
 

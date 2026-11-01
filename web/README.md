@@ -47,4 +47,6 @@ To preview, open `web\public\index.html` in your browser (double-click it in Fil
 
 ## §4 Publishing to GitHub Pages
 
+> **ON HOLD** (Rey, Nov 1, 2026, 2:45 PM): no publishing for now. Don't create the public repo, enable Pages or push `web/public/` anywhere public. Preview locally only (§3).
+
 See `docs/store/REY_SETUP.md` §1. In short: fill `site.config.json`, run the build, then copy **everything inside `web/public/`** (including the hidden `.nojekyll` file) to the root of `Bantutti/studynotes-site`. Agents can push it once the repo exists and the GitHub app has access.

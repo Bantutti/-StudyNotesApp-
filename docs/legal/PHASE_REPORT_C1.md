@@ -60,7 +60,7 @@ start web\public\index.html                # preview the site in your browser
 
 ## 6. Findings that matter for other tracks and for Rey
 
-1. **"Noted" clashes on both stores** with Digital Workroom's "Noted" (App Store Editors' Choice, about 5M downloads claimed, same headline feature: notes time-stamped to a lecture recording). Apple allows one app per name per localization. Recommendation: choose a distinctive name (Studyleaf looked free) before the permanent package name is set. Rey is confirming (`STORE_LISTING.md` §1).
+1. **App name: NotedPo** (Rey, Nov 1, 2:45 PM). "Noted" and "Notee" were dropped for strong store clashes; "notedpo" has no exact match on either store (`STORE_LISTING.md` §1). Proposed package name `io.github.bantutti.notedpo` (not set; permanent at the first Play upload).
 2. **Tombstoned notes keep their content in Firestore** (P2a design). P2b should erase content on tombstone so "deleted from the cloud" is true (`V-7`).
 3. **The review log `device` field is a synced device identifier**, so both store forms declare it (Play "Device or other IDs", Apple "Device ID").
 4. **Firebase Auth may store Google/Apple display names and photo URLs**; P2b should clear them or we declare Name (`V-5`).
@@ -76,8 +76,8 @@ start web\public\index.html                # preview the site in your browser
 
 ## 8. What's next
 
-1. Rey: create `Bantutti/studynotes-site`, the app Gmail, and send the legal name, email and final app name (`REY_SETUP.md` §1–3).
-2. Track C: fill `web/site.config.json`, rebuild, push `web/public/` to the site repo, confirm the URLs.
+1. Rey: create the app Gmail and send the legal name and email (`REY_SETUP.md` §2–3). **Publishing is on hold** (Rey, Nov 1, 2:45 PM): no public repo or GitHub Pages for now.
+2. Track C: fill the remaining placeholders and rebuild. When Rey lifts the hold, push `web/public/` to the site repo and confirm the URLs (needed before the P7 closed test).
 3. Lead: pass the §6 cross-track items to P2b, P3b and P4c; merge this PR after review.
 4. Before P6: Play developer account and verification. P6: recruiting. P7: closed test, V-checks, legal review results applied.
 

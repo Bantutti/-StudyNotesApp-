@@ -6,7 +6,7 @@
 
 | # | Step | Cost | When |
 |---|---|---|---|
-| 1 | Create the public website repo and turn on GitHub Pages | **FREE** | Now (Lead will tell the Track C worker when it exists) |
+| 1 | Create the public website repo and turn on GitHub Pages | **FREE** | **ON HOLD** (Rey, Nov 1, 2026: no publishing for now) |
 | 2 | Create the app's Gmail address | **FREE** | Now |
 | 3 | Send the Lead your legal name and the new email (fills the placeholders) | **FREE** | After step 2 |
 | 4 | Google Play developer account | **PAID: US$25 once** | Before P6 (verification takes time) |
@@ -19,6 +19,8 @@
 | 11 | (Optional) your own domain name | **PAID yearly** | Optional, later |
 
 ## §1 Public website repo and GitHub Pages (FREE)
+
+> **ON HOLD.** Rey decided on Nov 1, 2026 (2:45 PM): **no publishing for now.** No public repo, no GitHub Pages, no public pages. Everything stays as drafts in the private repo and Drive. Keep these steps for later: Play's closed test can't start until the privacy policy URL is public (`PLAY_APP_CONTENT.md`), so publishing has to happen before P7.
 
 GitHub Free includes Pages for **public** repositories only, so the site needs its own public repo; the main app repo stays private. Note: GitHub logs the IP addresses of visitors to Pages sites (stated in our privacy policy §5).
 
@@ -46,7 +48,7 @@ Send the Lead these values; the Track C worker puts them into `web/site.config.j
 
 | Placeholder | Value | Status |
 |---|---|---|
-| `APP_NAME` | The final app name (working name "Noted" clashes, see `STORE_LISTING.md` §1) | Waiting for your confirmation |
+| `APP_NAME` | **NotedPo** (your choice "notedpo"; casing options in `STORE_LISTING.md` §1.1) | Set |
 | `DEVELOPER_LEGAL_NAME` | Your full **legal** name, exactly as on your ID. It must match your Play and Apple developer accounts, because Play requires the developer named on the listing to appear in the privacy policy | Waiting |
 | `CONTACT_EMAIL` | The Gmail from §2 | Waiting |
 | `SITE_BASE_URL` | From §1 step 7 | Waiting |
@@ -113,7 +115,7 @@ The same inbox also handles other privacy requests (access, correction). Answer 
 
 | Decision | Options | Where it matters |
 |---|---|---|
-| **Final app name** | Keep "Noted" (clashes with an Editors' Choice app with the same core feature), or "Studyleaf", "Notelore", or your own. Do a trademark search before launch | `STORE_LISTING.md` §1; fixes the permanent package name |
+| **App name casing** | NotedPo (used), notedpo, or Noted Po. Name chosen Nov 1; still do a trademark search before launch, mainly against Digital Workroom's "Noted" | `STORE_LISTING.md` §1; fixes the permanent package name |
 | Give app reviewers a test AI key? | (a) No: reviewers get their own free Groq key (instructions in `PLAY_APP_CONTENT.md` §3). (b) Yes: a separate free Groq key just for review, deleted after approval | Play App access, Apple App Review notes |
 | Keep a 12-month record of deletion requests? | Yes as drafted, or a shorter time | Privacy policy §5, §8; deletion page |
 | Publish a postal address or phone on the Support page? | Email only (as drafted), or add more if the legal review says local law requires it (`L-17`). Apple asks for "actual contact information" | `web/content/support.md` |

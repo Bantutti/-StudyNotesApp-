@@ -22,7 +22,7 @@
 | L-11 | 🟠 | **Breach notification.** We promise to tell users and the NPC "when the law requires it". Check the NPC's breach rules and deadlines and whether to state them | Privacy §12 |
 | L-15 | 🟠 | **Warranty and liability** limits under Philippine consumer law (RA 7394) for a free app; non-waivable rights | Terms §5 |
 | L-17 | 🟠 | **Support page contact.** Apple's Support URL must lead to *"actual contact information (legal address, email address, telephone number), as may be required by local law"*. Is email-only enough, or must an individual developer publish an address or phone? | `web/content/support.md` |
-| L-19 | 🟠 | **Trademark search** for the final app name ("Noted" clashes with Digital Workroom's app) | `STORE_LISTING.md` §1 |
+| L-19 | 🟠 | **Trademark search** for the app name **NotedPo** (it starts with "Noted", which Digital Workroom Ltd uses for a study and meeting notes app) | `STORE_LISTING.md` §1 |
 | L-3 | 🟢 | Wording about the developer's technical ability to access synced data (no end-to-end encryption) | Privacy §3 |
 | L-6 | 🟢 | Firebase's abuse-prevention use of IP addresses as our processor: no separate purpose ticked on Play | `PLAY_DATA_SAFETY.md` §3 |
 | L-7 | 🟢 | Keeping a 12-month record of deletion requests (date and done, no content) | Privacy §5, §8; deletion page |
