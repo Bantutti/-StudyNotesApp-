@@ -9,7 +9,7 @@ Source: [Create and set up your app](https://support.google.com/googleplay/andro
 | Field | Proposed value | Notes |
 |---|---|---|
 | App name | `{{APP_NAME}}` = NotedPo (30 characters max) | Chosen Nov 1, 2026; no strong store clash (`STORE_LISTING.md` §1). Can be changed later |
-| Package name | Proposed **`io.github.bantutti.notedpo`**, not set yet (P1 owns `app.json`) | **Permanent**: *"Package names for app files are unique and permanent… can't be deleted or re-used."* Choose only after the final name |
+| Package name | **`io.github.bantutti.notedpo`** (final, Rey, Nov 1, 2026; P1 sets it in `app.json`) | **Permanent**: *"Package names for app files are unique and permanent… can't be deleted or re-used."* Choose only after the final name |
 | Default language | English (United States), en-US | Play's automatic translation doesn't support Tagalog |
 | App or game | App | |
 | Free or paid | Free | |

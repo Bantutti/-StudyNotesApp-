@@ -48,7 +48,7 @@ Send the Lead these values; the Track C worker puts them into `web/site.config.j
 
 | Placeholder | Value | Status |
 |---|---|---|
-| `APP_NAME` | **NotedPo** (your choice "notedpo"; casing options in `STORE_LISTING.md` §1.1) | Set |
+| `APP_NAME` | **NotedPo** (final, confirmed Nov 1, 2026). App id `io.github.bantutti.notedpo` (final; P1 sets it in `app.json`) | **Final** |
 | `DEVELOPER_LEGAL_NAME` | Your full **legal** name, exactly as on your ID. It must match your Play and Apple developer accounts, because Play requires the developer named on the listing to appear in the privacy policy | Waiting |
 | `CONTACT_EMAIL` | The Gmail from §2 | Waiting |
 | `SITE_BASE_URL` | From §1 step 7 | Waiting |
@@ -115,7 +115,7 @@ The same inbox also handles other privacy requests (access, correction). Answer 
 
 | Decision | Options | Where it matters |
 |---|---|---|
-| **App name casing** | NotedPo (used), notedpo, or Noted Po. Name chosen Nov 1; still do a trademark search before launch, mainly against Digital Workroom's "Noted" | `STORE_LISTING.md` §1; fixes the permanent package name |
+| ~~App name and app id~~ **Decided** | **NotedPo** and **`io.github.bantutti.notedpo`** (final, Nov 1, 2026). Still do a trademark search before launch, mainly against Digital Workroom's "Noted" | `STORE_LISTING.md` §1; fixes the permanent package name |
 | Give app reviewers a test AI key? | (a) No: reviewers get their own free Groq key (instructions in `PLAY_APP_CONTENT.md` §3). (b) Yes: a separate free Groq key just for review, deleted after approval | Play App access, Apple App Review notes |
 | Keep a 12-month record of deletion requests? | Yes as drafted, or a shorter time | Privacy policy §5, §8; deletion page |
 | Publish a postal address or phone on the Support page? | Email only (as drafted), or add more if the legal review says local law requires it (`L-17`). Apple asks for "actual contact information" | `web/content/support.md` |

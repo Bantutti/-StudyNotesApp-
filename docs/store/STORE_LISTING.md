@@ -17,9 +17,9 @@ Searched both stores on 2026-11-01: the first working name and three alternative
 | Notepine | No exact match | No exact match; close to [NotePin](https://apps.apple.com/gb/app/notepin/id1163586731) | Usable, weaker |
 | **notedpo / NotedPo / Noted Po** | **No exact match found.** Closest: Digital Workroom's [Noted.](https://play.google.com/store/apps/details?id=com.digitalworkroom.noted&hl=en) and generic "Notes Pro" / "Notepad Pro" apps | **No exact match found.** Closest: the "Noted" apps above, [Note Pro: AI Note Taker](https://apps.apple.com/us/app/note-pro-ai-note-taker/id6569242915), NotesPro AI | **Chosen (Nov 1, 2:45 PM).** No strong clash. Residual risk: it starts with "Noted", which Digital Workroom uses as a brand in the same niche, so a trademark search matters (`L-19`). "Noted po" is a common Filipino reply ("noted, sir/ma'am"), which makes the name distinctive and memorable locally |
 
-**Decision:** Rey chose **notedpo**. Still run a trademark search before launch (`L-19`), mainly against Digital Workroom's "Noted".
+**FINAL (Rey, Nov 1, 2026, 2:49 PM):** display name **NotedPo**, app id **`io.github.bantutti.notedpo`** (Android and iOS). Still run a trademark search before launch (`L-19`), mainly against Digital Workroom's "Noted".
 
-### §1.1 Display casing (proposal)
+### §1.1 Display casing: **NotedPo (final)**
 
 | Option | Reads as | Notes |
 |---|---|---|
@@ -29,9 +29,9 @@ Searched both stores on 2026-11-01: the first working name and three alternative
 
 Changing the casing later is a one-line edit in `web/site.config.json` plus a rebuild.
 
-### §1.2 Package name (proposal, not set anywhere)
+### §1.2 App id: **`io.github.bantutti.notedpo` (final)**
 
-Proposed: **`io.github.bantutti.notedpo`** for both the Android `package` and the iOS `bundleIdentifier`. Rey owns no domain; `bantutti.github.io` is a prefix he controls. **It becomes permanent at the first upload to Google Play** (Play: *"Package names for app files are unique and permanent… can't be deleted or re-used"*), including the first closed-test upload, and the iOS bundle ID can't change after the first build upload. P1 owns `app.json`; the Lead sets it there when Rey confirms.
+**Final:** **`io.github.bantutti.notedpo`** for both the Android `package` and the iOS `bundleIdentifier`. Rey owns no domain; `bantutti.github.io` is a prefix he controls. **It becomes permanent at the first upload to Google Play** (Play: *"Package names for app files are unique and permanent… can't be deleted or re-used"*), including the first closed-test upload, and the iOS bundle ID can't change after the first build upload. Confirmed by Rey on Nov 1, 2026. P1 sets it in `app.json` (`android.package` and `ios.bundleIdentifier`); Track C doesn't touch `app.json`.
 
 **Searches used:** Exa web search restricted to `apps.apple.com` and `play.google.com` (plus the apps' own websites), 2026-11-01. Store search results vary by country; repeat the search in the Play Store and App Store apps on a Philippine account before deciding.
 
