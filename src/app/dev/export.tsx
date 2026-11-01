@@ -20,7 +20,7 @@ export default function ExportSpike() {
   const { exporters, share, notes, results, packs, logger } = useServices();
   const [packId, setPackId] = useState<string>(P0_PACK_IDS[0]);
   const [paper, setPaper] = useState<PaperSize>('A4');
-  const { pack, faces, missing, fontError } = usePackFaces(packId);
+  const { pack, faces, missing, fontError, skipped } = usePackFaces(packId);
   const [out, setOut] = useState<Partial<Record<ExportFormat, ExportOutput>>>({});
   const [busy, setBusy] = useState<ExportFormat | null>(null);
   const [error, setError] = useState('');
@@ -80,6 +80,11 @@ export default function ExportSpike() {
         {missing.length ? ` (not bundled in P0: ${missing.join(', ')})` : ''}
       </Body>
       {fontError ? <Banner>Fonts could not be loaded; exports will use system fonts.</Banner> : null}
+      {skipped.length ? (
+        <Banner>
+          {`Font faces not loaded: ${skipped.map((f) => `${f.family} ${f.weight}${f.style === 'italic' ? ' italic' : ''} (${f.reason === 'too_large' ? `${Math.round(f.chars / 1000)}k chars, over the limit` : 'invalid data'})`).join(', ')}. They fall back to system fonts.`}
+        </Banner>
+      ) : null}
       {error ? <Banner>{error}</Banner> : null}
 
       <Card title="Export">
