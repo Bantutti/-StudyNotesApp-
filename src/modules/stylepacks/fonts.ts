@@ -61,11 +61,30 @@ export function missingFamilies(p: StylePack): FontFamily[] {
 /** Port for reading a bundled asset as base64 (Expo adapter in fontLoader). */
 export type AssetReader = (asset: number) => Promise<string>;
 
-export async function loadFaces(p: StylePack, read: AssetReader): Promise<FontFaceData[]> {
+/** A face that was not loaded, and why. Never carries the font data. */
+export interface FaceSkip {
+  family: FontFamily;
+  weight: 400 | 700;
+  style: 'normal' | 'italic';
+  reason: 'too_large' | 'not_base64';
+  /** Size in base64 characters. */
+  chars: number;
+}
+
+/**
+ * Loads a pack's bundled faces. A face that is too large or not base64 is never injected, and is
+ * reported through `onSkip` (the app logs a warning and lists it in the font diagnostics) instead
+ * of being dropped silently.
+ */
+export async function loadFaces(p: StylePack, read: AssetReader, onSkip?: (skip: FaceSkip) => void): Promise<FontFaceData[]> {
   const out: FontFaceData[] = [];
   for (const f of facesForPack(p)) {
     const base64 = await read(f.asset);
-    if (base64.length > MAX_FONT_BASE64 || !BASE64_PATTERN.test(base64)) continue; // skip, never inject
+    const reason = base64.length > MAX_FONT_BASE64 ? 'too_large' : !BASE64_PATTERN.test(base64) ? 'not_base64' : null;
+    if (reason) {
+      onSkip?.({ family: f.family, weight: f.weight, style: f.style, reason, chars: base64.length });
+      continue;
+    }
     out.push({ family: f.family, weight: f.weight, style: f.style, base64 });
   }
   return out;
