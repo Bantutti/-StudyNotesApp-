@@ -20,6 +20,8 @@ module.exports = {
         ...shared.moduleNameMapper,
         '^expo-audio$': '<rootDir>/test/mocks/expo-audio.ts',
         '^react-native-webview$': '<rootDir>/test/mocks/react-native-webview.tsx',
+        // P2a's deletion module (firebase/src/deletion) must use the APP's Firebase SDK, never firebase/node_modules (one SDK instance).
+        '^firebase/(app|auth|firestore|storage)$': '<rootDir>/node_modules/firebase/$1',
         // P2a's firebase/src uses NodeNext ".js" import specifiers for .ts files.
         '^(\\.{1,2}/.*)\\.js$': '$1',
       },
