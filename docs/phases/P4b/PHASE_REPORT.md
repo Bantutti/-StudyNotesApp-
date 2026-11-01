@@ -6,7 +6,8 @@
 | Date | 2026-11-01 (Asia/Manila) |
 | Zip | `{{ZIP_NAME}}` ({{ZIP_FILES}} files, {{ZIP_BYTES}} bytes) |
 | SHA-256 | `{{ZIP_SHA256}}` |
-| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p4b-ink`, PR #8, based on `main` 21b29b8 (P1 merged + PR #9) |
+| Revision | **r2**: `main` 33712d8 merged in (C1 #4, P3b #7, lint fix #11); two additive conflicts resolved (`APP_FOLDERS` keeps P3b's `ai` and P4b's `ink`; composition exports), docs merged. r1 (based on `main` 21b29b8) stays in Drive, superseded |
+| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p4b-ink`, PR #8, based on `main` 33712d8 |
 
 > The copy of this report **inside** the zip shows the placeholders above, because a zip can't contain its own
 > checksum. The real values are in `exports/<zip>.sha256` and in the copy uploaded next to the zip
@@ -41,11 +42,11 @@ modules were added, so everything runs in **Expo Go** on Android and iPhone and 
 
 | Check | Result |
 |---|---|
-| `npm run verify` (editor page, typecheck, lint, tests, secret scan, prod audit) | Pass: **675 passed**, 10 skipped (P3a opt-in live AI tests) in 67 suites; `main` had 476, so **199 new P4b tests** |
+| `npm run verify` (editor page, typecheck, lint, tests, secret scan, prod audit) | Pass: **850 passed**, 10 skipped (P3a opt-in live AI tests) in 79 suites; `main` 33712d8 has 651, so **199 new P4b tests** |
 | Editor page | Up to date: script 594,255 bytes, CSP `sha256-jMi6rg1N2Mj+tSiRLxF2GykAy0oIqrpLcNFHPnA8EWE=` |
 | `npm run audit:prod` | 0 vulnerabilities |
 | `npm run audit:all` | 7 low, dev-only, unchanged from `main` (no dependency changes) |
-| `npm run bundle:check` | Android and iOS bundles build (8.3 MB each) |
+| `npm run bundle:check` | Android and iOS bundles build (8.5 MB each, with P3b) |
 | New dependencies | **None** |
 | Backend rules tests | Not re-run (no Java here); `firebase/` is unchanged by P4b |
 | Device behaviour | **UNVERIFIED** (no device run yet): latency, palm rejection, rendering speed, gestures |
@@ -81,7 +82,7 @@ See `docs/SECURITY.md` §2 "P4b controls" and §4d. **No open High or Medium iss
 | `src/core/document/schema.ts` | `sketch` node and `SKETCH_HEIGHT` |
 | `src/modules/export/html.ts`, `docx.ts` | Sketch placeholder |
 | `src/modules/store/store.ts`, `index.ts` (+ new `assets.ts`) | `store.assets`. **P2b adds `store.sync` here; whoever merges second rebases the index lines** |
-| `src/composition/services.ts`, `index.ts` (+ new `ink.ts`, `noteInk.ts`) | `'ink'` in Delete-all-data folders; exports |
+| `src/composition/services.ts`, `index.ts` (+ new `ink.ts`, `noteInk.ts`) | `'ink'` added to Delete-all-data folders next to P3b's `'ai'`; exports next to P3b's |
 | `src/app/dev/ink.tsx`, `src/app/dev/index.tsx` | Ink diagnostics screen |
 | `jest.config.js`, `test/mocks/*` | Skia / Reanimated / Worklets stubs, Gesture Handler `jestSetup` |
 | Shared docs | ARCHITECTURE, SECURITY, TESTING_ON_DEVICE, CHANGELOG, README, editor.md, store.md |

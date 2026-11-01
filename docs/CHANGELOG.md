@@ -2,6 +2,30 @@
 
 All notable changes, one section per phase.
 
+## P4b: drawing and ink (2026-11-01)
+
+### Added
+- **Draw mode** in the note editor: pen (three pack pens plus custom colours, three widths, pressure),
+  highlighter (behind the text), eraser (whole strokes or partial), lasso (move, recolour, delete),
+  undo/redo, two-finger scroll and fling, pinch zoom 1x to 3x. Phone toolbar at the bottom; tablet
+  floating toolbar that docks left or right.
+- **Stylus-aware input** with palm guards; preferences (input mode, finger drawing, toolbar side, tools)
+  stored on the device.
+- **Finished ink inside the editor page** (SVG per block, highlighter under the text, pens over it): it moves
+  with its text, restyles with the pack, hides with deleted lines and returns with Undo.
+- **Sketch block** (slash menu > Sketch), with "Make the selected sketch taller".
+- **Ink file format v1** (one JSON file per note, block units, delta-coded points, tombstones), saved locally
+  while drawing and published once per visit for sync; crash recovery; ink of deleted notes cleaned up.
+- **Sync hand-off** for P2b: union merger (`registerInkMerger`) and download on open.
+- **Developer menu > Ink diagnostics:** live metrics, palm test, latency clock, engine bench on synthetic strokes.
+- Docs: `docs/modules/ink.md`, `docs/modules/INK_MATH.md` (formulas §1 to §10), store assets, editor ink
+  messages; TESTING_ON_DEVICE §5 and §8 P4b; SECURITY §2 P4b controls and §4d findings.
+
+### Changed
+- Editor bridge: ink messages and the `sketch` / `sketchTaller` commands; tablets get a fixed 760 px page width.
+- Store: `store.assets` (incl. `createInkLayer`, `setLocalPath`).
+- Jest: stubs for Skia, Reanimated and Worklets; Gesture Handler's `jestSetup`.
+
 ## P3b: AI screens (2026-11-01)
 
 ### Added

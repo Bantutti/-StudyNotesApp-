@@ -183,24 +183,34 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
 ## 5. Tablet and stylus testing
 
 Use an Android tablet with a stylus if you have one (Samsung Tab with S Pen, Lenovo with pen,
-or an iPad with Apple Pencil in Expo Go).
+or an iPad with Apple Pencil in Expo Go). A phone with a finger works for everything except
+pen-only checks. **Everything in this section is UNVERIFIED until you run it.**
 
-1. Open **6. Ink latency**.
-2. **Palm rejection = Auto:** write 3 lines of real notes with the pen while resting your palm on
-   the screen as you normally would.
-   - Watch for: stray marks under your palm, missing pen strokes, lines starting late.
-   - Expected: palm makes no marks once the pen has touched the screen. "Rejected" counts palm touches.
-   - Known P0 limit: if your palm touches **before** the pen, the pen stroke may not start. Note how
-     often this happens; it decides how much work P4b needs.
-3. Switch to **Stylus only** and repeat: fingers must never draw.
-4. Switch to **Off** and draw with a finger: it should draw.
-5. Watch the numbers: **Frame p50/p95** (lower is smoother; about 8 ms on 120 Hz screens, 16 ms on
-   60 Hz), **Dropped** (aim for under 5%), **Samples/s** (how often the pen reports; 120+ is good).
-6. **Real touch-to-ink latency (optional, most accurate):** record the screen with another phone in
-   **slow motion (240 fps)** while drawing fast. Count frames between the pen tip moving and ink
-   appearing; frames ÷ 240 = latency in seconds (8 frames ≈ 33 ms). Note it in your report.
-7. Rotate the tablet: the canvas should resize and keep working.
-8. Tap **Save result**.
+**A. Drawing in a note (P4b)**
+
+1. Open any note and tap **Draw** (next to Type and Style). The keyboard closes and the drawing
+   toolbar appears: at the **bottom** on a phone, as a **floating bar on the side** on a tablet.
+2. Write a few words with the pen. Expected: the ink follows the pen with no visible lag and
+   doesn't jump or change shape when you lift the pen.
+3. **Palm test:** write 10 lines with your palm resting on the screen as you normally would.
+   Count marks you didn't mean to make. Once the pen has touched the screen, a finger or palm
+   should scroll instead of drawing.
+4. **Scroll and zoom:** two fingers scroll the page (it keeps moving a little after a flick);
+   pinch zooms up to 3x. Tap **Done**: the zoom resets.
+5. Rotate the tablet: the page is a fixed-width column, so your drawing stays over the same words.
+
+**B. Ink diagnostics (developer menu, dev builds only)**
+
+1. Developer menu > **6. Ink diagnostics**.
+2. **Live drawing:** choose Palm rejection = Auto and write 3 lines with your palm resting.
+   Watch the numbers: **Frame p50/p95** (about 8 ms on 120 Hz screens, 16 ms on 60 Hz),
+   **Dropped** (aim under 5%), **Samples/s** (120+ is good), **Palm rejected**.
+3. **Latency clock:** tap Start clock, film the screen with another phone in **slow motion
+   (240 fps)** while drawing a fast line. Count frames between the pen tip moving and ink
+   appearing: frames × 4.2 ms = latency.
+4. **Engine bench:** tap Run bench (it uses 5,000 **generated** strokes, not your notes).
+   Note Open, Render, Eraser and Lasso times.
+5. Tap **Save result**, then Results > Copy and paste it back to me.
 
 **Editor on a tablet (P1):** open a note in portrait and landscape. The page and the keyboard toolbar
 should use the full width; the slash menu and block picker should stay inside the page.
@@ -294,6 +304,38 @@ Center, Sep 3, 2026).
 
 Write PASS / FAIL and any numbers next to each step. Then open **Results log** > **Copy all as
 Markdown** and paste it back to me with your notes.
+
+### P4b: drawing and ink
+
+All steps UNVERIFIED until your device run. Expo Go works for all of them.
+
+1. Open a note, tap **Draw**. Expected: keyboard closes, drawing toolbar shows (bottom on phones,
+   floating on tablets), a one-time tip says two fingers scroll.
+2. Draw with **Pen 1**, then **Pen 2** and **Pen 3**. Expected: the pack's three pen colours.
+3. Tap the width button: thin → medium → thick.
+4. **Highlighter** over a line of text. Expected: the colour sits **behind** the words, which stay readable.
+5. With a stylus, press lightly then hard. Expected: the line gets thinner and thicker (pressure).
+6. **Eraser** over a stroke: the whole stroke goes. Tap the eraser again (partial mode) and erase
+   the middle of a long stroke: it splits in two.
+7. **Undo** three times, **Redo** once. Expected: each gesture undoes as one step.
+8. **Lasso:** circle two strokes. Drag inside the dashed box to move them; tap Recolour, then Delete.
+9. Tap **Done**, then type a new line **above** your drawing. Expected: the drawing moves down with
+   its text.
+10. Put the cursor at the start of a drawn-on line and press Backspace (joins it with the line above).
+    Expected: the drawing stays where it was.
+11. Delete a drawn-on line, then Undo. Expected: the drawing disappears with the line and comes back
+    with it. ⋯ > "Delete N hidden drawings" appears while it's hidden.
+12. Slash menu > **Sketch**: a dashed drawing area appears. Draw inside it; strokes past the edge are cut off.
+    Select the sketch and use ⋯ > "Make the selected sketch taller".
+13. Change the note's style pack (Style). Expected: pens and highlighter switch to the new pack's colours.
+14. Leave the note and open it again. Expected: the drawing is still there.
+15. Draw, then swipe the app away from recent apps **without leaving the note**; reopen the app and the note.
+    Expected: the drawing is still there (crash recovery).
+16. Delete the note and wait 10 seconds. Expected: nothing left (Me > Delete all data also removes drawings).
+17. ⋯ menu: switch **Pen input** (automatic / stylus only / finger draws), **Draw with finger**, and
+    **Toolbar on the left/right** (tablet). Drag the floating toolbar by its handle; it snaps to a side.
+18. Developer menu > **6. Ink diagnostics** (section 5B). Save and send the results.
+19. Security: the drawing never appears in any log you send me (Results hold numbers only).
 
 ### P1: core app
 
@@ -558,6 +600,10 @@ Add key button.
 | Backend tests: `npm : running scripts is disabled on this system` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `npm.cmd`. |
 | Backend tests: `firebase-tools no longer supports Java version before 21` / `Could not spawn java -version` | Install Java 21 (section 1), reopen PowerShell, check `java -version`. |
 | Backend tests: port already in use / tests time out on the first run | Close other emulator windows; run `npm test` again (the first emulator download can be slow). More rows: `docs/backend/TESTING_BACKEND.md` section 6. |
+| Drawing: my palm makes marks | Draw once with the pen first (the app then knows you have a stylus), or ⋯ > Pen input > stylus only. Send me the Ink diagnostics "Palm rejected" number. |
+| Drawing: the page won't scroll in Draw mode | Use two fingers. One finger scrolls only after a stylus has been seen (or with Pen input = stylus only). |
+| Drawing: "The page is still loading" | Wait a second after opening the note and draw again. If it keeps happening, tell me your device. |
+| Drawing: a banner says part of the drawing is damaged | Your last good copy is shown. Send me the steps; don't delete the app. |
 | AI panel: "This key was rejected by Groq." | Copy the key again from https://console.groq.com/keys (all of it, no spaces), then Me > AI > Replace key. |
 | AI panel: "Your free Groq limit is used up for now" | You hit the free daily limit. Wait the time shown, or add a Mistral key and tap "Use Mistral instead". |
 | AI panel: "…answer didn't make sense twice" | Try again; if it keeps happening, tap Report this AI result and send me the report details (Me > AI). |

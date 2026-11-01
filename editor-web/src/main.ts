@@ -26,6 +26,8 @@ import { runCommand } from './commands';
 import { createEditor, loadDoc } from './createEditor';
 import { createDiagnostics } from './diagnostics';
 import { createFontState } from './fonts';
+import { createInkLayer } from './ink';
+import { createInkView } from './inkView';
 import { createBlockMenu } from './menu';
 import { checkOutgoingDoc, requestDocReply } from './replies';
 
@@ -107,11 +109,20 @@ function sendState(): void {
   }, STATE_DEBOUNCE_MS);
 }
 
+// P4b ink layers (editor-web/src/ink.ts). Re-placed after transactions, resizes and font loads.
+const ink = createInkLayer({ root, editorEl: document.getElementById('editor') as HTMLElement, post });
+window.addEventListener('resize', () => ink.refresh());
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => ink.refresh()).observe(root);
+window.addEventListener('scroll', () => ink.refresh(), { passive: true });
+const inkView = createInkView({ root, onMoved: () => ink.refresh() });
+// Created before the editor: onUpdate below uses it.
+
 const editor: Editor = createEditor({
   element: document.getElementById('editor') as HTMLElement,
   random,
   onUpdate: () => {
     sendState();
+    ink.refresh(); // P4b: blocks may have moved; re-place ink (once per frame)
     if (suppressChange) return;
     if (changeTimer) clearTimeout(changeTimer);
     changeTimer = setTimeout(() => {
@@ -178,6 +189,8 @@ function handle(msg: ToWeb): void {
       themeStyle.textContent = packCss(report.pack);
       for (const [k, val] of Object.entries(packAttrs(report.pack))) root.setAttribute(k, val);
       document.body.style.backgroundColor = report.pack.paper.color;
+      ink.setPalette(report.pack.ink); // P4b: pen and highlighter keys restyle with the pack
+      ink.refresh();
       post({ v: 1, type: 'metric', name: 'set_pack_ms', ms: performance.now() - s });
       return;
     }
@@ -186,6 +199,7 @@ function handle(msg: ToWeb): void {
       const css = fonts.apply(msg.faces, msg.append === true);
       if (css === null) return post({ v: 1, type: 'error', code: 'invalid_fonts' });
       fontStyle.textContent = css;
+      ink.refresh(); // P4b: new fonts change line heights, so re-place ink
       post({ v: 1, type: 'metric', name: 'set_fonts_ms', ms: performance.now() - s });
       return;
     }
@@ -208,6 +222,31 @@ function handle(msg: ToWeb): void {
       return;
     case 'ping':
       post({ v: 1, type: 'pong', reqId: msg.reqId, sentAt: msg.sentAt });
+      return;
+    // P4b ink: items were checked by toWebSchema (inkItemSchema) in decode().
+    case 'inkAdd':
+      ink.add(msg.items);
+      return;
+    case 'inkRemove':
+      ink.remove(msg.ids);
+      return;
+    case 'inkClear':
+      ink.clear();
+      return;
+    case 'setInkFeed':
+      ink.setFeed(msg.on);
+      return;
+    case 'requestInkLayout':
+      ink.layout(msg.reqId);
+      return;
+    case 'inkScroll':
+      inkView.scroll(msg.dx, msg.dy);
+      return;
+    case 'inkFling':
+      inkView.fling(msg.vx, msg.vy);
+      return;
+    case 'inkZoom':
+      inkView.zoom(msg.scale);
       return;
   }
 }

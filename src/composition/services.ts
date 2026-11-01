@@ -201,8 +201,9 @@ export function createServices(): Services {
  * App-made folders outside the database. Fixed names only, never user input.
  * P3b fix: 'ai' (usage meter, gate answers, reports) was missing, so
  * Delete all data left ai/usage.json behind.
+ * P4b: 'ink' (drawings: working and published copies).
  */
-export const APP_FOLDERS = ['p0', 'recordings', 'ai'] as const;
+export const APP_FOLDERS = ['p0', 'recordings', 'ai', 'ink'] as const;
 
 async function wipeAppFiles(): Promise<void> {
   for (const name of APP_FOLDERS) {
