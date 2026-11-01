@@ -2,29 +2,32 @@
 
 All notable changes, one section per phase.
 
-## P4b: drawing and ink (2026-11-01)
+## P3b: AI screens (2026-11-01)
 
 ### Added
-- **Draw mode** in the note editor: pen (three pack pens plus custom colours, three widths, pressure),
-  highlighter (behind the text), eraser (whole strokes or partial), lasso (move, recolour, delete),
-  undo/redo, two-finger scroll and fling, pinch zoom 1x to 3x. Phone toolbar at the bottom; tablet
-  floating toolbar that docks left or right.
-- **Stylus-aware input** with palm guards; preferences (input mode, finger drawing, toolbar side, tools)
-  stored on the device.
-- **Finished ink inside the editor page** (SVG per block, highlighter under the text, pens over it): it moves
-  with its text, restyles with the pack, hides with deleted lines and returns with Undo.
-- **Sketch block** (slash menu > Sketch), with "Make the selected sketch taller".
-- **Ink file format v1** (one JSON file per note, block units, delta-coded points, tombstones), saved locally
-  while drawing and published once per visit for sync; crash recovery; ink of deleted notes cleaned up.
-- **Sync hand-off** for P2b: union merger (`registerInkMerger`) and download on open.
-- **Developer menu > Ink diagnostics:** live metrics, palm test, latency clock, engine bench on synthetic strokes.
-- Docs: `docs/modules/ink.md`, `docs/modules/INK_MATH.md` (formulas §1 to §10), store assets, editor ink
-  messages; TESTING_ON_DEVICE §5 and §8 P4b; SECURITY §2 P4b controls and §4d findings.
+- **aiui module:** the AI modal over the note (action sheet, scope Selection/Whole note, provider chip,
+  usage "N of 1,000 today"), the 18+ age check (birth year with no default; month only in the boundary
+  year; day only in the birth month; result-only storage; re-check after a year), key wizard (catalog
+  badges, open key page outside the app, paste, Test then save, clipboard cleared), per-provider consent
+  (Apple 5.1.2(i)), run progress with Cancel, errors with one next step (Plan 9.6), diff preview (word
+  diff, per-block toggles, stale lock, Accept all, Discard), Apply through `runEditorAction` ("Before AI
+  change" version, exact 8-second Undo), "Report this AI result" (local only), Me → AI settings (age,
+  masked keys, Test/Replace/Remove, consent Withdraw, usage, default provider, "Never send to AI" per
+  subject, reports), Demo AI for development builds.
+- **ai module:** `testKey(provider, signal, candidateKey)` and `usage.reload()`.
+- Flashcards and Quiz me stay hidden (`AI_CARDS_ENABLED = false`); P4c turns them on with its screens.
+- Consent per data kind: `text` and `image` (catalog `imageConsent`), `checkCanSend`, `ConsentStep kind`,
+  gate file v2 (v1 migrates as text only).
+- Guards: the AI won't run on an empty hand-over or apply a result that removes all text; release builds
+  never reach Groq outside the gate.
 
-### Changed
-- Editor bridge: ink messages and the `sketch` / `sketchTaller` commands; tablets get a fixed 760 px page width.
-- Store: `store.assets` (incl. `createInkLayer`, `setLocalPath`).
-- Jest: stubs for Skia, Reanimated and Worklets; Gesture Handler's `jestSetup`.
+### Fixed
+- Delete all data now removes the Mistral key and the `ai/` folder (usage, gate, reports) and drops cached
+  AI state (P3b-S1, P3b-S2).
+- Closing an editor action with Cancel no longer shows an error alert on the note screen.
+
+### Dependencies
+- None added (component tests use P1's `test-renderer`).
 
 ## P1: core app (2026-11-01)
 

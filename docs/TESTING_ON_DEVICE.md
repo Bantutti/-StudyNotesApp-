@@ -17,8 +17,8 @@ the first time. Commands go in **PowerShell** or **Command Prompt** opened in th
 | **Git for Windows** from https://git-scm.com (optional) | Version control | Free |
 | **Expo Go** app on your phone (Play Store / App Store) | Runs the app without building it | Free |
 | **Expo account** at https://expo.dev/signup | Only for an installable Android APK (section 4c) or the development build (section 4b) | Free plan is enough |
-| **Groq account** at https://console.groq.com | Only for the audio timestamps spike and the AI live check (section 7). AI features are 18+ only. | Free plan, no card |
-| **Mistral account** at https://console.mistral.ai | Optional second AI provider for the AI live check (section 7) | Free mode, no card |
+| **Groq account** at https://console.groq.com | Only for AI features in the app (P3b), the audio timestamps spike and the AI live check (section 7). AI features are 18+ only. | Free plan, no card |
+| **Mistral account** at https://console.mistral.ai | Optional second AI provider (section 7) | Free mode, no card |
 | **Java JDK 21+**: `winget install EclipseAdoptium.Temurin.21.JDK` | Only to run the backend (Firebase rules) tests on your PC (section 6) | Free |
 | Apple Developer Program | Only for an iPhone development build. **Not needed for P1** (everything in P1 runs in Expo Go). | Paid (99 USD/year) |
 | Firebase project | **Not needed.** The backend tests use local emulators (section 6). A real project comes later, only with your approval (Storage needs the paid Blaze plan). | Not needed |
@@ -183,34 +183,24 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
 ## 5. Tablet and stylus testing
 
 Use an Android tablet with a stylus if you have one (Samsung Tab with S Pen, Lenovo with pen,
-or an iPad with Apple Pencil in Expo Go). A phone with a finger works for everything except
-pen-only checks. **Everything in this section is UNVERIFIED until you run it.**
+or an iPad with Apple Pencil in Expo Go).
 
-**A. Drawing in a note (P4b)**
-
-1. Open any note and tap **Draw** (next to Type and Style). The keyboard closes and the drawing
-   toolbar appears: at the **bottom** on a phone, as a **floating bar on the side** on a tablet.
-2. Write a few words with the pen. Expected: the ink follows the pen with no visible lag and
-   doesn't jump or change shape when you lift the pen.
-3. **Palm test:** write 10 lines with your palm resting on the screen as you normally would.
-   Count marks you didn't mean to make. Once the pen has touched the screen, a finger or palm
-   should scroll instead of drawing.
-4. **Scroll and zoom:** two fingers scroll the page (it keeps moving a little after a flick);
-   pinch zooms up to 3x. Tap **Done**: the zoom resets.
-5. Rotate the tablet: the page is a fixed-width column, so your drawing stays over the same words.
-
-**B. Ink diagnostics (developer menu, dev builds only)**
-
-1. Developer menu > **6. Ink diagnostics**.
-2. **Live drawing:** choose Palm rejection = Auto and write 3 lines with your palm resting.
-   Watch the numbers: **Frame p50/p95** (about 8 ms on 120 Hz screens, 16 ms on 60 Hz),
-   **Dropped** (aim under 5%), **Samples/s** (120+ is good), **Palm rejected**.
-3. **Latency clock:** tap Start clock, film the screen with another phone in **slow motion
-   (240 fps)** while drawing a fast line. Count frames between the pen tip moving and ink
-   appearing: frames × 4.2 ms = latency.
-4. **Engine bench:** tap Run bench (it uses 5,000 **generated** strokes, not your notes).
-   Note Open, Render, Eraser and Lasso times.
-5. Tap **Save result**, then Results > Copy and paste it back to me.
+1. Open **6. Ink latency**.
+2. **Palm rejection = Auto:** write 3 lines of real notes with the pen while resting your palm on
+   the screen as you normally would.
+   - Watch for: stray marks under your palm, missing pen strokes, lines starting late.
+   - Expected: palm makes no marks once the pen has touched the screen. "Rejected" counts palm touches.
+   - Known P0 limit: if your palm touches **before** the pen, the pen stroke may not start. Note how
+     often this happens; it decides how much work P4b needs.
+3. Switch to **Stylus only** and repeat: fingers must never draw.
+4. Switch to **Off** and draw with a finger: it should draw.
+5. Watch the numbers: **Frame p50/p95** (lower is smoother; about 8 ms on 120 Hz screens, 16 ms on
+   60 Hz), **Dropped** (aim for under 5%), **Samples/s** (how often the pen reports; 120+ is good).
+6. **Real touch-to-ink latency (optional, most accurate):** record the screen with another phone in
+   **slow motion (240 fps)** while drawing fast. Count frames between the pen tip moving and ink
+   appearing; frames ÷ 240 = latency in seconds (8 frames ≈ 33 ms). Note it in your report.
+7. Rotate the tablet: the canvas should resize and keep working.
+8. Tap **Save result**.
 
 **Editor on a tablet (P1):** open a note in portrait and landscape. The page and the keyboard toolbar
 should use the full width; the slash menu and block picker should stay inside the page.
@@ -246,8 +236,44 @@ instead of 127.0.0.1. Only do that on a private home Wi-Fi, allow Java through W
 
 ## 7. AI features
 
-AI features are **18+ only** and need your own free key. P1 has **no AI screens** (they come in P3b);
-the app works fully without a key (Beautify Lite runs on the phone).
+AI features are **18+ only** and need your own free key. The app works fully without a key (Beautify Lite
+runs on the phone). Everything in this section works in **Expo Go** on Android and iPhone (no development
+build, no paid account).
+
+**Try AI with no key first (Demo AI, development only).** Me > **AI** > Developer > switch on **Demo AI**.
+Every AI screen then shows a **DEMO** label, the answers are made up from your own text and end with
+"(demo)", and nothing is sent. You still go through the real age check, key wizard (any key in the right
+shape, for example `gsk_` plus 20 letters, is accepted by the demo) and consent screens. Switch it off
+before testing with a real key. Demo AI does not exist in an installed APK (release build).
+
+**Use AI in a note with your free Groq key (P3b):**
+1. Get a key: open https://console.groq.com, sign in (free plan, no card), go to **API Keys** > **Create API
+   Key**, name it `notedpo-test` and copy it (it starts with `gsk_`).
+2. In the app, open any note and tap the **sparkle** (✨) in the toolbar above the keyboard. The AI panel
+   opens.
+3. Pick **Beautify**. The first time, you are asked **"What year were you born?"** (the field is empty).
+   Type your year and tap Next. If the year alone can't tell, you're asked the month (and only sometimes the
+   day). Only "AI available: yes/no" and the date are kept, never your birth date.
+4. **Set up AI:** choose Groq > **Open Groq key page** (it asks first, then opens your browser) > come back >
+   **Paste** > **Test and save key**. Expected: the panel moves on. A wrong key shows "This key was rejected
+   by Groq." and your old key (if any) is kept.
+5. **Send to Groq?** Read what is sent and why, then tap **Yes, send to Groq**. ("Not now" sends nothing.)
+6. Wait for the answer (you can **Cancel**). The preview shows each change: removed words are struck
+   through, added words are underlined and bold. Switch off any change you don't want, then tap **Apply**.
+7. Tap **Undo** on the snackbar within 8 seconds to get the exact note back. History also has **Before AI
+   change**.
+8. Manage everything in Me > **AI**: the masked key (`gsk_…Ab3x`), Test, Replace, Remove, Withdraw
+   permission, usage today ("12 of 1,000 requests today"), **Never send to AI** per subject, and your saved
+   reports.
+
+**Mistral (optional second provider):** create a key at https://console.mistral.ai (free mode). **Before
+using it with your notes**, open its Admin panel > **Privacy** (left-hand menu) and switch off **"Anonymous
+improvement data"**. It is separate from the Vibe toggle (Mistral Help Center, Sep 3, 2026). The app shows
+this step in the key wizard and on the consent screen.
+
+**Clipboard:** after you save a pasted key, the app clears it from the clipboard. Some keyboards (for example
+Gboard) keep their own clipboard history: delete the key there too (long-press it in the keyboard's clipboard
+> Delete).
 
 **Groq key for the P0 audio timestamps spike** (developer menu):
 1. Go to https://console.groq.com and sign in (free plan).
@@ -268,38 +294,6 @@ Center, Sep 3, 2026).
 
 Write PASS / FAIL and any numbers next to each step. Then open **Results log** > **Copy all as
 Markdown** and paste it back to me with your notes.
-
-### P4b: drawing and ink
-
-All steps UNVERIFIED until your device run. Expo Go works for all of them.
-
-1. Open a note, tap **Draw**. Expected: keyboard closes, drawing toolbar shows (bottom on phones,
-   floating on tablets), a one-time tip says two fingers scroll.
-2. Draw with **Pen 1**, then **Pen 2** and **Pen 3**. Expected: the pack's three pen colours.
-3. Tap the width button: thin → medium → thick.
-4. **Highlighter** over a line of text. Expected: the colour sits **behind** the words, which stay readable.
-5. With a stylus, press lightly then hard. Expected: the line gets thinner and thicker (pressure).
-6. **Eraser** over a stroke: the whole stroke goes. Tap the eraser again (partial mode) and erase
-   the middle of a long stroke: it splits in two.
-7. **Undo** three times, **Redo** once. Expected: each gesture undoes as one step.
-8. **Lasso:** circle two strokes. Drag inside the dashed box to move them; tap Recolour, then Delete.
-9. Tap **Done**, then type a new line **above** your drawing. Expected: the drawing moves down with
-   its text.
-10. Put the cursor at the start of a drawn-on line and press Backspace (joins it with the line above).
-    Expected: the drawing stays where it was.
-11. Delete a drawn-on line, then Undo. Expected: the drawing disappears with the line and comes back
-    with it. ⋯ > "Delete N hidden drawings" appears while it's hidden.
-12. Slash menu > **Sketch**: a dashed drawing area appears. Draw inside it; strokes past the edge are cut off.
-    Select the sketch and use ⋯ > "Make the selected sketch taller".
-13. Change the note's style pack (Style). Expected: pens and highlighter switch to the new pack's colours.
-14. Leave the note and open it again. Expected: the drawing is still there.
-15. Draw, then swipe the app away from recent apps **without leaving the note**; reopen the app and the note.
-    Expected: the drawing is still there (crash recovery).
-16. Delete the note and wait 10 seconds. Expected: nothing left (Me > Delete all data also removes drawings).
-17. ⋯ menu: switch **Pen input** (automatic / stylus only / finger draws), **Draw with finger**, and
-    **Toolbar on the left/right** (tablet). Drag the floating toolbar by its handle; it snaps to a side.
-18. Developer menu > **6. Ink diagnostics** (section 5B). Save and send the results.
-19. Security: the drawing never appears in any log you send me (Results hold numbers only).
 
 ### P1: core app
 
@@ -490,6 +484,54 @@ expected results in `docs/backend/TESTING_BACKEND.md` section 5.
 4. Live check with no keys. *Expected:* only the "rejects a made-up key" tests run, and they pass.
 5. *Security:* search the test output for your key. *Expected:* it does not appear.
 
+### P3b: AI screens (Expo Go or APK)
+
+Use a test note with a few lines, for example "osmosis - movement of water across a membrane". Steps 1 to 12
+work with **Demo AI** (no key). Steps 13 to 17 need your real free Groq key (section 7). Write PASS / FAIL.
+
+1. Me > AI > Developer > Demo AI **on**. *Expected:* a DEMO warning on the AI settings screen.
+2. Open a note, tap the **sparkle**. *Expected:* the AI panel with "DEMO", Use: **Selection** (greyed out) /
+   **Whole note**, the provider chips, and the actions. **Make flashcards** and **Quiz me** are *not* listed
+   (they come in P4c). **Explain this** says "Select text in the note first."
+3. Tap **Beautify**. *Expected:* "What year were you born?" with an **empty** field. The screen does not
+   mention 18 or "adult".
+4. Type a year more than 19 years ago, tap Next. *Expected:* "Set up AI" with the Groq and Mistral cards
+   (badges such as Free plan, No card needed; Mistral shows "May train on your notes unless you turn it
+   off").
+5. Choose Groq, type `gsk_` + 20 letters, tap **Test and save key**. *Expected:* "Send to Groq?" showing
+   who receives it, what is sent, why, and what Groq does with it.
+6. Tap **Not now**. *Expected:* back to the actions with "Nothing was sent."
+7. Tap Beautify again > **Yes, send to Groq**. *Expected:* a short "Waiting for Groq…", then the preview with
+   one change ending in "(demo)".
+8. Switch the change **off**. *Expected:* the button says "Nothing selected". Switch it back on > **Apply 1**.
+   *Expected:* the panel closes, the note shows the change, and a snackbar "Beautify: 1 change applied" with
+   **Undo**.
+9. Tap **Undo**. *Expected:* the note is exactly as before. History lists **Before AI change**.
+10. Open the panel, run Summarize, then tap **Report this AI result** > pick a reason > Save. *Expected:*
+    "Report saved on this phone." It is listed in Me > AI > Your AI reports, and you can delete it.
+11. Open the panel and press the **X** (or Android back). *Expected:* it closes with no error message and the
+    note is unchanged.
+12. Me > AI > a subject > **Never send to AI** on. Open a note in that subject > sparkle. *Expected:* "AI is
+    off for this subject" and nothing else.
+13. Switch Demo AI **off**. Me > AI > Groq > **Replace key**: paste your real key > Test and save.
+    *Expected:* saved; the screen shows only `gsk_…` plus 4 characters.
+14. Run **Beautify** on a real note. *Expected:* a real answer within about 10 seconds; the preview shows
+    removed words struck through and added words underlined.
+15. Turn on airplane mode and run an action. *Expected:* "Needs internet. You can still use Beautify Lite."
+16. Me > AI > Groq: the usage line counts your requests ("N of 1,000 requests today").
+17. *Security:* in the terminal running Metro, search for `gsk_`. *Expected:* your key does not appear. Then
+    Me > **Delete all data**. *Expected:* Me > AI shows no keys, the age check "Not checked yet", and no
+    reports.
+
+18. *Safety:* open a note with text and tap the sparkle right after opening it. *Expected:* the panel opens
+    normally. (If the editor ever hands over an empty page, you'd see "This note couldn't be read just now,
+    so AI didn't run" and the note stays as it is: tell me if you ever see it.)
+
+**Under-18 path (any phone):** Me > Delete all data, open a note > sparkle > Beautify > type a year less than
+17 years ago. *Expected:* "AI isn't available" with one **Done** button and a pointer to Beautify Lite. Tapping
+the sparkle again shows the same panel without asking again. Me > AI shows "AI isn't available to you" with no
+Add key button.
+
 ## 9. Troubleshooting
 
 | Problem | Fix |
@@ -516,10 +558,11 @@ expected results in `docs/backend/TESTING_BACKEND.md` section 5.
 | Backend tests: `npm : running scripts is disabled on this system` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `npm.cmd`. |
 | Backend tests: `firebase-tools no longer supports Java version before 21` / `Could not spawn java -version` | Install Java 21 (section 1), reopen PowerShell, check `java -version`. |
 | Backend tests: port already in use / tests time out on the first run | Close other emulator windows; run `npm test` again (the first emulator download can be slow). More rows: `docs/backend/TESTING_BACKEND.md` section 6. |
-| Drawing: my palm makes marks | Draw once with the pen first (the app then knows you have a stylus), or ⋯ > Pen input > stylus only. Send me the Ink diagnostics "Palm rejected" number. |
-| Drawing: the page won't scroll in Draw mode | Use two fingers. One finger scrolls only after a stylus has been seen (or with Pen input = stylus only). |
-| Drawing: "The page is still loading" | Wait a second after opening the note and draw again. If it keeps happening, tell me your device. |
-| Drawing: a banner says part of the drawing is damaged | Your last good copy is shown. Send me the steps; don't delete the app. |
+| AI panel: "This key was rejected by Groq." | Copy the key again from https://console.groq.com/keys (all of it, no spaces), then Me > AI > Replace key. |
+| AI panel: "Your free Groq limit is used up for now" | You hit the free daily limit. Wait the time shown, or add a Mistral key and tap "Use Mistral instead". |
+| AI panel: "…answer didn't make sense twice" | Try again; if it keeps happening, tap Report this AI result and send me the report details (Me > AI). |
+| The sparkle doesn't appear in the toolbar | The toolbar shows it once the note's editor has loaded. Reload with `r` in the terminal. |
+| AI says "AI isn't available" but you are 18+ | You entered a year that made you under 18. Me > Delete all data (this wipes your notes too), or wait for "Check my age again" (offered after a year). |
 | AI live check: 401 with your real key | Copy the key again from the provider's key page (no spaces). |
 | AI live check: 429 | You used the free limit; wait or try tomorrow. Mistral 400 on Beautify: report it (schema field names). |
 

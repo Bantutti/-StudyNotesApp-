@@ -27,11 +27,11 @@ and the rules every later phase follows.
                 │   src/screens (shared screen pieces: NoteCard, NoteBrowser, EditorToolbar, sheets)
                 ▼   useServices() · useAppData() · use cases
           src/composition ── the ONLY place adapters are chosen; app use cases live here
-   ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬────┐
-   ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼    ▼
- store  editor  templates  beautify  stylepacks  export   review   voice   ink    ai
-   │      │                                                                       │
- SQLite  editor-web (TipTap page inside the WebView)                    provider HTTPS
+   ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬──────┬────┐
+   ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼      ▼
+ store  editor  templates  beautify  stylepacks  export   review   voice   ink   aiui ─► ai
+   │      │                                                                       │      │
+ SQLite  editor-web (TipTap page inside the WebView)                  AI screens  provider HTTPS
    │
    └── tables mirror firebase/src/schemas (P2a); P2b syncs them      all modules depend on src/core
 ```
@@ -47,8 +47,9 @@ and the rules every later phase follows.
 | `export` | PDF / DOCX / print exporters behind `Exporter` + ports (P1 blocks render; P6 polishes) | [modules/export.md](modules/export.md) |
 | `review` | FSRS scheduler wrapper, append-only logs, rebuild, on-device self-test (P4c builds on it) | [modules/review.md](modules/review.md) |
 | `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
-| `ink` | Drawing (P4b): ink file format v1 with a zod trust boundary, block-unit anchors and reconcile, geometry (smoothing, pressure outlines, RDP, eraser and lasso hit tests, safe SVG paths), immutable layer ops with tombstones, undo, union merge, the Draw-mode controller, live Skia overlay with stylus-aware routing, toolbars, local save/publish service, sync hand-off ports, diagnostics bench. Maths in [INK_MATH.md](modules/INK_MATH.md) | [modules/ink.md](modules/ink.md) |
+| `ink` | Skia ink surface, palm-rejection policy, smoothness stats (P4b builds on it) | [modules/ink.md](modules/ink.md) |
 | `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
+| `aiui` | AI screens (P3b): the 18+ birth-year check, key wizard (test before save), consent per provider and version, action sheet, run progress with Cancel, diff preview with per-block toggles, local reports, Me → AI settings, Demo AI (dev builds only). One `ai` editor action in the sparkle slot; the flow is a modal state machine. | [modules/aiui.md](modules/aiui.md) |
 | `auth`, `sync` | **Planned for P2b.** Not created yet. | |
 
 **Composition** (`src/composition`) also holds the app's use cases, all unit-tested on real SQLite:
@@ -57,9 +58,6 @@ template), Home (`homeSummary`, exam countdowns), templates (`applyTemplateToNot
 (`applyPackToNote`), versions (`checkpointWhileEditing`, `checkpointOnLeave`), editor actions
 (`runEditorAction`, `beautifyLiteAction`), autosave (`createAutosave`, `createNoteSession`), search
 (`createSearchController`) and the app data lifecycle (`createAppDataController`: open, undo, wipe, reset).
-P4b adds `inkServiceFor` / `inkStorePort` (`composition/ink.ts`, one ink service per Store, crash recovery
-and orphan sweep at start) and `createNoteInk` (`composition/noteInk.ts`: one note's ink while the editor is
-open), used by `src/screens/NoteInk.tsx` and the note screen.
 
 ### Module rules (enforced)
 
@@ -125,8 +123,15 @@ and leave), running the 10-minute version rule first. One transaction stores the
 The keyboard toolbar sends commands; the page reports toolbar state. Links go to the native "Open link?"
 dialog, then the OS browser.
 
-**Editor actions (P3b hook).** Beautify Lite (and later AI) run through `runEditorAction`: current
+**Editor actions (P3b hook).** Beautify Lite and the AI run through `runEditorAction`: current
 document from the page, `action.run()`, schema check, "Before …" version, save, show, exact Undo.
+
+**AI (P3b).** `composition/aiWiring.tsx` (mounted once under AppDataProvider) registers the `ai` action
+in the sparkle slot and renders `AiFlowHost`, a React Native Modal. `run()` calls `flow.start(ctx,
+subjectAiAllowed)`: action sheet, then (only as needed) age check, key wizard and consent, then
+`engine.run()`, the diff preview, and `applyProposal()`. It resolves with the new document, and
+`runEditorAction` saves "Before AI change". Closing the modal is a cancel (`AppError('cancelled')`, no
+message). Age, consent and reports live in `documents/ai/*.json`; keys live only in secure storage.
 
 **Search.** `createSearchController` debounces input into `store.search()`, which turns the text into safe
 quoted prefix terms, ranks titles and terms above text, and returns plain-text snippet parts grouped by
@@ -198,10 +203,8 @@ frame-interval histogram; the screen polls stats every 500 ms.
 | Editor actions as one registry and one run path (P1) | Beautify Lite and P3b's AI share validation, versions and exact Undo; P3b touches no editor internals | AI screens calling the store directly |
 | Slash menu inside the page, toolbar native (P1) | Pack-accurate previews without per-keystroke bridge traffic; toolbar is fast and accessible | All-native menus |
 | Conservative IME handling plus Typing diagnostics (P1) | Android keyboards are unverified; data from real phones instead of guesses | Custom key handling for shortcuts |
-| Hybrid ink rendering (P4b, Q1): finished strokes as SVG inside the WebView, live stroke in a native Skia overlay | Ink scrolls, reflows and prints with the text natively (no scroll-sync drift) and the stroke being drawn stays low-latency; both use the same TS geometry, so committing never moves the line | Native-only overlay synced to WebView scroll; WebView-only pointer drawing |
-| Ink in block units (P4b, Q3): 1000 = anchor block width, same scale on both axes | Strokes follow their block through edits and scale across devices without distortion | Absolute page coordinates (break on every edit) |
-| Ink saved locally while drawing, published once per visit (P4b, Q9) | P2b uploads at most once per note visit (Storage free tier: 5K uploads/month) and the uploaded file never changes mid-upload | Publishing every stroke or on background |
-| Immutable strokes + tombstones, merge = set union (P4b, Q10) | Two devices drawing offline converge without losing strokes; laws property-tested | Last-push-wins per file |
+| AI screens as a modal over the note, not pushed routes (P3b) | The note keeps its editing session (no "left the note" save, no reload), and no note text or key ever goes into navigation params | Expo Router routes for each AI step |
+| The 18+ gate is a birth-year question with only the result stored (P3b, Rey Nov 1) | Neutral prompt (no hint of the cut-off), month or day asked only when needed, nothing identifying kept | An "I'm 18 or older" checkbox; storing the birth date |
 | AI edits are proposals, never direct writes (P3a) | The AI sees block aliases, not ids; output is schema data with five inline marks, so no links or HTML can come from the AI. Undo is exact only while the note is unchanged; otherwise use version history | Letting the AI return documents |
 
 ## Known structural limits (to revisit)
