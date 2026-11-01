@@ -2,6 +2,36 @@
 
 All notable changes, one section per phase.
 
+## P2b: sign-in and sync, app side (2026-11-01)
+
+### Added
+- Sign-in and sync against the local Firebase emulators (project `demo-studynotes`): email sign-up,
+  verification, sign-in, reset and re-sign-in; Google and Apple Firebase half (hidden; scopes pinned to
+  `openid email` / email only).
+- Sync engine: SQLite trigger outbox, rev conflict detection with batch splitting and lost-ack detection,
+  incremental pulls with exact cursors, zod validation of every downloaded doc (quarantine), erased
+  tombstones, review-log union, asset files with `registerAssetMerger` (for P4b), scheduler.
+- Screens: Me (account and sync, app lock, privacy, terms, deletion page), sign-in set, Turn on sync with
+  counts and progress, Needs attention, Conflict resolver (Keep mine / other / both), Delete account, App
+  lock, in-app legal pages (C1 drafts, pinned to `phase/c1-compliance` @ e78a01a); sync chip; Home banner.
+- In-app account deletion (P2a `deleteAccount`, Apple token revoke), "deletion leaves nothing" e2e test.
+- App lock (Face ID / fingerprint / device PIN), FLAG_SECURE on Android, app-switcher blur on iOS.
+- `npm run test:sync-e2e` (two simulated devices on the real SDK and rules), `npm run emulators:lan`,
+  `npm run emu:verify`, `npm run check:legal`, `npm run build:android:emulator`; EAS `emulator` profile with a
+  config plugin that allows cleartext to one private LAN address only.
+
+### Changed
+- Store migration 2 (sync bookkeeping). Delete all data also clears sync tables and signs out.
+- Tombstones are never written during P1's 8-second undo window (P1 r2's undo rule).
+- `jest.config.js`: `firebase/*` resolves to the app's SDK (one instance for P2a's deletion module).
+
+### Dependencies
+- `firebase` 13.1.0 (same pin as P2a) with the `@grpc/grpc-js` 1.14.7 override (P2a MERGE_NOTES §6.3),
+  `expo-local-authentication` 58.0.2, `expo-screen-capture` 58.0.6 (both Expo SDK 58 bundled versions).
+
+### Security
+- See SECURITY.md section 4d (P2b-S1 to P2b-S12). No open high-severity findings.
+
 ## P1: core app (2026-11-01)
 
 ### Added

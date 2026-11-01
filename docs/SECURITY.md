@@ -220,14 +220,38 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 | P3a-S6 | Info | Free tiers may train on prompts. | P3b shows data use and the Mistral opt-out in the key wizard and consent screen. |
 | P3a-S7 | Info | `testKey` skips the 18+/consent gates (sends only the key). | Accepted; the wizard asks the age question first. |
 
+## 4d. Findings and fixes (P2b: sign-in and sync, app side)
+
+Threat-model additions (plan §17): uploading to the wrong account, partial uploads, tampered sync data,
+another device writing during account deletion, tokens at rest, shoulder surfing. Reviewed: every new
+file in `src/modules/{store/sync.ts,sync,cloud,auth,applock,legal}`, `src/composition/{cloudRuntime,
+syncController,SyncBridge,AppLockGate}`, the new screens, `plugins/withEmulatorCleartext.js`, scripts.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P2b-S1 | Medium | No App Check (P2a F-3): any client with the (public) config can call the backend; the rules still enforce ownership, verified email, shapes and the deletion lock. | **Open, tracked**: needs React Native Firebase + a development build (decision Nov 1). Required before a real project goes live. |
+| P2b-S2 | Medium | Wrong-account upload (plan §17): guest notes or one person's notes uploading into another account. | **Fixed by design**: the database is bound to one uid (Q7); another account is refused until "Remove notes from this phone"; sync runs only when `syncState.uid` equals the verified uid (tests). |
+| P2b-S3 | Medium | Tampered or malformed cloud docs (rules can't look inside JSON strings). | **Fixed**: every pulled doc passes P2a's zod (including the note tree) and the app's own document schema, plus owner and id checks; failures are quarantined (ids and a field path only) and never rendered (unit + e2e). |
+| P2b-S4 | Medium | A second device re-uploading while (or after) the account is deleted. | **Fixed**: rules lock (P2a) + the engine treats a missing/marked profile as "account gone", stops, signs out and turns the notes into guest notes without uploading (e2e: 0 docs, 0 files, 0 users after deletion). |
+| P2b-S5 | Low | Firestore SDK console logs can include document paths and server messages. | **Fixed**: SDK log level silent; the app logs content-free codes only (tests check no email/password in logs). |
+| P2b-S6 | Low | Sign-in tokens at rest. | **Fixed**: Firebase session in Keychain/Keystore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`), chunked; falls back to memory (signed out on restart), never a plain file (Q8). |
+| P2b-S7 | Low | Name/photo copied from Google/Apple (store forms would have to declare "Name"). | **Mitigated**: scopes pinned to `openid email` / email (test); top-level name and photo cleared after every sign-in (e2e). Firebase keeps the provider's own record when a token carries a name; real tokens with our scopes don't (reported to C1). |
+| P2b-S8 | Low | App lock is a screen gate, not encryption; a rooted/jailbroken phone or a backup tool can read the database. | **Accepted**: documented in the app and docs; encryption at rest revisit in P7 (P1-S6). |
+| P2b-S9 | Low | Cleartext http to the emulators from an APK. | **Fixed**: only the EAS `emulator` profile, only one private IPv4 (build fails otherwise), base config stays cleartext-off (test). The app refuses an emulator host unless the project id is `demo-*`, and a `demo-*` project without one. |
+| P2b-S10 | Low | Downloaded asset files and remote bytes given to a merger are untrusted. | **Mitigated**: path recomputed from the validated id and an extension allow-list, exact owner path required, size caps; P4/P4b must validate file contents (ink JSON with zod) before use; documented in docs/modules/sync.md. |
+| P2b-S11 | Low | Narrow race: a pull applies a newer copy of the OPEN note while the editor still holds edits from the last second (before autosave); the next autosave then overwrites the remote edit locally and uploads it (no conflict copy). | **Accepted for P2b**, mitigated by the 1 s autosave, a server re-read when a note opens, and pulls at most every 30 s while typing. Revisit in P7 (flush before applying an open note). |
+| P2b-S12 | Info | Account enumeration and password policy on a real project. | The app never reveals whether an account exists and requires 8+ characters; on a real project also turn on Firebase Email Enumeration Protection and a password policy (console). |
+
+P2a F-4 (no rate limits in the rules) stays **accepted** on the free plan. No High finding is open.
+
 ## 5. OWASP MASVS check
 
 | Group | Status (P1) |
 |---|---|
 | MASVS-STORAGE | Keys in Keychain/Keystore; no secrets in files or logs; backups off (Android); notes in private SQLite with secure delete and wipe; no encryption at rest in P1 (P1-S6, revisit P7). |
 | MASVS-CRYPTO | No custom crypto. CSPRNG (expo-crypto) for ids. |
-| MASVS-AUTH | No accounts in the app yet (P2b). Backend rules require verified email and ownership (P2a). |
-| MASVS-NETWORK | HTTPS only, single fixed provider host, no cleartext. Certificate pinning: evaluate in P7. |
+| MASVS-AUTH | P2b: email sign-in with verification (sync refused until verified), re-sign-in before account deletion, no account enumeration, sessions in Keychain/Keystore, one account per phone, app lock (OS biometrics/PIN). App Check open (P2b-S1). |
+| MASVS-NETWORK | HTTPS only, single fixed provider host. Cleartext only in the EAS `emulator` profile to one private LAN address (P2b-S9). Certificate pinning: evaluate in P7. |
 | MASVS-PLATFORM | WebViews hardened (section 2), previews with JavaScript off; links open only in the OS browser after a confirm; deep links validated by route params and the developer menu is gated; minimal permissions. |
 | MASVS-CODE | Pinned deps, lockfile, audits, input validation at every boundary (documents, bridge, templates, search, synced text), parameterized SQL, no dynamic code in the WebView. |
 | MASVS-RESILIENCE | P7 (release hardening). |

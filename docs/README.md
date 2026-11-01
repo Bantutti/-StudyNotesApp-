@@ -23,7 +23,12 @@ P1 is the real offline app (guest mode: no account, no AI key):
 - **Hidden developer menu** (Me > tap the version 7 times): the P0 spike lab and Typing diagnostics.
 
 Also in the repo: the **P2a backend** (`firebase/`, Firestore and Storage rules with emulator tests) and the
-**P3a AI engine** (`src/modules/ai`, no screens until P3b). Accounts and sync arrive in P2b.
+**P3a AI engine** (`src/modules/ai`, no screens until P3b).
+
+**P2b (sign-in and sync)** adds accounts and two-device sync against the **local Firebase emulators only**
+(project `demo-studynotes`; no real Firebase project, nothing online), Turn on sync with counts, the
+Conflict resolver, in-app account deletion, app lock and the in-app legal pages. Without the
+`EXPO_PUBLIC_FIREBASE_*` lines in `.env` the app stays local-only. Phone setup: TESTING_ON_DEVICE.md 6b.
 
 ## App identity
 
@@ -79,6 +84,11 @@ npm run audit:all           # full dependency audit including dev tools
 **Backend rules (P2a).** The Firebase backend lives in `firebase/` as its own npm project (own
 `package.json` and lockfile). It needs Java 21+. Run `cd firebase && npm ci && npm test`. Details:
 `docs/backend/README.md` and `docs/backend/TESTING_BACKEND.md`.
+
+**Sign-in and sync (P2b).** `npm test` runs the sync engine against an in-memory cloud with the same rules
+(two-device and randomised convergence tests). The emulator end-to-end suite runs the real Firebase JS SDK
+and P2a's rules with two simulated devices: `cd firebase && npm ci` once, then `npm run test:sync-e2e`
+(Java 21+). `npm run check:legal` checks the bundled legal pages against their pinned C1 commit.
 
 **AI engine (P3a).** `npm test` runs its unit tests; the opt-in live check with your own keys is described
 in `docs/modules/ai.md`.

@@ -88,7 +88,9 @@
     "export:phase": "node scripts/export-phase.mjs",
     "test:sync-e2e": "node scripts/test-sync-e2e.mjs",
     "check:legal": "node scripts/build-legal.mjs --check",
-    "emu:verify": "node scripts/emu-verify-email.mjs"
+    "emu:verify": "node scripts/emu-verify-email.mjs",
+    "emulators:lan": "node scripts/emulators-lan.mjs",
+    "build:android:emulator": "npx eas-cli@latest build --profile emulator --platform android"
   },
   "private": true,
   "overrides": {

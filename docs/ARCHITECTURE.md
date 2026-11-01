@@ -49,7 +49,12 @@ and the rules every later phase follows.
 | `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
 | `ink` | Skia ink surface, palm-rejection policy, smoothness stats (P4b builds on it) | [modules/ink.md](modules/ink.md) |
 | `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
-| `auth`, `sync` | **Planned for P2b.** Not created yet. | |
+| `store` (P2b) | Migration 2: `syncOutbox` filled by SQLite triggers (every local insert/update; nothing for deletes), `syncState` (bound account, applying flag), exact pull cursors, `syncConflicts`, `syncQuarantine`, `syncFiles`; the `store.sync` API keeps all SQL in the store | [modules/sync.md](modules/sync.md) |
+| `sync` (P2b) | Engine: push (profile first, batches split on refusal, lost-ack detection), pull (cursor + 60 s overlap, zod on every doc, quarantine), conflicts (resolver for notes, cards, recordings; automatic for the rest), tombstones erased, review-log union, asset pass with `registerAssetMerger`, scheduler; a rules-faithful fake cloud for tests | [modules/sync.md](modules/sync.md) |
+| `cloud` (P2b) | Firebase JS SDK setup (config with emulator-only-for-demo rule, memory cache, long polling, SDK logs silenced), Firestore `RemoteBackend`, Storage `BlobStorePort`, React Native session persistence | [modules/cloud.md](modules/cloud.md) |
+| `auth` (P2b) | Sign-in (email fully; Google/Apple Firebase half behind ports, hidden), scope pins, name/photo scrub, SecureStore session, one account per phone, account deletion wiring (Apple revoke, P2a `deleteAccount`) | [modules/auth.md](modules/auth.md) |
+| `applock` (P2b) | Lock rules (pure), LockGate (nothing mounted before the first unlock; opaque cover when inactive), expo-local-authentication and expo-screen-capture adapters | [modules/applock.md](modules/applock.md) |
+| `legal` (P2b) | C1's in-app privacy, terms and account-deletion pages, bundled and pinned (`check:legal`), safe Markdown subset | [modules/legal.md](modules/legal.md) |
 
 **Composition** (`src/composition`) also holds the app's use cases, all unit-tested on real SQLite:
 onboarding (`finishOnboarding`, `skipOnboarding`), notes (`createNoteIn` with subject default pack and
@@ -57,6 +62,12 @@ template), Home (`homeSummary`, exam countdowns), templates (`applyTemplateToNot
 (`applyPackToNote`), versions (`checkpointWhileEditing`, `checkpointOnLeave`), editor actions
 (`runEditorAction`, `beautifyLiteAction`), autosave (`createAutosave`, `createNoteSession`), search
 (`createSearchController`) and the app data lifecycle (`createAppDataController`: open, undo, wipe, reset).
+P2b adds the cloud runtime (`cloudRuntime.ts`: built only with a valid `EXPO_PUBLIC_FIREBASE_*` config, so
+`services.cloud` is null in local-only builds), the sync controller (`syncController.ts`: one view model for
+every sync screen, Turn on sync, sign-out, account gone), `SyncBridge` and `AppLockGate` (mounted in the
+root layout), and hooks `useSyncView` / `useNoteSync`. P2a's schemas and deletion module are imported only
+through `src/modules/sync/cloudSchemas.ts` and `src/modules/auth/p2aDeletion.ts`; `metro.config.js` maps
+their `.js` specifiers and hides `firebase/node_modules` so the bundle has one SDK and one zod.
 
 ### Module rules (enforced)
 
