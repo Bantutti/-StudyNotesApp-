@@ -39,6 +39,107 @@ const META = `
 
 const bool = (col: string, dflt: 0 | 1) => `${col} INTEGER NOT NULL DEFAULT ${dflt} CHECK (${col} IN (0, 1))`;
 
+/**
+ * The 10 synced tables, in upload order (users first: the cloud profile must
+ * exist before anything else is written, P2a §D.3 "Profile first").
+ * Fixed identifiers, never user data.
+ */
+export const SYNC_TABLES = [
+  'users', 'subjects', 'folders', 'notes', 'cards', 'reviewLogs', 'recordings', 'assets', 'stylePacks', 'templates',
+] as const;
+export type SyncTable = (typeof SYNC_TABLES)[number];
+
+const tableList = SYNC_TABLES.map((t) => `'${t}'`).join(', ');
+
+/** "Not applying a pulled doc": local edits only are queued (§ sync.md "Change tracking"). */
+const LOCAL_EDIT = 'COALESCE((SELECT applying FROM syncState WHERE id = 1), 0) = 0';
+
+/**
+ * Queues (table, id) in the outbox. seq counts local edits since the last
+ * upload, so an edit made while an upload is in flight is never lost
+ * (markPushed only clears the item if seq is still the one it sent).
+ * A quarantined item (invalid local data) is retried after the next edit.
+ */
+const enqueue = (t: SyncTable) => `INSERT INTO syncOutbox (tbl, id, seq) VALUES ('${t}', NEW.id, 1)
+      ON CONFLICT (tbl, id) DO UPDATE SET seq = seq + 1,
+        state = CASE WHEN state = 'quarantined' THEN 'pending' ELSE state END;`;
+
+const triggersFor = (t: SyncTable): string[] => {
+  const ins = `CREATE TRIGGER sync_${t}_ins AFTER INSERT ON ${t} WHEN ${LOCAL_EDIT} BEGIN ${enqueue(t)} END`;
+  // Review logs are append-only (P2a reviewLogSchema): only inserts are queued.
+  if (t === 'reviewLogs') return [ins];
+  return [ins, `CREATE TRIGGER sync_${t}_upd AFTER UPDATE ON ${t} WHEN ${LOCAL_EDIT} BEGIN ${enqueue(t)} END`];
+};
+
+/**
+ * Migration 2 (P2b). Local only: none of these tables is ever synced.
+ * - syncState: one row. The account this database is bound to (decision
+ *   Q7: one account per local database), whether sync is on, and the
+ *   `applying` flag the triggers read (1 while a pulled doc is written, so
+ *   remote changes are not queued for upload again).
+ * - syncOutbox: what still has to be uploaded (filled by triggers, Q2).
+ *   There is NO delete trigger: removing rows on the phone (Delete all data,
+ *   Remove notes from this phone) never deletes anything in the cloud.
+ * - syncCursors: pull position per collection, as the exact server
+ *   timestamp (seconds + nanos: Firestore keeps microseconds, P1 keeps ms)
+ *   plus the doc id for ties.
+ * - syncConflicts: the server copy of a doc whose upload was rejected as
+ *   stale (rev), until the user resolves it (Q5). Holds note content, so it
+ *   is wiped by Delete all data, Remove notes from this phone and resolve.
+ * - syncQuarantine: docs that failed validation (ids and a reason code
+ *   only, never content), in either direction.
+ * Every existing row is queued once, so guest data uploads on first sign-in.
+ */
+const SYNC_MIGRATION: readonly string[] = [
+  `CREATE TABLE syncState (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    uid TEXT,
+    enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+    applying INTEGER NOT NULL DEFAULT 0 CHECK (applying IN (0, 1)),
+    initialSyncDone INTEGER NOT NULL DEFAULT 0 CHECK (initialSyncDone IN (0, 1)),
+    lastPushAt INTEGER,
+    lastPullAt INTEGER,
+    lastError TEXT
+  ) STRICT`,
+  'INSERT INTO syncState (id) VALUES (1)',
+  `CREATE TABLE syncOutbox (
+    tbl TEXT NOT NULL CHECK (tbl IN (${tableList})),
+    id TEXT NOT NULL,
+    seq INTEGER NOT NULL CHECK (seq >= 1),
+    state TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending', 'conflict', 'quarantined')),
+    sentSeq INTEGER,
+    sentRev INTEGER,
+    sentHash TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (tbl, id)
+  ) STRICT, WITHOUT ROWID`,
+  `CREATE TABLE syncCursors (
+    tbl TEXT PRIMARY KEY NOT NULL CHECK (tbl IN (${tableList})),
+    seconds INTEGER NOT NULL,
+    nanos INTEGER NOT NULL CHECK (nanos BETWEEN 0 AND 999999999),
+    docId TEXT NOT NULL
+  ) STRICT, WITHOUT ROWID`,
+  `CREATE TABLE syncConflicts (
+    tbl TEXT NOT NULL CHECK (tbl IN (${tableList})),
+    id TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('edit_edit', 'remote_deleted', 'local_deleted')),
+    serverRev INTEGER NOT NULL,
+    serverRow TEXT NOT NULL,
+    detected INTEGER NOT NULL,
+    PRIMARY KEY (tbl, id)
+  ) STRICT, WITHOUT ROWID`,
+  `CREATE TABLE syncQuarantine (
+    tbl TEXT NOT NULL CHECK (tbl IN (${tableList})),
+    id TEXT NOT NULL,
+    direction TEXT NOT NULL CHECK (direction IN ('in', 'out')),
+    reason TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    PRIMARY KEY (tbl, id, direction)
+  ) STRICT, WITHOUT ROWID`,
+  ...SYNC_TABLES.flatMap(triggersFor),
+  ...SYNC_TABLES.map((t) => `INSERT INTO syncOutbox (tbl, id, seq) SELECT '${t}', id, 1 FROM ${t}`),
+];
+
 export const MIGRATIONS: readonly Migration[] = [
   {
     version: 1,
@@ -173,6 +274,11 @@ export const MIGRATIONS: readonly Migration[] = [
       'CREATE INDEX noteVersions_note ON noteVersions (note, created)',
       'CREATE INDEX searchMap_note ON searchMap (noteId)',
     ],
+  },
+  {
+    version: 2,
+    name: 'sync bookkeeping (P2b)',
+    statements: SYNC_MIGRATION,
   },
 ];
 
