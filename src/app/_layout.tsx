@@ -9,7 +9,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AppDataProvider, AppLockGate, ServicesProvider, SyncBridge, useServices } from '@/composition';
+import { AiWiring, AppDataProvider, AppLockGate, ServicesProvider, SyncBridge, useServices } from '@/composition';
 import { ThemeProvider, useTheme } from '@/core/ui';
 
 function Navigator() {
@@ -43,6 +43,7 @@ function Navigator() {
         <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
+        <Stack.Screen name="ai/settings" options={{ title: 'AI' }} />
         {/* P2b: account, sync, app lock and legal pages */}
         <Stack.Screen name="account/sign-in" options={{ title: 'Sign in' }} />
         <Stack.Screen name="account/sign-up" options={{ title: 'Create an account' }} />
@@ -55,6 +56,7 @@ function Navigator() {
         <Stack.Screen name="settings/app-lock" options={{ title: 'App lock' }} />
         <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
       </Stack>
+      <AiWiring />
     </>
   );
 }

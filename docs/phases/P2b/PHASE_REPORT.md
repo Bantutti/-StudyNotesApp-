@@ -4,10 +4,11 @@
 |---|---|
 | Phase | P2b, accounts and sync, app side (Track A, Developer worker). Plan approved by the Lead for Rey (Q1 to Q14 all option A), Nov 1, 2026 |
 | Date | 2026-11-01 (Asia/Manila) |
+| Revision | **r2**: `main` 33712d8 merged in (C1 PR #4, P3b PR #7, lint fix PR #11; conflicts resolved in `composition/index.ts`, `_layout.tsx`, `me.tsx`, `note/[id].tsx`, `services.ts` and the shared docs). Clean PR from `main`: branch `phase/p2b-sync-r2`. r1 (SHA-256 32223e56…395b) stays in Drive for comparison |
 | Backend | **Local Firebase emulators only** (project `demo-studynotes`). No real Firebase project, no deploys, nothing published |
 | Zip | `{{ZIP_NAME}}` ({{ZIP_FILES}} files, {{ZIP_BYTES}} bytes) |
 | SHA-256 | `{{ZIP_SHA256}}` |
-| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p2b-sync`, PR #6 (includes `main` up to 21b29b8: P0, P1 with r2 fixes, P3a, P2a, PR #9) |
+| Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p2b-sync-r2` (from `main` 33712d8, mergeable PR) and `phase/p2b-sync` (PR #6, same tree) |
 
 > The copy of this report **inside** the zip shows the placeholders above (a zip cannot contain its own
 > checksum). The real values are in `exports/<zip>.sha256` and in the copy uploaded next to the zip
@@ -44,11 +45,11 @@ TESTING_ON_DEVICE.md section 6b: put the two `EXPO_PUBLIC_FIREBASE_*` lines in `
 
 | Check | Result |
 |---|---|
-| `npm run verify` (editor page, legal pages, typecheck, lint, unit tests, secret scan, prod audit) | **Pass**: 599 passed, 10 skipped (P1's opt-in live AI tests), 67 suites; secretlint clean; prod audit **0** |
+| `npm run verify` (after merging main 33712d8; editor page, legal pages (`web/app-docs/` on main equals the pinned e78a01a copies), typecheck, lint, unit tests, secret scan, prod audit) | **Pass**: 774 passed, 10 skipped (opt-in live AI tests), with P3b's suites from `main`; secretlint clean; prod audit **0** |
 | Random convergence (2 and 3 devices) | 300 seeds pass (`SYNC_SEEDS=300 npx jest convergence`); 12 run in `npm test` |
 | `npm run test:sync-e2e` (real Firebase JS SDK 13.1.0 + P2a rules, emulators) | **20/20**: 10 two-device sync, 8 auth, Flow 8 (guest -> sign-up -> verify -> Turn on sync -> second phone), **account deletion leaves nothing** (0 docs, 0 Storage files, 0 Auth users; second phone stops and uploads nothing) |
 | P2a rules (`cd firebase && npm test`) | **601/601** (rules unchanged) |
-| `npm run bundle:check` | Android and iOS Hermes bundles build (about 10 MB each) |
+| `npm run bundle:check` | Android and iOS Hermes bundles build (about 10 MB each), with P3b's screens |
 | `npm run audit:all` | 7 **low**, dev-only (jest `deepmerge` chain), the same on `main` before P2b; accepted |
 | Toolchain | Temurin JDK 21.0.13+9 (Adoptium SHA-256 verified); emulator jars match the SHA-256 pinned in firebase-tools 15.34.2 |
 | Security review | SECURITY.md section 4d: **no open High**; P2b-S1 (App Check) Medium open and tracked |

@@ -73,6 +73,12 @@ export interface UsageMeter {
   /** Up to RETENTION_DAYS days, newest first. */
   history(provider: Provider): Promise<{ day: string; counter: UsageCounter }[]>;
   clear(): Promise<void>;
+  /**
+   * Drops the in-memory copy so the next call reads the file again (P3b:
+   * "Delete all data" removes the ai folder; without this the old counts
+   * would stay cached until the app restarts).
+   */
+  reload(): void;
 }
 
 /** §8 Local calendar day "YYYY-MM-DD" for a timestamp. */
@@ -196,5 +202,9 @@ export function createUsageMeter(deps: { file: TextFilePort; logger: Logger; now
         cache = { v: USAGE_FILE_VERSION, days: {} };
         await save(cache);
       }),
+
+    reload: () => {
+      cache = null;
+    },
   };
 }

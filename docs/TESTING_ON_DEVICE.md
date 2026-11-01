@@ -3,9 +3,9 @@
 This guide is for testing on real devices from a **Windows PC with no Mac**. Follow it top to bottom
 the first time. Commands go in **PowerShell** or **Command Prompt** opened in the project folder.
 
-> Phase covered: **P2b sign-in and sync** (against the local Firebase emulators), the **P1 core app**,
-> plus the **P0 spike lab** (now in the hidden developer menu), the **P2a backend** rules tests and the
-> **P3a AI engine** tests. Updated every phase.
+> Phase covered: **P2b sign-in and sync** (against the local Firebase emulators), the **P3b AI screens**,
+> the **P1 core app**, plus the **P0 spike lab** (now in the hidden developer menu), the **P2a backend**
+> rules tests and the **P3a AI engine** tests. Updated every phase.
 > Nothing in this guide publishes anything: no store uploads, no public website.
 
 ---
@@ -18,8 +18,8 @@ the first time. Commands go in **PowerShell** or **Command Prompt** opened in th
 | **Git for Windows** from https://git-scm.com (optional) | Version control | Free |
 | **Expo Go** app on your phone (Play Store / App Store) | Runs the app without building it | Free |
 | **Expo account** at https://expo.dev/signup | Only for an installable Android APK (section 4c) or the development build (section 4b) | Free plan is enough |
-| **Groq account** at https://console.groq.com | Only for the audio timestamps spike and the AI live check (section 7). AI features are 18+ only. | Free plan, no card |
-| **Mistral account** at https://console.mistral.ai | Optional second AI provider for the AI live check (section 7) | Free mode, no card |
+| **Groq account** at https://console.groq.com | Only for AI features in the app (P3b), the audio timestamps spike and the AI live check (section 7). AI features are 18+ only. | Free plan, no card |
+| **Mistral account** at https://console.mistral.ai | Optional second AI provider (section 7) | Free mode, no card |
 | **Java JDK 21+**: `winget install EclipseAdoptium.Temurin.21.JDK` | Only to run the backend (Firebase rules) tests on your PC (section 6) | Free |
 | Apple Developer Program | Only for an iPhone development build. **Not needed for P1** (everything in P1 runs in Expo Go). | Paid (99 USD/year) |
 | Firebase project | **Not needed.** Sign-in and sync (P2b) run against the local emulators on your PC (section 6). A real project comes later, only with your approval (Storage needs the paid Blaze plan). | Not needed |
@@ -279,8 +279,44 @@ with a real Firebase project. They are marked UNVERIFIED in the checklist.
 
 ## 7. AI features
 
-AI features are **18+ only** and need your own free key. P1 has **no AI screens** (they come in P3b);
-the app works fully without a key (Beautify Lite runs on the phone).
+AI features are **18+ only** and need your own free key. The app works fully without a key (Beautify Lite
+runs on the phone). Everything in this section works in **Expo Go** on Android and iPhone (no development
+build, no paid account).
+
+**Try AI with no key first (Demo AI, development only).** Me > **AI** > Developer > switch on **Demo AI**.
+Every AI screen then shows a **DEMO** label, the answers are made up from your own text and end with
+"(demo)", and nothing is sent. You still go through the real age check, key wizard (any key in the right
+shape, for example `gsk_` plus 20 letters, is accepted by the demo) and consent screens. Switch it off
+before testing with a real key. Demo AI does not exist in an installed APK (release build).
+
+**Use AI in a note with your free Groq key (P3b):**
+1. Get a key: open https://console.groq.com, sign in (free plan, no card), go to **API Keys** > **Create API
+   Key**, name it `notedpo-test` and copy it (it starts with `gsk_`).
+2. In the app, open any note and tap the **sparkle** (✨) in the toolbar above the keyboard. The AI panel
+   opens.
+3. Pick **Beautify**. The first time, you are asked **"What year were you born?"** (the field is empty).
+   Type your year and tap Next. If the year alone can't tell, you're asked the month (and only sometimes the
+   day). Only "AI available: yes/no" and the date are kept, never your birth date.
+4. **Set up AI:** choose Groq > **Open Groq key page** (it asks first, then opens your browser) > come back >
+   **Paste** > **Test and save key**. Expected: the panel moves on. A wrong key shows "This key was rejected
+   by Groq." and your old key (if any) is kept.
+5. **Send to Groq?** Read what is sent and why, then tap **Yes, send to Groq**. ("Not now" sends nothing.)
+6. Wait for the answer (you can **Cancel**). The preview shows each change: removed words are struck
+   through, added words are underlined and bold. Switch off any change you don't want, then tap **Apply**.
+7. Tap **Undo** on the snackbar within 8 seconds to get the exact note back. History also has **Before AI
+   change**.
+8. Manage everything in Me > **AI**: the masked key (`gsk_…Ab3x`), Test, Replace, Remove, Withdraw
+   permission, usage today ("12 of 1,000 requests today"), **Never send to AI** per subject, and your saved
+   reports.
+
+**Mistral (optional second provider):** create a key at https://console.mistral.ai (free mode). **Before
+using it with your notes**, open its Admin panel > **Privacy** (left-hand menu) and switch off **"Anonymous
+improvement data"**. It is separate from the Vibe toggle (Mistral Help Center, Sep 3, 2026). The app shows
+this step in the key wizard and on the consent screen.
+
+**Clipboard:** after you save a pasted key, the app clears it from the clipboard. Some keyboards (for example
+Gboard) keep their own clipboard history: delete the key there too (long-press it in the keyboard's clipboard
+> Delete).
 
 **Groq key for the P0 audio timestamps spike** (developer menu):
 1. Go to https://console.groq.com and sign in (free plan).
@@ -519,6 +555,54 @@ expected results in `docs/backend/TESTING_BACKEND.md` section 5.
 4. Live check with no keys. *Expected:* only the "rejects a made-up key" tests run, and they pass.
 5. *Security:* search the test output for your key. *Expected:* it does not appear.
 
+### P3b: AI screens (Expo Go or APK)
+
+Use a test note with a few lines, for example "osmosis - movement of water across a membrane". Steps 1 to 12
+work with **Demo AI** (no key). Steps 13 to 17 need your real free Groq key (section 7). Write PASS / FAIL.
+
+1. Me > AI > Developer > Demo AI **on**. *Expected:* a DEMO warning on the AI settings screen.
+2. Open a note, tap the **sparkle**. *Expected:* the AI panel with "DEMO", Use: **Selection** (greyed out) /
+   **Whole note**, the provider chips, and the actions. **Make flashcards** and **Quiz me** are *not* listed
+   (they come in P4c). **Explain this** says "Select text in the note first."
+3. Tap **Beautify**. *Expected:* "What year were you born?" with an **empty** field. The screen does not
+   mention 18 or "adult".
+4. Type a year more than 19 years ago, tap Next. *Expected:* "Set up AI" with the Groq and Mistral cards
+   (badges such as Free plan, No card needed; Mistral shows "May train on your notes unless you turn it
+   off").
+5. Choose Groq, type `gsk_` + 20 letters, tap **Test and save key**. *Expected:* "Send to Groq?" showing
+   who receives it, what is sent, why, and what Groq does with it.
+6. Tap **Not now**. *Expected:* back to the actions with "Nothing was sent."
+7. Tap Beautify again > **Yes, send to Groq**. *Expected:* a short "Waiting for Groq…", then the preview with
+   one change ending in "(demo)".
+8. Switch the change **off**. *Expected:* the button says "Nothing selected". Switch it back on > **Apply 1**.
+   *Expected:* the panel closes, the note shows the change, and a snackbar "Beautify: 1 change applied" with
+   **Undo**.
+9. Tap **Undo**. *Expected:* the note is exactly as before. History lists **Before AI change**.
+10. Open the panel, run Summarize, then tap **Report this AI result** > pick a reason > Save. *Expected:*
+    "Report saved on this phone." It is listed in Me > AI > Your AI reports, and you can delete it.
+11. Open the panel and press the **X** (or Android back). *Expected:* it closes with no error message and the
+    note is unchanged.
+12. Me > AI > a subject > **Never send to AI** on. Open a note in that subject > sparkle. *Expected:* "AI is
+    off for this subject" and nothing else.
+13. Switch Demo AI **off**. Me > AI > Groq > **Replace key**: paste your real key > Test and save.
+    *Expected:* saved; the screen shows only `gsk_…` plus 4 characters.
+14. Run **Beautify** on a real note. *Expected:* a real answer within about 10 seconds; the preview shows
+    removed words struck through and added words underlined.
+15. Turn on airplane mode and run an action. *Expected:* "Needs internet. You can still use Beautify Lite."
+16. Me > AI > Groq: the usage line counts your requests ("N of 1,000 requests today").
+17. *Security:* in the terminal running Metro, search for `gsk_`. *Expected:* your key does not appear. Then
+    Me > **Delete all data**. *Expected:* Me > AI shows no keys, the age check "Not checked yet", and no
+    reports.
+
+18. *Safety:* open a note with text and tap the sparkle right after opening it. *Expected:* the panel opens
+    normally. (If the editor ever hands over an empty page, you'd see "This note couldn't be read just now,
+    so AI didn't run" and the note stays as it is: tell me if you ever see it.)
+
+**Under-18 path (any phone):** Me > Delete all data, open a note > sparkle > Beautify > type a year less than
+17 years ago. *Expected:* "AI isn't available" with one **Done** button and a pointer to Beautify Lite. Tapping
+the sparkle again shows the same panel without asking again. Me > AI shows "AI isn't available to you" with no
+Add key button.
+
 ## 9. Troubleshooting
 
 | Problem | Fix |
@@ -551,6 +635,11 @@ expected results in `docs/backend/TESTING_BACKEND.md` section 5.
 | APK built with the emulator profile fails: "must be your PC's private Wi-Fi IPv4 address" | Put your real address into `eas.json` > `emulator` > `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST`. |
 | App lock can't be turned on | Set up a screen lock (PIN, pattern, fingerprint or face) in the phone's settings first. |
 | E2E sync tests on the PC | `cd firebase && npm ci` once, then from the project root `npm run test:sync-e2e` (Java 21). |
+| AI panel: "This key was rejected by Groq." | Copy the key again from https://console.groq.com/keys (all of it, no spaces), then Me > AI > Replace key. |
+| AI panel: "Your free Groq limit is used up for now" | You hit the free daily limit. Wait the time shown, or add a Mistral key and tap "Use Mistral instead". |
+| AI panel: "…answer didn't make sense twice" | Try again; if it keeps happening, tap Report this AI result and send me the report details (Me > AI). |
+| The sparkle doesn't appear in the toolbar | The toolbar shows it once the note's editor has loaded. Reload with `r` in the terminal. |
+| AI says "AI isn't available" but you are 18+ | You entered a year that made you under 18. Me > Delete all data (this wipes your notes too), or wait for "Check my age again" (offered after a year). |
 | AI live check: 401 with your real key | Copy the key again from the provider's key page (no spaces). |
 | AI live check: 429 | You used the free limit; wait or try tomorrow. Mistral 400 on Beautify: report it (schema field names). |
 

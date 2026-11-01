@@ -16,7 +16,8 @@ import {
   type ResultsStore,
   type TextFilePort,
 } from '@/core';
-import { createKeyVault, expoSecretStore, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createKeyVault, expoSecretStore, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createAiUi, type AiFileName, type AiUi } from '@/modules/aiui';
 import {
   createDocxExporter,
   createPdfExporter,
@@ -65,8 +66,11 @@ export interface Services {
   links: LinkOpener;
   /** Built-in note templates (validated data). */
   templates: TemplateRegistry;
-  /** Editor actions (Beautify Lite now; P3b registers AI actions here). */
+  /** Editor actions (Beautify Lite; P3b's "ai" action is registered by AiWiring). */
   editorActions: EditorActionRegistry;
+  /** P3b: the AI engine (P3a) and everything its screens need (gate, reports, flow). */
+  ai: AiEngine;
+  aiui: AiUi;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
   /** Developer menu allowed in this build (dev mode or a development build only). */
@@ -80,6 +84,8 @@ export interface Services {
 
 export interface Adapters {
   resultsFile: TextFilePort;
+  /** P3b: files in documents/ai/ (usage meter, gate answers, local reports). */
+  aiFile: (name: AiFileName) => TextFilePort;
   secretStore: SecretStorePort;
   print: PrintPort;
   files: FileWriterPort;
@@ -102,6 +108,7 @@ export function createServicesWith(a: Adapters): Services {
   const logger = createLogger({ sink: consoleSink(a.isDev), minLevel: a.isDev ? 'debug' : 'warn' });
   const ids = createIdGenerator(a.randomBytes);
   const keyVault = createKeyVault(a.secretStore);
+  const aiui = createAiUi({ keyVault, fetchFn: a.fetchFn, logger, ids, aiFile: a.aiFile, isDev: a.isDev });
   const faceCache = new Map<string, Promise<FontFaceData[]>>();
   const skips: FaceSkip[] = [];
   const onSkip = (s: FaceSkip) => {
@@ -115,7 +122,9 @@ export function createServicesWith(a: Adapters): Services {
     packs: createPackRegistry(),
     keyVault,
     transcriber: createGroqTranscriber({
-      getKey: () => keyVault.get('groq'),
+      // P3b: in release builds Groq gets the key only after the 18+ check and Groq consent
+      // (the AI gate is the only route to any Groq call). Dev builds keep the P0 spikes working.
+      getKey: async () => ((await transcriptionAllowed(devToolsAllowed({ isDev: a.isDev, variant: a.appVariant }), aiui)) ? keyVault.get('groq') : null),
       fetchFn: a.fetchFn,
       fileSize: a.fileSize,
       logger,
@@ -131,9 +140,17 @@ export function createServicesWith(a: Adapters): Services {
     templates: createTemplateRegistry(),
     editorActions: createEditorActionRegistry([beautifyLiteAction]),
     devTools: devToolsAllowed({ isDev: a.isDev, variant: a.appVariant }),
+    ai: aiui.engine,
+    aiui,
     appData: {
       ...a.database,
-      wipeSecrets: () => keyVault.remove('groq'),
+      // P3b fix: also drop the AI module's in-memory copies once the ai folder is gone.
+      wipeFiles: async () => {
+        await a.database.wipeFiles();
+        aiui.forget();
+      },
+      // P3b fix: every AI provider key (was Groq only, so a Mistral key survived Delete all data).
+      wipeSecrets: () => aiui.wipeSecrets(),
       ids,
       logger,
     },
@@ -157,9 +174,22 @@ export function createServicesWith(a: Adapters): Services {
   };
 }
 
+/**
+ * Release builds: no Groq transcription yet. Audio is its own data kind, and
+ * a text consent must never authorise it (Lead, Nov 1: kinds are separate),
+ * so release stays closed until P4 adds an 'audio' consent kind to the
+ * catalog and replaces this with checkCanSend(gate, { provider: 'groq',
+ * kind: 'audio' }). Development builds keep the P0 spike screens working.
+ */
+export async function transcriptionAllowed(developerBuild: boolean, _aiui: AiUi): Promise<boolean> {
+  // developerBuild = P1's devToolsAllowed (__DEV__ or an EAS development build), the same rule as the developer menu.
+  return developerBuild;
+}
+
 export function createServices(): Services {
   return createServicesWith({
     resultsFile: expoTextFile('p0', 'spike-results.jsonl'),
+    aiFile: (name) => expoTextFile('ai', name),
     secretStore: expoSecretStore,
     print: expoPrint,
     files: expoFiles,
@@ -177,8 +207,12 @@ export function createServices(): Services {
   });
 }
 
-/** App-made folders outside the database. Fixed names only, never user input. */
-const APP_FOLDERS = ['p0', 'recordings', SYNC_FILES_FOLDER] as const;
+/**
+ * App-made folders outside the database. Fixed names only, never user input.
+ * P3b fix: 'ai' (usage meter, gate answers, reports) was missing, so
+ * Delete all data left ai/usage.json behind. P2b: synced files.
+ */
+export const APP_FOLDERS = ['p0', 'recordings', 'ai', SYNC_FILES_FOLDER] as const;
 
 async function wipeAppFiles(): Promise<void> {
   for (const name of APP_FOLDERS) {

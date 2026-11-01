@@ -1,5 +1,5 @@
 export { ServicesProvider, useServices } from './ServicesContext';
-export { createServices, createServicesWith, type Services, type Adapters } from './services';
+export { createServices, createServicesWith, APP_FOLDERS, type Services, type Adapters } from './services';
 export { usePackFaces, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
@@ -18,3 +18,4 @@ export { previewPair, type PreviewLine, type PreviewMark } from './conflictPrevi
 export { countsText, maskEmail } from './syncText';
 export { bumpLockRevision, useLockRevision } from './lockRevision';
 export { AppLockGate } from './AppLockGate';
+export { AiWiring, useAiScreenPorts, subjectAiAllowed, storedNoteHasText, expoClipboard } from './aiWiring';

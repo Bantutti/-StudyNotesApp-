@@ -125,6 +125,8 @@ export default function Me() {
 
       <SectionHeader>Your data</SectionHeader>
       <ListRow icon="lock-closed-outline" title="App lock" subtitle="Face ID, fingerprint or phone PIN" onPress={() => router.push('/settings/app-lock')} testID="me-app-lock" />
+      <ListRow icon="sparkles-outline" title={t('me.ai')} subtitle={t('me.aiRow')} onPress={() => router.push('/ai/settings')} testID="me-ai" />
+      <Caption>AI is optional: a note is sent only when you pick an AI action and allow that provider.</Caption>
       <ListRow icon="trash-outline" title={t('me.deleteAll')} destructive onPress={confirmDeleteAll} testID="me-delete-all" />
 
       <SectionHeader>Privacy and terms</SectionHeader>

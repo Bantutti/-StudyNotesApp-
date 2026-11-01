@@ -5,8 +5,10 @@ const KEY = 'gsk_' + 'z'.repeat(52);
 function adapters(over: Partial<Adapters> = {}): Adapters {
   let file: string | null = null;
   const secrets = new Map<string, string>();
+  const aiFiles = new Map<string, string>();
   return {
     resultsFile: { read: async () => file, write: async (c) => void (file = c) },
+    aiFile: (name) => ({ read: async () => aiFiles.get(name) ?? null, write: async (c) => void aiFiles.set(name, c) }),
     secretStore: { get: async (k) => secrets.get(k) ?? null, set: async (k, v) => void secrets.set(k, v), remove: async (k) => void secrets.delete(k) },
     print: { printToFile: async () => ({ uri: 'file:///x.pdf' }), print: async () => undefined },
     files: { writeBytes: async (n, b) => ({ uri: `file:///${n}`, size: b.length }), sizeOf: () => 10 },
@@ -24,10 +26,11 @@ function adapters(over: Partial<Adapters> = {}): Adapters {
 }
 
 describe('composition root', () => {
-  it('wires the key vault into the transcriber', async () => {
+  it('wires the key vault into the transcriber (development build; release is gated, see aiWiring.test)', async () => {
     const calls: string[] = [];
     const s = createServicesWith(
       adapters({
+        isDev: true,
         fetchFn: (async (_u: unknown, init?: RequestInit) => {
           calls.push(String((init?.headers as Record<string, string>).Authorization));
           return { ok: true, status: 200, json: async () => ({}) };
