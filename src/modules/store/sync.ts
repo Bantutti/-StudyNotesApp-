@@ -90,6 +90,26 @@ export interface ConflictRecord {
   detected: number;
 }
 
+/** The version of an asset's file this device last uploaded or downloaded. */
+export interface FileRecord {
+  id: string;
+  syncedHash: string;
+  syncedRev: number;
+  syncedPath: string;
+}
+
+export interface AssetFileRow {
+  id: string;
+  type: string;
+  rev: number;
+  deleted: boolean;
+  cloudPath: string | null;
+  size: number;
+  localPath: string | null;
+  /** null when this device never synced the file. */
+  file: FileRecord | null;
+}
+
 export interface QuarantineRecord {
   tbl: SyncTable;
   id: string;
@@ -218,6 +238,7 @@ export function createSyncRepo(deps: { now: () => number }) {
       await tx.run('DELETE FROM syncCursors');
       await tx.run('DELETE FROM syncConflicts');
       await tx.run('DELETE FROM syncQuarantine');
+      await tx.run('DELETE FROM syncFiles');
       for (const t of SYNC_TABLES) await tx.run(`INSERT INTO syncOutbox (tbl, id, seq) SELECT '${t}', id, 1 FROM ${t}`);
       await tx.run(
         'UPDATE syncState SET uid = NULL, enabled = 0, initialSyncDone = 0, lastPushAt = NULL, lastPullAt = NULL, lastError = NULL WHERE id = 1',
@@ -448,6 +469,52 @@ export function createSyncRepo(deps: { now: () => number }) {
         reason: str(r.reason),
         at: num(r.at),
       }));
+    },
+
+    // ---- asset files (sync/assets.ts) ----------------------------------------------
+    /** Assets this device holds a file for, or once synced a file for. */
+    async listAssetFiles(ex: SqlExecutor): Promise<AssetFileRow[]> {
+      const rows = await ex.all(
+        `SELECT a.id, a.type, a.rev, a.deleted, a.cloudPath, a.size, a.localPath,
+                f.syncedHash, f.syncedRev, f.syncedPath
+           FROM assets a LEFT JOIN syncFiles f ON f.id = a.id
+          WHERE a.localPath IS NOT NULL OR f.id IS NOT NULL
+          ORDER BY a.id LIMIT 2000`,
+      );
+      return rows.map((r) => ({
+        id: str(r.id),
+        type: str(r.type),
+        rev: num(r.rev),
+        deleted: r.deleted === 1,
+        cloudPath: strOrNull(r.cloudPath),
+        size: num(r.size),
+        localPath: strOrNull(r.localPath),
+        file: r.syncedHash == null ? null : { id: str(r.id), syncedHash: str(r.syncedHash), syncedRev: num(r.syncedRev), syncedPath: str(r.syncedPath) },
+      }));
+    },
+
+    async putFileRecord(tx: SqlExecutor, f: FileRecord): Promise<void> {
+      await tx.run(
+        `INSERT INTO syncFiles (id, syncedHash, syncedRev, syncedPath) VALUES (?, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET syncedHash = excluded.syncedHash, syncedRev = excluded.syncedRev, syncedPath = excluded.syncedPath`,
+        [f.id, f.syncedHash, Math.trunc(f.syncedRev), f.syncedPath],
+      );
+    },
+
+    async removeFileRecord(tx: SqlExecutor, id: string): Promise<void> {
+      await tx.run('DELETE FROM syncFiles WHERE id = ?', [id]);
+    },
+
+    /** A new file version: cloudPath and exact size (a normal, queued update). */
+    async setAssetFile(tx: SqlExecutor, id: string, cloudPath: string, size: number): Promise<void> {
+      await tx.run('UPDATE assets SET cloudPath = ?, size = ?, updated = max(updated, ?) WHERE id = ? AND deleted = 0', [
+        cloudPath, Math.trunc(size), deps.now(), id,
+      ]);
+    },
+
+    /** Where this device keeps the file (local only, never queued). */
+    async setLocalPath(tx: SqlExecutor, id: string, localPath: string | null): Promise<void> {
+      await applying(tx, () => tx.run('UPDATE assets SET localPath = ? WHERE id = ?', [localPath, id]));
     },
 
     // ---- pull cursors -------------------------------------------------------------

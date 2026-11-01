@@ -8,7 +8,9 @@
  * scheduler.ts; screens call syncNow() for "Sync now" and pull-to-refresh.
  */
 import { AppError } from '@/core';
-import type { SyncTable } from '@/modules/store';
+import type { OutboxItem, SyncTable } from '@/modules/store';
+
+import { ensureLocalFile, hasUnsyncedFile, syncAssetFiles, type AssetReport, type AssetSyncDeps } from './assets';
 
 import { resolveConflict, type ConflictChoice } from './conflicts';
 import { AccountGoneError, type SyncContext } from './context';
@@ -35,6 +37,7 @@ export interface SyncStatus {
 export interface SyncRunResult {
   push: PushReport | null;
   pull: PullReport | null;
+  assets: AssetReport | null;
   status: SyncStatus;
 }
 
@@ -43,6 +46,8 @@ export interface SyncEngine {
   /** Re-reads one note from the server (when a note is opened; cuts conflicts). */
   refreshOne(tbl: SyncTable, id: string): Promise<void>;
   resolve(tbl: SyncTable, id: string, choice: ConflictChoice): Promise<{ copyId: string | null }>;
+  /** A local path for an asset's file, downloaded on demand. */
+  ensureLocalFile(id: string): Promise<string>;
   status(): Promise<SyncStatus>;
   subscribe(fn: (s: SyncStatus) => void): () => void;
   /** Called with the ids of notes a pull changed (an open editor reloads them). */
@@ -55,7 +60,23 @@ function errorCodeOf(e: unknown): string {
   return 'unknown';
 }
 
-export function createSyncEngine(ctx: SyncContext): SyncEngine {
+export interface SyncEngineOptions {
+  /** File sync (asset pass). Without it, asset docs sync but files don't. */
+  assets?: AssetSyncDeps;
+}
+
+export function createSyncEngine(ctx: SyncContext, opts: SyncEngineOptions = {}): SyncEngine {
+  const assets = opts.assets;
+  /** Normal pushes leave changed-file asset docs to the asset pass (doc then file, in order). */
+  const pushOpts = assets
+    ? {
+        filter: async (i: OutboxItem) => {
+          if (i.tbl !== 'assets') return true;
+          const a = (await ctx.local.listAssetFiles()).find((x) => x.id === i.id);
+          return !(await hasUnsyncedFile(assets, a));
+        },
+      }
+    : {};
   const subs = new Set<(s: SyncStatus) => void>();
   const noteSubs = new Set<(ids: string[]) => void>();
   let running: Promise<SyncRunResult> | null = null;
@@ -87,18 +108,20 @@ export function createSyncEngine(ctx: SyncContext): SyncEngine {
 
   const runOnce = async (): Promise<SyncRunResult> => {
     const st = await ctx.local.getState();
-    if (!st.enabled || st.uid !== ctx.uid) return { push: null, pull: null, status: await emit() };
+    if (!st.enabled || st.uid !== ctx.uid) return { push: null, pull: null, assets: null, status: await emit() };
     phase = 'syncing';
     await emit();
     let pushReport: PushReport | null = null;
     let pullReport: PullReport | null = null;
+    let assetReport: AssetReport | null = null;
     try {
-      pushReport = await push(ctx);
+      pushReport = await push(ctx, pushOpts);
       await ctx.local.recordRun('push', null);
       pullReport = await pull(ctx);
       await ctx.local.recordRun('pull', null);
+      if (assets) assetReport = await syncAssetFiles(ctx, assets);
       // A pull can turn a conflict into "local wins": send that right away.
-      if ((await ctx.local.listOutbox({ limit: 1 })).length > 0) pushReport = await push(ctx);
+      if ((await ctx.local.listOutbox({ limit: 1 })).length > 0) pushReport = await push(ctx, pushOpts);
       phase = 'idle';
       errorCode = null;
       if (pullReport.changedNotes.length) noteSubs.forEach((f) => f(pullReport?.changedNotes ?? []));
@@ -116,7 +139,7 @@ export function createSyncEngine(ctx: SyncContext): SyncEngine {
       }
       await ctx.local.recordRun(pushReport ? 'pull' : 'push', errorCode);
     }
-    return { push: pushReport, pull: pullReport, status: await emit() };
+    return { push: pushReport, pull: pullReport, assets: assetReport, status: await emit() };
   };
 
   return {
@@ -159,6 +182,11 @@ export function createSyncEngine(ctx: SyncContext): SyncEngine {
       await emit();
       if (tbl === 'notes') noteSubs.forEach((f) => f(r.copyId ? [id, r.copyId] : [id]));
       return r;
+    },
+
+    async ensureLocalFile(id) {
+      if (!assets) throw new AppError('unsupported', 'File sync is not available.');
+      return ensureLocalFile(ctx, assets, id);
     },
 
     status,

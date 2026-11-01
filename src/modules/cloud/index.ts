@@ -6,3 +6,4 @@
 export { readCloudConfig, buildEnv, cloudConfigSchema, type CloudConfig, type CloudEnv } from './config';
 export { createCloudServices, type CloudServices, type CreateCloudOptions } from './firebaseApp';
 export { createFirestoreRemote, toRemoteError, toSdkValue } from './firestoreRemote';
+export { createStorageBlobs } from './storageBlobs';

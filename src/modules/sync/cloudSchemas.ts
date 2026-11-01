@@ -9,6 +9,10 @@ export {
   REVIEW_FUTURE_SKEW_MS,
   QUERY_LIMIT_MAX,
   userSchema,
+  STORAGE,
+  ASSET_FOLDER,
+  type AssetType,
+  type StorageFolder,
   type CollectionName,
   type TimestampLike,
 } from '../../../firebase/src/schemas';

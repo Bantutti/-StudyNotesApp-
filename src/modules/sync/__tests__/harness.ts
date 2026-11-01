@@ -8,6 +8,7 @@ import { openStore, type Store } from '@/modules/store';
 
 import { nodeSqliteDriver } from '../../../../test/nodeSqlite';
 import type { SyncContext } from '../context';
+import { createAssetMergerRegistry, type AssetMergerRegistry, type AssetSyncDeps, type FileStorePort } from '../assets';
 import { createSyncEngine, type SyncEngine } from '../engine';
 import { createFakeCloud, type FakeAuth, type FakeClientControls, type FakeCloud } from '../fakeRemote';
 import type { RemoteBackend } from '../ports';
@@ -42,6 +43,10 @@ export interface Device {
   enable(): Promise<void>;
   sync(): ReturnType<SyncEngine['syncNow']>;
   logs: ReturnType<typeof memorySink>;
+  /** The device's files (memory) and its merger registry. */
+  files: Map<string, Uint8Array>;
+  mergers: AssetMergerRegistry;
+  assetDeps: AssetSyncDeps;
   /** The device database (for assertions only). */
   raw: ReturnType<typeof nodeSqliteDriver>['raw'];
 }
@@ -61,13 +66,30 @@ export async function makeDevice(
   const dev: Partial<Device> & { auth: FakeAuth | null } = { name, auth: { uid, emailVerified: opts.verified ?? true } };
   const remote = cloud.client(() => dev.auth);
   const ctx: SyncContext = { local: store.sync, remote, uid, ids, now: clock.now, logger, ...(opts.limits ? { limits: opts.limits } : {}) };
-  const engine = createSyncEngine(ctx);
+  const files = new Map<string, Uint8Array>();
+  const fileStore: FileStorePort = {
+    read: async (p) => (files.has(p) ? new Uint8Array(files.get(p) as Uint8Array) : null),
+    write: async (p, b) => {
+      files.set(p, new Uint8Array(b));
+    },
+    remove: async (p) => {
+      files.delete(p);
+    },
+    pathFor: ({ id, ext }) => `file:///${name}/${id}.${ext}`,
+  };
+  const mergers = createAssetMergerRegistry();
+  const blobs = cloud.blobs(() => dev.auth);
+  const assetDeps: AssetSyncDeps = { files: fileStore, blobs, mergers };
+  const engine = createSyncEngine(ctx, { assets: assetDeps });
   Object.assign(dev, {
     store,
     engine,
     remote,
     ctx,
     logs,
+    files,
+    mergers,
+    assetDeps,
     raw: driver.raw,
     enable: async () => {
       await store.sync.run(async (s) => {

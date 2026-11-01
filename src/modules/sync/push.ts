@@ -29,6 +29,10 @@ export interface PushReport {
   quarantined: number;
   /** Tombstones still inside the undo window. */
   deferred: number;
+  /** Refused writes that turned out to have landed already (lost acks). */
+  acked: number;
+  /** Stale writes resolved by taking the server's copy. */
+  replaced: number;
 }
 
 interface Prepared {
@@ -141,13 +145,17 @@ async function classify(ctx: SyncContext, p: Prepared, report: PushReport): Prom
     return;
   }
   // Lost acknowledgement: an earlier attempt (or this one) actually landed.
-  const earlier = p.item.sentRev === serverRev && p.item.sentHash === serverHash;
-  const now = p.plan.sentRev === serverRev && p.hash === serverHash;
+  // Not for assets: their doc (size, path) can't tell two different files of
+  // the same size apart, so the stale path below handles them (always safe).
+  const identifiable = tbl !== 'assets';
+  const earlier = identifiable && p.item.sentRev === serverRev && p.item.sentHash === serverHash;
+  const now = identifiable && p.plan.sentRev === serverRev && p.hash === serverHash;
   if (earlier || now) {
     await local.run(async (s) => {
       await s.markPushed(tbl, p.item.id, { sentSeq: earlier ? (p.item.sentSeq ?? 0) : p.item.seq, rev: serverRev, owner: uid });
       await eraseLocalTombstone(s, tbl, p.item.id);
     });
+    report.acked += 1;
     return;
   }
 
@@ -166,6 +174,7 @@ async function classify(ctx: SyncContext, p: Prepared, report: PushReport): Prom
       return resolveStale(s, tbl, localRow, chk.value);
     });
     if (outcome === 'conflict') report.conflicts += 1;
+    if (outcome === 'took_server') report.replaced += 1;
     return;
   }
 
@@ -203,8 +212,13 @@ async function commit(ctx: SyncContext, batch: Prepared[], report: PushReport): 
   report.uploaded += batch.length;
 }
 
-export async function push(ctx: SyncContext): Promise<PushReport> {
-  const report: PushReport = { uploaded: 0, conflicts: 0, quarantined: 0, deferred: 0 };
+export interface PushOptions {
+  /** Only upload items this returns true for (the asset pass uses it). */
+  filter?: (item: OutboxItem) => boolean | Promise<boolean>;
+}
+
+export async function push(ctx: SyncContext, opts: PushOptions = {}): Promise<PushReport> {
+  const report: PushReport = { uploaded: 0, conflicts: 0, quarantined: 0, deferred: 0, acked: 0, replaced: 0 };
   await ensureProfile(ctx);
   for (let round = 0; round < limitsOf(ctx).maxRounds; round++) {
     const items = await ctx.local.listOutbox({ limit: limitsOf(ctx).batchSize });
@@ -213,6 +227,7 @@ export async function push(ctx: SyncContext): Promise<PushReport> {
     let handled = 0;
     report.deferred = 0;
     for (const item of items) {
+      if (opts.filter && !(await opts.filter(item))) continue;
       const p = await prepare(ctx, item);
       if (p === 'deferred') report.deferred += 1;
       else if (p === 'quarantined') {

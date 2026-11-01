@@ -16,6 +16,8 @@ export {
   type ConflictKind,
   type QuarantineRecord,
   type QuarantineDirection,
+  type FileRecord,
+  type AssetFileRow,
 } from './sync';
 export { parseSearchQuery, splitSnippet, SEARCH_LIMITS, MARK_OPEN, MARK_CLOSE } from './search';
 export { cleanTags, cleanTitle, type CreateNoteInput, type NotePatch, type SaveResult } from './notes';

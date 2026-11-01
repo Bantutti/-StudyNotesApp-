@@ -68,7 +68,7 @@ const ALL_TABLES = [
   'noteVersions', 'searchMap', 'search', 'kv', 'reviewLogs', 'cards', 'recordings', 'notes', 'folders',
   'subjects', 'assets', 'stylePacks', 'templates', 'users',
   // P2b sync bookkeeping (syncState is reset, not deleted: the triggers read it).
-  'syncOutbox', 'syncCursors', 'syncConflicts', 'syncQuarantine',
+  'syncOutbox', 'syncCursors', 'syncConflicts', 'syncQuarantine', 'syncFiles',
 ] as const;
 
 export async function openStore(driver: SqlDriver, deps: StoreDeps) {

@@ -88,6 +88,9 @@ const triggersFor = (t: SyncTable): string[] => {
  *   is wiped by Delete all data, Remove notes from this phone and resolve.
  * - syncQuarantine: docs that failed validation (ids and a reason code
  *   only, never content), in either direction.
+ * - syncFiles: for each asset whose file this device holds, the hash, the
+ *   asset doc rev and the cloud path of the last uploaded or downloaded
+ *   version (sync/assets.ts).
  * Every existing row is queued once, so guest data uploads on first sign-in.
  */
 const SYNC_MIGRATION: readonly string[] = [
@@ -135,6 +138,14 @@ const SYNC_MIGRATION: readonly string[] = [
     reason TEXT NOT NULL,
     at INTEGER NOT NULL,
     PRIMARY KEY (tbl, id, direction)
+  ) STRICT, WITHOUT ROWID`,
+  // Files behind asset docs (audio, images, ink, pdf): the version of the
+  // file this device holds, so the asset pass knows what changed where.
+  `CREATE TABLE syncFiles (
+    id TEXT PRIMARY KEY NOT NULL,
+    syncedHash TEXT NOT NULL,
+    syncedRev INTEGER NOT NULL,
+    syncedPath TEXT NOT NULL
   ) STRICT, WITHOUT ROWID`,
   ...SYNC_TABLES.flatMap(triggersFor),
   ...SYNC_TABLES.map((t) => `INSERT INTO syncOutbox (tbl, id, seq) SELECT '${t}', id, 1 FROM ${t}`),

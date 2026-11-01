@@ -6,6 +6,8 @@
  * - notes, cards, recordings -> a conflict for the resolver (keep mine,
  *   keep other, keep both). The local version stays on screen and its
  *   upload pauses until the user chooses.
+ * - assets -> the server's doc is taken (unless deleted here); the file is
+ *   reconciled by the asset pass (assets.ts, with optional mergers).
  * - everything else -> resolved automatically: a delete beats an edit,
  *   otherwise the local edit wins (it is re-sent on top of the server rev,
  *   i.e. the last push wins).
@@ -44,6 +46,11 @@ export async function resolveStale(s: SyncOps, tbl: SyncTable, localRow: SqlRow,
     await s.putConflict({ tbl, id, kind, serverRev, serverRow });
     return 'conflict';
   }
+
+  // Asset docs only describe their file (size, path): take the server's, and
+  // let the asset pass decide about the file itself (download, merge with a
+  // registered merger, or upload ours on top). A local delete still wins.
+  if (tbl === 'assets' && !localDeleted) return takeServer(s, tbl, id, serverRow);
 
   // Metadata: a delete beats an edit; otherwise the local edit wins.
   if (serverDeleted && !localDeleted) return takeServer(s, tbl, id, serverRow);

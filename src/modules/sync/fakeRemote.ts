@@ -16,7 +16,8 @@
  *    profile must be committed before the first other write).
  * Server times have microsecond precision, like Firestore.
  */
-import { REVIEW_FUTURE_SKEW_MS, COLLECTION_SCHEMAS, QUERY_LIMIT_MAX, userSchema } from './cloudSchemas';
+import type { BlobStorePort } from './assets';
+import { ASSET_FOLDER, COLLECTION_SCHEMAS, QUERY_LIMIT_MAX, REVIEW_FUTURE_SKEW_MS, STORAGE, userSchema } from './cloudSchemas';
 import { RemoteError, SERVER_TIME, type CloudCollection, type QuerySpec, type RemoteBackend, type RemoteDoc, type RemoteWrite } from './ports';
 import { CloudTime, compareTime, isTimestampLike } from './time';
 
@@ -30,6 +31,10 @@ export interface FakeAuth {
 export interface FakeCloud {
   /** A device's connection, acting as `auth` (null = signed out). */
   client(auth: () => FakeAuth | null): RemoteBackend & FakeClientControls;
+  /** A device's Cloud Storage connection, with storage.rules' upload checks. */
+  blobs(auth: () => FakeAuth | null): BlobStorePort & { setOnline(online: boolean): void };
+  /** Admin view of Storage. */
+  files(): Map<string, Uint8Array>;
   /** Admin view (no rules), for assertions. */
   peek(collection: CloudCollection, id: string): Data | undefined;
   all(collection: CloudCollection): RemoteDoc[];
@@ -62,6 +67,7 @@ export function createFakeCloud(opts: { now?: () => number } = {}): FakeCloud {
   const now = opts.now ?? Date.now;
   const store = new Map<CloudCollection, Map<string, Data>>(COLLECTIONS.map((c) => [c, new Map()]));
   const stats = { reads: 0, writes: 0, commits: 0 };
+  const blobStore = new Map<string, Uint8Array>();
   let lastMicros = 0;
 
   /** Strictly increasing server time with microseconds (never ms-aligned). */
@@ -221,7 +227,51 @@ export function createFakeCloud(opts: { now?: () => number } = {}): FakeCloud {
     adminDelete: (c, id) => {
       col(c).delete(id);
     },
-    count: () => [...store.values()].reduce((n, m) => n + m.size, 0),
+    count: () => [...store.values()].reduce((n, m) => n + m.size, 0) + blobStore.size,
     stats,
+    files: () => blobStore,
+    blobs: (authOf) => {
+      let online = true;
+      const who = () => {
+        if (!online) throw new RemoteError('unavailable');
+        const a = authOf();
+        if (!a) throw new RemoteError('unauthenticated');
+        if (!a.emailVerified) denied();
+        return a;
+      };
+      const ownPath = (uid: string, path: string) => path.startsWith(`users/${uid}/`);
+      return {
+        setOnline(v: boolean) {
+          online = v;
+        },
+        async upload(path, bytes, contentType) {
+          const a = who();
+          const m = /^users\/([^/]+)\/([a-z]+)\/([A-Za-z0-9_-]{16,64})\.([a-z0-9]+)$/.exec(path);
+          if (!m || m[1] !== a.uid) denied();
+          const folder = m[2] as keyof typeof STORAGE;
+          const cap = STORAGE[folder];
+          if (!cap || !(cap.contentTypes as readonly string[]).includes(contentType)) denied();
+          if (bytes.length === 0 || bytes.length > cap.maxBytes) denied();
+          const docData = col('assets').get(m[3] as string);
+          const profile = col('users').get(a.uid);
+          if (!profile || profile.deletionRequestedAt != null) denied();
+          if (!docData || docData.owner !== a.uid || docData.deleted !== false) denied();
+          if (docData.cloudPath !== path || docData.size !== bytes.length) denied();
+          if (ASSET_FOLDER[docData.type as keyof typeof ASSET_FOLDER] !== folder) denied();
+          blobStore.set(path, new Uint8Array(bytes));
+        },
+        async download(path) {
+          const a = who();
+          if (!ownPath(a.uid, path)) denied();
+          const b = blobStore.get(path);
+          return b ? new Uint8Array(b) : null;
+        },
+        async remove(path) {
+          const a = who();
+          if (!ownPath(a.uid, path)) denied();
+          blobStore.delete(path);
+        },
+      };
+    },
   };
 }

@@ -83,7 +83,8 @@
     "audit:all": "npm audit --audit-level=moderate",
     "bundle:check": "expo export --platform android --platform ios --output-dir dist-check",
     "verify": "npm run check:editor && npm run typecheck && npm run lint && npm test && npm run secrets:scan && npm run audit:prod",
-    "export:phase": "node scripts/export-phase.mjs"
+    "export:phase": "node scripts/export-phase.mjs",
+    "test:sync-e2e": "node scripts/test-sync-e2e.mjs"
   },
   "private": true,
   "overrides": {

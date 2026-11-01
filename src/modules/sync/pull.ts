@@ -63,7 +63,7 @@ export async function applyIncoming(ctx: SyncContext, tbl: SyncTable, doc: Remot
       return 'applied';
     }
     // The row has a queued local edit.
-    if (item.sentRev === inRev && item.sentHash === hash) {
+    if (tbl !== 'assets' && item.sentRev === inRev && item.sentHash === hash) {
       await s.markPushed(tbl, id, { sentSeq: item.sentSeq ?? 0, rev: inRev, owner: ctx.uid });
       await eraseLocalTombstone(s, tbl, id);
       return 'own';
