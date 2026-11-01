@@ -67,23 +67,41 @@ export interface EditorActionRegistry {
   register(action: EditorAction): () => void;
   list(placement?: EditorActionPlacement): EditorAction[];
   get(id: string): EditorAction | undefined;
+  /** Called after every register/unregister, so an open note screen shows actions registered later. */
+  subscribe(listener: () => void): () => void;
+  /** Increases on every change (a cheap snapshot key for React). */
+  revision(): number;
 }
 
 const ACTION_ID = /^[a-z0-9][a-z0-9-]{1,40}$/;
 
 export function createEditorActionRegistry(initial: readonly EditorAction[] = []): EditorActionRegistry {
   const actions = new Map<string, EditorAction>();
+  const listeners = new Set<() => void>();
+  let rev = 0;
+  const changed = () => {
+    rev += 1;
+    listeners.forEach((l) => l());
+  };
   const reg: EditorActionRegistry = {
     register(a) {
       if (!ACTION_ID.test(a.id)) throw new Error(`bad_action_id:${a.id}`);
       if (actions.has(a.id)) throw new Error(`duplicate_action:${a.id}`);
       actions.set(a.id, a);
+      changed();
       return () => {
-        actions.delete(a.id);
+        if (actions.get(a.id) === a && actions.delete(a.id)) changed();
       };
     },
     list: (placement) => [...actions.values()].filter((a) => !placement || a.placement === placement),
     get: (id) => actions.get(id),
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    revision: () => rev,
   };
   initial.forEach((a) => reg.register(a));
   return reg;

@@ -24,7 +24,7 @@ an Android APK. No publishing.
 | App shell | Tabs Home · Subjects · (+) · Me, light/dark, database start-up, developer menu (P0 spikes + Typing diagnostics) |
 | Onboarding | Welcome, Pick your look (live sample page), first subject, Sample note, Skip anywhere |
 | Organising | Home (continue, exam countdowns, recent, search), Subjects, folders, Inbox, sort, tags, move, delete + Undo |
-| Editor | Live TipTap editor, autosave (1 s / 5 s / flush), keyboard toolbar with the P3b sparkle slot, slash menu and block picker, shortcuts, block menu, Info, focus mode, search-to-line |
+| Editor | Live TipTap editor, autosave (1 s / 5 s / flush), keyboard toolbar with the P3b sparkle slot (fixed, live, empty without a `sparkle` action; render-tested with `test-renderer`), slash menu and block picker, shortcuts, block menu, Info, focus mode, search-to-line |
 | Block ids | Stable through Enter, paste, turn-into, cut-move, duplicate, move, undo, Beautify, templates, restore, pack switch (tested) |
 | Shaping | 7 templates, Beautify Lite, Style sheet, Pastel Highlight + Clear Read v2 (Atkinson Hyperlegible) |
 | History | Versions before Beautify/AI/style/template/restore, every 10 minutes and on leaving; History, preview, Restore |
@@ -52,7 +52,7 @@ Android APK (no PC needed afterwards): `npx eas-cli@latest build --profile previ
 
 | Gate | Result |
 |---|---|
-| Unit tests | **423 passed**, 10 skipped (P3a opt-in live tests) in 46 suites (app + web). Includes 8 P2a contract tests, 41 editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes |
+| Unit tests | **430 passed**, 10 skipped (P3a opt-in live tests) in 47 suites (app + web). Includes 8 P2a contract tests, 41 editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes |
 | Type check (`tsc --noEmit`, strict) | Pass |
 | Lint (`eslint . --max-warnings 0`, React Compiler rules) | Pass |
 | Editor page integrity (`npm run check:editor`) | Pass: CSP hash matches the single inline script (585,659 bytes, `sha256-LKFRTdTXKTf9bl+xfg2L49464tVyvKOuutQojoiaczg=`) |
@@ -74,7 +74,7 @@ sections 1 and 2 exactly:
 | Unzip to an empty folder; confirm no `.env` inside | Pass (`.env.example` only; `PHASE_REPORT.md` and `TESTING_ON_DEVICE.md` at the root) |
 | `npm ci` | Pass in 17 s (install-script warnings as documented) |
 | `copy .env.example .env` (Linux: `cp`) | Pass |
-| `npm run verify` | Pass: editor page up to date, types, lint, **423/423 tests** (10 skipped), secret scan, prod audit 0 |
+| `npm run verify` | Pass: editor page up to date, types, lint, **430/430 tests** (10 skipped), secret scan, prod audit 0 |
 | `npm run bundle:check` | Pass: Android and iOS Hermes bundles (8.1 MB each) |
 | `npm run start:go` (headless) | Pass: Metro running, manifest `runtimeVersion exposdk:58.0.0` (Expo Go SDK 58), app name "NotedPo", Android dev bundle served (14.3 MB, HTTP 200) |
 

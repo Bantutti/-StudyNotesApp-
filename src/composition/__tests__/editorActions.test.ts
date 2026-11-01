@@ -83,4 +83,18 @@ describe('editor action hook', () => {
     off();
     expect(reg.get('ai-summarize')).toBeUndefined();
   });
+
+  it('registry: notifies subscribers on register and unregister (so an open note shows late actions)', () => {
+    const reg = createEditorActionRegistry();
+    const calls: number[] = [];
+    const stop = reg.subscribe(() => calls.push(reg.revision()));
+    const r0 = reg.revision();
+    const off = reg.register({ ...beautifyLiteAction, id: 'ai', placement: 'sparkle', reason: 'before_ai' });
+    off();
+    off(); // a second unregister changes nothing
+    expect(calls).toEqual([r0 + 1, r0 + 2]);
+    stop();
+    reg.register({ ...beautifyLiteAction, id: 'ai', placement: 'sparkle', reason: 'before_ai' });
+    expect(calls).toHaveLength(2);
+  });
 });

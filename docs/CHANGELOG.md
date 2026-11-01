@@ -29,7 +29,10 @@ All notable changes, one section per phase.
 ### Changed
 - App identity (confirmed by Rey): display name **NotedPo** (`app.json` name and the strings table), Android package
   and iOS bundle id `io.github.bantutti.notedpo`, URL scheme and Expo slug `notedpo` (were P0 placeholders).
-- P0 spike screens moved under `/dev` (developer menu). `expo-crypto` and `expo-device` pinned exactly.
+- P0 spike screens moved under `/dev` (developer menu).
+- Keyboard toolbar: the P3b sparkle slot is a fixed, live slot (actions registered later appear at once;
+  `isAvailable` honoured); the editor action registry gains `subscribe`/`revision`. New dev dependency
+  `test-renderer` 1.3.1 for component tests. `expo-crypto` and `expo-device` pinned exactly.
 - Export renders the new blocks (basic; P6 polishes). Editor script about 586 KB.
 
 ### Dependencies

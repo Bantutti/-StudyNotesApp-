@@ -18,16 +18,16 @@ import {
   createNoteSession,
   displayTitle,
   rememberOpenedNote,
-  runEditorAction,
   useAppData,
   usePackFaces,
   useServices,
 } from '@/composition';
 import { countWords, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
 import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
-import { EditorView, type EditorAction, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
+import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
 import { EditorToolbar } from '@/screens/EditorToolbar';
+import { useEditorActionRunner } from '@/screens/editorActionHooks';
 import { BlockMenuSheet, InfoSheet, LinkSheet } from '@/screens/EditorSheets';
 
 type Sheet = 'block' | 'link' | 'info' | null;
@@ -46,7 +46,6 @@ export default function NoteScreen() {
   const [banner, setBanner] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [info, setInfo] = useState<{ words: number; items: OutlineItem[] }>({ words: 0, items: [] });
-  const [busy, setBusy] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const editor = useRef<EditorHandle>(null);
   const [session] = useState(() => createNoteSession({ store, noteId: id, onBanner: setBanner }));
@@ -112,6 +111,22 @@ export default function NoteScreen() {
     [autosave, session],
   );
 
+  const runner = useEditorActionRunner({
+    store,
+    ids,
+    host,
+    noteId: id,
+    onDone: (action, outcome) => {
+      if (outcome) showActionUndo(outcome.message, outcome.undo);
+      else Alert.alert(action.label, 'Nothing to change here.');
+    },
+    onError: (action, e) => Alert.alert(action.label, userMessage(e)),
+  });
+  const actionContext = useMemo(
+    () => (note ? { noteId: note.id, subjectId: note.subject, title: note.title, stylePackId: note.stylePackId, selection: null } : null),
+    [note],
+  );
+
   if (note === undefined) return <Spinner />;
   if (note === null) return <Caption>This note no longer exists.</Caption>;
 
@@ -122,19 +137,6 @@ export default function NoteScreen() {
   };
 
   const command = (name: EditorCommand, arg?: string) => editor.current?.command(name, arg);
-
-  const runAction = async (action: EditorAction) => {
-    setBusy(action.id);
-    try {
-      const outcome = await runEditorAction(action, { store, ids, host }, id);
-      if (outcome) showActionUndo(outcome.message, outcome.undo);
-      else Alert.alert(action.label, 'Nothing to change here.');
-    } catch (e) {
-      Alert.alert(action.label, userMessage(e));
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const saveTitle = async () => {
     if (title === note.title) return;
@@ -247,11 +249,11 @@ export default function NoteScreen() {
       <EditorToolbar
         state={edState}
         pack={pack}
-        actions={editorActions.list('toolbar')}
-        sparkle={editorActions.list('sparkle')}
-        busyAction={busy}
+        registry={editorActions}
+        actionContext={actionContext}
+        busyAction={runner.busy}
         onCommand={command}
-        onAction={(a) => void runAction(a)}
+        onAction={(a) => void runner.run(a)}
         onBlockMenu={() => setSheet('block')}
         onLink={() => setSheet('link')}
       />

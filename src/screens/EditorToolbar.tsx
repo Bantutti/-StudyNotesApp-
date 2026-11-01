@@ -1,15 +1,22 @@
 /**
  * Toolbar above the keyboard (plan 9.4): Aa (text styles), highlight,
- * lists, + block, block menu, the P3b sparkle slot (editor actions with
- * placement 'sparkle'; hidden until P3b registers one), toolbar actions
- * (Beautify), undo/redo, hide keyboard. A second row opens for the chosen
+ * lists, + block, block menu, the P3b sparkle slot, toolbar actions
+ * (Beautify), undo/redo, hide keyboard.
+ *
+ * Sparkle slot: always present (testID "editor-sparkle-slot") right after
+ * the block menu. It renders every EditorAction registered with placement
+ * 'sparkle' (P3b registers "ai" through composition) and shows nothing, and
+ * takes no space, while none is registered. Both lists stay live: actions
+ * registered while a note is open appear at once. A second row opens for the chosen
  * group. Table controls appear when the cursor is in a table.
  */
 import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, useTheme, type IconName } from '@/core/ui';
-import type { EditorAction, EditorCommand, EditorState } from '@/modules/editor';
+import type { EditorAction, EditorActionRegistry, EditorCommand, EditorState } from '@/modules/editor';
+
+import { useEditorActions, type ActionAvailabilityContext } from './editorActionHooks';
 import { highlighterColor, type StylePack } from '@/modules/stylepacks';
 
 type Group = 'text' | 'highlight' | 'list' | null;
@@ -17,8 +24,10 @@ type Group = 'text' | 'highlight' | 'list' | null;
 export interface EditorToolbarProps {
   state: EditorState | null;
   pack: StylePack;
-  actions: EditorAction[];
-  sparkle: EditorAction[];
+  /** The app's action registry (services.editorActions). */
+  registry: EditorActionRegistry;
+  /** The open note, for EditorAction.isAvailable(). */
+  actionContext?: ActionAvailabilityContext | null;
   busyAction: string | null;
   onCommand(name: EditorCommand, arg?: string): void;
   onAction(a: EditorAction): void;
@@ -58,6 +67,8 @@ export function EditorToolbar(props: EditorToolbarProps) {
   const s = props.state;
   const mark = (m: string) => !!s?.marks.includes(m as never);
   const block = s?.block ?? 'paragraph';
+  const sparkle = useEditorActions(props.registry, 'sparkle', props.actionContext);
+  const actions = useEditorActions(props.registry, 'toolbar', props.actionContext);
   const toggle = (g: Group) => setGroup((x) => (x === g ? null : g));
   const cmd = (name: EditorCommand, arg?: string) => props.onCommand(name, arg);
 
@@ -112,10 +123,14 @@ export function EditorToolbar(props: EditorToolbarProps) {
         <Tool label="Lists and quotes" icon="list-outline" active={group === 'list'} onPress={() => toggle('list')} />
         <Tool label="Insert a block" icon="add-circle-outline" onPress={() => cmd('blockPicker')} />
         <Tool label="Block menu: turn into, move, duplicate, delete" icon="reorder-three-outline" onPress={props.onBlockMenu} />
-        {props.sparkle.map((a) => (
-          <Tool key={a.id} label={a.label} icon={a.icon as IconName} disabled={props.busyAction !== null} onPress={() => props.onAction(a)} />
-        ))}
-        {props.actions.map((a) => (
+        <View testID="editor-sparkle-slot" style={sparkle.length ? styles.slot : styles.slotEmpty}>
+          {sparkle.map((a) => (
+            <Tool key={a.id} label={a.label} icon={a.icon as IconName} disabled={props.busyAction !== null} onPress={() => props.onAction(a)}>
+              {props.busyAction === a.id ? <Text style={[styles.toolText, { color: th.primary.text }]}>…</Text> : undefined}
+            </Tool>
+          ))}
+        </View>
+        {actions.map((a) => (
           <Tool key={a.id} label={a.label} icon={a.icon as IconName} disabled={props.busyAction !== null} onPress={() => props.onAction(a)} />
         ))}
         <Tool label="Undo" icon="arrow-undo-outline" disabled={!s?.canUndo} onPress={() => cmd('undo')} />
@@ -132,6 +147,9 @@ const styles = StyleSheet.create({
   tool: { minWidth: 44, minHeight: 44, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
   toolText: { fontSize: 16, fontWeight: '700' },
   dim: { opacity: 0.45 },
+  slot: { flexDirection: 'row', gap: 4, alignItems: 'center' },
+  // Empty slot: no children and no layout box, so the toolbar has no gap.
+  slotEmpty: { display: 'none' },
   swatch: { width: 26, height: 20, borderRadius: 5, borderWidth: 1 },
   caption: { fontSize: 10, maxWidth: 60 },
 });

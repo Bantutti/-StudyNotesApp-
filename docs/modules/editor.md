@@ -66,13 +66,31 @@ holds the registry (`services.editorActions`), pre-loaded with Beautify Lite. Ev
 5. The returned `undo()` restores the exact previous document (same block ids); the screen shows it in
    the Undo snackbar.
 
-**P3b:** register `{ id: 'ai-…', placement: 'sparkle', reason: 'before_ai', run }`. Show your consent,
-key wizard and diff preview inside `run()`, and resolve with the accepted document or `null`. Don't touch
-storage or the WebView directly. Placements: `toolbar` (shown now), `sparkle` (the toolbar's AI slot, M5),
-`menu`.
+**P3b:** register through composition, e.g. in services setup:
 
-**Finish in M5:** the note screen's `EditorHost` switches from the stored document to the live editor
-(`requestDoc`, selection, `load`).
+```ts
+services.editorActions.register({
+  id: 'ai', label: 'AI', icon: 'sparkles-outline',
+  placement: 'sparkle', reason: 'before_ai',
+  isAvailable: (ctx) => true,          // optional; false hides the button for this note
+  run: async (ctx) => /* consent, key wizard, diff preview */ null,
+});
+```
+
+Show your consent, key wizard and diff preview inside `run()`, and resolve with the accepted document or
+`null`. Don't touch storage or the WebView directly. Placements: `toolbar` (Beautify), `sparkle` (the
+keyboard toolbar's AI slot), `menu` (reserved).
+
+**Sparkle slot (M5):** `EditorToolbar` always renders a slot (`testID="editor-sparkle-slot"`) right after
+the block menu. Every action with placement `sparkle` appears there; with none registered the slot is
+empty and takes no space (`display: 'none'`). The toolbar reads the registry through
+`useEditorActions(registry, placement, ctx)` (`src/screens/editorActionHooks.ts`), which subscribes to it
+(`registry.subscribe`/`revision`), so an action registered while a note is open appears at once, and
+unregistering removes it. `isAvailable(ctx)` gets the open note (id, subject, title, pack, `selection:
+null`); a check that throws hides the action. Presses go through `useEditorActionRunner`, which calls
+`runEditorAction` (one action at a time, the button shows "…" while it runs) and reports the outcome to
+the screen (Undo snackbar, or "Nothing to change here", or the error message).
+Tests: `src/screens/__tests__/editorToolbarSparkle.test.tsx` renders the toolbar with `test-renderer`.
 
 ## The live editor (P1 M5)
 
