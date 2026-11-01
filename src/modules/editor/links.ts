@@ -14,6 +14,8 @@
  */
 import { safeHref } from '@/core';
 
+import { toAsciiHost } from './punycode';
+
 export interface LinkPorts {
   /** Hands the URL to the OS (Linking.openURL). */
   openExternal(url: string): Promise<void>;
@@ -23,13 +25,17 @@ export interface LinkPorts {
 
 export type LinkOpenResult = 'opened' | 'cancelled' | 'rejected' | 'busy' | 'failed';
 
-/** Display host for the confirm dialog (lowercased, IDN shown as punycode by URL). */
+/**
+ * Display host for the confirm dialog: the host the browser will really open,
+ * lowercased, with internationalized labels as punycode ("xn--…") so
+ * look-alike letters can't pass for a familiar domain.
+ */
 export function linkHost(url: string): string {
   if (/^mailto:/i.test(url)) return url.slice(7, 120);
-  const m = url.match(/^https?:\/\/([^/?#]+)/i);
+  const m = url.match(/^https?:\/\/([^/?#\\]+)/i);
   const authority = m?.[1] ?? '';
   // Drop any "user:pass@" part: it is a classic way to disguise the real host.
-  return authority.replace(/^.*@/, '').toLowerCase().slice(0, 120);
+  return toAsciiHost(authority.replace(/^.*@/, '')).slice(0, 120);
 }
 
 export function createLinkOpener(ports: LinkPorts) {
@@ -39,6 +45,9 @@ export function createLinkOpener(ports: LinkPorts) {
     const url = safeHref(raw);
     // Whitespace or control characters inside a URL are a spoofing trick, never valid.
     if (!url || /[\u0000-\u0020\u007F-\u009F\u2028\u2029]/.test(url)) return 'rejected';
+    // Browsers read "\" as "/": "https://evil.example\@good.example/" opens evil.example
+    // while the text suggests good.example. A backslash is never needed in a real link.
+    if (url.includes('\\')) return 'rejected';
     if (busy) return 'busy'; // one dialog at a time; repeated taps are ignored
     busy = true;
     try {

@@ -15,6 +15,11 @@
  *     at its mapped position, if it holds the same text (so a deleted
  *     block's id is never moved onto another block).
  *  4. Missing or malformed ids get fresh ones.
+ *  5. A split that skipped our Enter shortcut (some keyboards split the
+ *     block directly; the DOM route even copies the id into both halves):
+ *     when a block's text moved whole into the next block of the same type
+ *     and the original is left empty, the id moves with the text and the
+ *     empty line gets a fresh id. Same result as the Enter shortcut.
  * IME safety: nothing runs while the view is composing (Gboard, iOS
  * keyboards); the pass runs once composition ends. Its transaction never
  * enters undo history.
@@ -103,6 +108,28 @@ export function fixBlockIds(
   const lostAt = new Map<number, string>();
   for (const id of lost) for (const p of expected.get(id) ?? []) if (!lostAt.has(p)) lostAt.set(p, id);
 
+  // 5. split fallback: id X's whole text now sits in the next same-type block (no id, or a copy of X)
+  const moveTo = new Map<number, string>();
+  const dropAt = new Set<number>();
+  if (!isPaste) {
+    const blocks: { pos: number; node: PMNode; id: string | null }[] = [];
+    newState.doc.descendants((node, pos) => {
+      if (!TYPES.has(node.type.name)) return;
+      const raw = node.attrs.blockId as unknown;
+      blocks.push({ pos, node, id: typeof raw === 'string' && BLOCK_ID.test(raw) ? raw : null });
+    });
+    blocks.forEach((b, i) => {
+      if (!b.id || b.node.textContent !== '' || dropAt.has(b.pos)) return;
+      const oldText = oldNodes.get(b.id)?.text;
+      if (!oldText) return;
+      const end = b.pos + b.node.nodeSize;
+      const next = blocks.slice(i + 1).find((c) => c.pos >= end && c.node.type === b.node.type);
+      if (!next || (next.id !== null && next.id !== b.id) || next.node.textContent !== oldText) return;
+      dropAt.add(b.pos);
+      moveTo.set(next.pos, b.id);
+    });
+  }
+
   const used = new Set<string>();
   const tr = newState.tr;
   let changed = false;
@@ -114,6 +141,18 @@ export function fixBlockIds(
   newState.doc.descendants((node, pos) => {
     if (!TYPES.has(node.type.name)) return;
     const raw = node.attrs.blockId as unknown;
+    const moved = moveTo.get(pos);
+    if (moved && !used.has(moved)) {
+      used.add(moved);
+      if (raw !== moved) assign(pos, node, moved);
+      return;
+    }
+    if (dropAt.has(pos)) {
+      const fresh = newId();
+      used.add(fresh);
+      assign(pos, node, fresh);
+      return;
+    }
     const id = typeof raw === 'string' && BLOCK_ID.test(raw) ? raw : null;
     if (id === null) {
       // 3. a block rebuilt in place (same position, same text) gets its vanished id back;

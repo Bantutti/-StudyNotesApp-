@@ -22,7 +22,7 @@ import {
   usePackFaces,
   useServices,
 } from '@/composition';
-import { countWords, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
+import { AppError, countWords, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
 import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
 import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
@@ -41,7 +41,6 @@ export default function NoteScreen() {
 
   const [note, setNote] = useState<Note | null | undefined>(undefined);
   const [title, setTitle] = useState('');
-  const [ready, setReady] = useState(false);
   const [edState, setEdState] = useState<EditorState | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -49,8 +48,11 @@ export default function NoteScreen() {
   const [focusMode, setFocusMode] = useState(false);
   const editor = useRef<EditorHandle>(null);
   const [session] = useState(() => createNoteSession({ store, noteId: id, onBanner: setBanner }));
-  const autosave = session.autosave;
   useEffect(() => () => session.dispose(), [session]);
+  // flush/leave save what is only in the WebView so far (the last word, a composition in progress).
+  useEffect(() => {
+    session.setLiveSource(() => editor.current?.requestDoc() ?? Promise.resolve(null));
+  }, [session]);
 
   const { pack, faces } = usePackFaces(note?.stylePackId ?? '');
 
@@ -80,24 +82,20 @@ export default function NoteScreen() {
   // App to the background: save immediately.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s !== 'active') void autosave.flush();
+      if (s !== 'active') void session.flush();
     });
     return () => sub.remove();
-  }, [autosave]);
-
-  useEffect(() => {
-    if (ready) editor.current?.setPack(pack);
-  }, [ready, pack]);
-  useEffect(() => {
-    if (ready && faces) editor.current?.setFonts(faces);
-  }, [ready, faces]);
+  }, [session]);
 
   const host = useMemo<EditorHost>(
     () => ({
       getDocument: async () => {
-        await autosave.flush();
+        await session.flush();
+        // The live document, or a rejection: an action must never run on (and save) a stand-in.
         const handle = editor.current;
-        return handle ? handle.requestDoc() : (session.latestDoc ?? { type: 'doc', content: [] });
+        if (handle) return handle.requestDoc();
+        if (session.latestDoc) return session.latestDoc;
+        throw new AppError('unsupported', 'The editor is not ready yet. Try again.');
       },
       getSelection: async () => {
         const sel = (await editor.current?.requestSelection()) ?? [];
@@ -108,7 +106,7 @@ export default function NoteScreen() {
         editor.current?.load(d);
       },
     }),
-    [autosave, session],
+    [session],
   );
 
   const runner = useEditorActionRunner({
@@ -130,9 +128,8 @@ export default function NoteScreen() {
   if (note === undefined) return <Spinner />;
   if (note === null) return <Caption>This note no longer exists.</Caption>;
 
+  // EditorView sends pack, fonts and readyDoc on every 'ready' (also after a WebView restart).
   const onReady = () => {
-    setReady(true);
-    editor.current?.load(note.document);
     if (block) setTimeout(() => editor.current?.scrollToBlock(block), 350);
   };
 
@@ -157,11 +154,11 @@ export default function NoteScreen() {
   };
 
   const go = async (path: '/style/[id]' | '/history/[id]') => {
-    await autosave.flush();
+    await session.flush();
     router.push({ pathname: path, params: { id } });
   };
   const addTemplate = async () => {
-    await autosave.flush();
+    await session.flush();
     router.push({ pathname: '/templates', params: { mode: 'apply', note: id } });
   };
   const deleteNote = () =>
@@ -171,7 +168,7 @@ export default function NoteScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          await autosave.flush();
+          await session.flush();
           session.dispose();
           const token = await store.notes.remove([id]);
           router.back();
@@ -231,6 +228,9 @@ export default function NoteScreen() {
         <EditorView
           ref={editor}
           logger={logger}
+          pack={pack}
+          faces={faces}
+          getDoc={() => session.readyDoc(note.document)}
           onReady={onReady}
           onChange={(d) => session.edited(d)}
           onState={setEdState}

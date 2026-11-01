@@ -4,6 +4,8 @@
 import { validateNoteDoc, listBlockIds, SAMPLE_NOTE } from '../../src/core/document';
 import { runCommand } from '../src/commands';
 import { createEditor } from '../src/createEditor';
+import { createFontState, MAX_FACES } from '../src/fonts';
+import { requestDocReply } from '../src/replies';
 import { stripDangerousHtml } from '../src/sanitize';
 
 let counter = 0;
@@ -126,3 +128,54 @@ describe('paste sanitizer', () => {
     expect(stripDangerousHtml('a'.repeat(1_000_001))).toBe('');
   });
 });
+
+describe('requestDoc reply (review M1: never a stand-in document)', () => {
+  it('a valid live document is sent with the request id', () => {
+    const r = requestDocReply(SAMPLE_NOTE, 7);
+    expect(r).toMatchObject({ type: 'doc', reqId: 7, reason: 'request' });
+    expect(validateNoteDoc((r as { doc: unknown }).doc).ok).toBe(true);
+  });
+
+  it('an invalid live document becomes an error with the same request id, not an empty doc', () => {
+    const bad = { type: 'doc', content: [{ type: 'script', content: [{ type: 'text', text: 'x' }] }] };
+    const r = requestDocReply(bad, 42);
+    expect(r).toEqual({ v: 1, type: 'error', code: 'invalid_doc', reqId: 42 });
+    expect(JSON.stringify(r)).not.toContain('"content":[]');
+  });
+
+  it('an oversized live document is a too_large error for the request', () => {
+    const big = { type: 'doc', content: Array.from({ length: 30_000 }, (_, i) => ({ type: 'paragraph', content: [{ type: 'text', text: `line ${i} `.repeat(20) }] })) };
+    expect(requestDocReply(big, 3)).toEqual({ v: 1, type: 'error', code: 'too_large', reqId: 3 });
+  });
+});
+
+describe('font faces in the page (sent one per message)', () => {
+  const face = (family: string, weight = 400, base64 = 'AAAA') => ({ family, weight, style: 'normal', base64 });
+
+  it('the first message replaces, appends add, and a new pack starts over', () => {
+    const st = createFontState();
+    expect(st.apply([face('Gaegu')], false)).toContain("font-family:'Gaegu'");
+    const css = st.apply([face('Nunito', 700)], true)!;
+    expect(css).toContain('Gaegu');
+    expect(css).toContain('Nunito');
+    expect(st.count).toBe(2);
+    expect(st.apply([face('Cinzel')], false)).not.toContain('Gaegu');
+    expect(st.count).toBe(1);
+  });
+
+  it('accepts a Gaegu-sized face (4.2 M chars) and rejects invalid ones without changing anything', () => {
+    const st = createFontState();
+    expect(st.apply([face('Gaegu', 400, 'A'.repeat(4_219_900))], false)).not.toBeNull();
+    expect(st.apply([face('Gaegu', 700, 'A'.repeat(4_500_001))], true)).toBeNull(); // over MAX_FONT_BASE64
+    expect(st.apply([face('Comic Sans')], true)).toBeNull(); // not an allowed family
+    expect(st.apply([{ ...face('Nunito'), base64: 'x<y' }], true)).toBeNull();
+    expect(st.count).toBe(1);
+  });
+
+  it('keeps at most MAX_FACES faces', () => {
+    const st = createFontState();
+    for (let i = 0; i < MAX_FACES; i++) expect(st.apply([face('Nunito')], i > 0)).not.toBeNull();
+    expect(st.apply([face('Nunito')], true)).toBeNull();
+  });
+});
+

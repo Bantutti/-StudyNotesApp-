@@ -21,12 +21,13 @@ import {
   type ToNative,
   type ToWeb,
 } from '../../src/modules/editor/protocol';
-import { fontFaceCss, fontFaceDataSchema, packAttrs, packCss, validatePack } from '../../src/modules/stylepacks/web';
+import { packAttrs, packCss, validatePack } from '../../src/modules/stylepacks/web';
 import { runCommand } from './commands';
 import { createEditor, loadDoc } from './createEditor';
 import { createDiagnostics } from './diagnostics';
+import { createFontState } from './fonts';
 import { createBlockMenu } from './menu';
-import { normalizeDoc } from './normalize';
+import { checkOutgoingDoc, requestDocReply } from './replies';
 
 declare global {
   interface Window {
@@ -56,16 +57,16 @@ const fontStyle = document.getElementById('fonts') as HTMLStyleElement;
 let changeTimer: ReturnType<typeof setTimeout> | null = null;
 let stateTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressChange = false;
+const fonts = createFontState();
 
 /** The document to send: normalized, then validated with the app's schema. */
 function currentDoc(): unknown | null {
-  const json = normalizeDoc(editor.getJSON());
-  const r = validateNoteDoc(json);
-  if (!r.ok) {
-    post({ v: 1, type: 'error', code: r.error.code === 'too_large' ? 'too_large' : 'invalid_doc' });
+  const c = checkOutgoingDoc(editor.getJSON());
+  if (!c.ok) {
+    post({ v: 1, type: 'error', code: c.code });
     return null;
   }
-  return r.value;
+  return c.doc;
 }
 
 function blockKind(): BlockKind {
@@ -182,13 +183,9 @@ function handle(msg: ToWeb): void {
     }
     case 'setFonts': {
       const s = performance.now();
-      const faces = [];
-      for (const f of msg.faces) {
-        const parsed = fontFaceDataSchema.safeParse(f);
-        if (!parsed.success) return post({ v: 1, type: 'error', code: 'invalid_fonts' });
-        faces.push(parsed.data);
-      }
-      fontStyle.textContent = fontFaceCss(faces);
+      const css = fonts.apply(msg.faces, msg.append === true);
+      if (css === null) return post({ v: 1, type: 'error', code: 'invalid_fonts' });
+      fontStyle.textContent = css;
       post({ v: 1, type: 'metric', name: 'set_fonts_ms', ms: performance.now() - s });
       return;
     }
@@ -197,7 +194,8 @@ function handle(msg: ToWeb): void {
       else runCommand(editor, msg.name, msg.arg);
       return;
     case 'requestDoc':
-      post({ v: 1, type: 'doc', reqId: msg.reqId, reason: 'request', doc: currentDoc() ?? { type: 'doc', content: [] } });
+      // Never an empty stand-in: an invalid live document is an error for this request.
+      post(requestDocReply(editor.getJSON(), msg.reqId));
       return;
     case 'requestSelection':
       post({ v: 1, type: 'selection', reqId: msg.reqId, blockIds: selectionBlockIds() });

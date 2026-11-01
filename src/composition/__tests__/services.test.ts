@@ -43,6 +43,34 @@ describe('composition root', () => {
     expect(calls).toEqual([`Bearer ${KEY}`]);
   });
 
+  it('developer tools only in dev mode or a development build (review M4)', () => {
+    expect(createServicesWith(adapters({ isDev: false })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'preview' })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'development' })).devTools).toBe(true);
+    expect(createServicesWith(adapters({ isDev: true })).devTools).toBe(true);
+  });
+
+  it('a skipped font face is logged (redacted) and listed in fontSkips, never dropped silently', async () => {
+    const logs: unknown[][] = [];
+    const spy = jest.spyOn(console, 'log').mockImplementation((...args: unknown[]) => void logs.push(args));
+    try {
+      const huge = 'A'.repeat(4_500_004);
+      const s = createServicesWith(adapters({ isDev: true, readAsset: async () => huge }));
+      const faces = await s.getFaces(s.packs.getOrDefault('clear-read'));
+      expect(faces).toHaveLength(0);
+      expect(s.fontSkips().map((f) => `${f.family} ${f.weight} ${f.style} ${f.reason}`)).toEqual([
+        'Atkinson Hyperlegible 400 normal too_large',
+        'Atkinson Hyperlegible 400 italic too_large',
+        'Atkinson Hyperlegible 700 normal too_large',
+      ]);
+      const text = JSON.stringify(logs);
+      expect(text).toContain('fonts.face_skipped');
+      expect(text).not.toContain('AAAAAAAAAA');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('caches font faces per font pair', async () => {
     let reads = 0;
     const s = createServicesWith(adapters({ readAsset: async () => { reads++; return 'AAAA'; } }));

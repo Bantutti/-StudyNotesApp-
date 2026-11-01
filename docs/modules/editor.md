@@ -4,8 +4,16 @@
 validated message bridge.
 
 **Public interface**
-- `<EditorView ref logger onReady onChange onMetric onBridgeError />` with handle methods
+- `<EditorView ref logger pack faces getDoc onReady onChange onMetric onBridgeError />` with handle methods
   `load(doc)`, `setPack(pack)`, `setFonts(faces)`, `command(name, arg?)`, `requestDoc()`, `ping()`.
+- **Fonts go one face per `setFonts` message** (first replaces, the rest `append: true`; the page keeps at
+  most 12, `editor-web/src/fonts.ts`): Pastel Highlight's Gaegu faces are ~4 M chars each.
+- **Every `ready`** (first start and after a WebView restart) `EditorView` sends `pack`, `faces` and
+  `getDoc()` (the screen passes the newest document, `session.readyDoc`). Android render-process loss
+  remounts the WebView; iOS content-process loss reloads it; pending requests fail with `timeout`.
+- **`requestDoc()` never resolves with a stand-in.** If the live document fails validation the page
+  answers `{ type: 'error', code, reqId }` (`editor-web/src/replies.ts`) and the promise rejects
+  (`validation_failed` or `too_large`); `onBridgeError` still fires for the banner.
 - Protocol: `toWebSchema`, `toNativeSchema`, `decode`, `encode`, `COMMANDS`, `MAX_BRIDGE_CHARS`.
 - Hardening: `HARDENED_WEBVIEW_PROPS`, `allowNavigation(url)`.
 - Build info: `EDITOR_CSP`, `EDITOR_SCRIPT_SHA256`, `EDITOR_SCRIPT_BYTES`.
@@ -103,13 +111,18 @@ Beautify, undo and redo, hide keyboard. Table controls appear inside tables.
 
 **Saving:** `createNoteSession` (composition) wraps `createAutosave`: 1 s after typing stops, at least
 every 5 s while typing, flushed when the app goes to the background, before actions and Style, History
-or Template, and on leaving the note (then the "When you left" version). Before each save the
+or Template, and on leaving the note (then the "When you left" version). `session.flush()` and
+`session.leave()` first pull the editor's **live** document (`requestDoc`, 1.5 s limit), because the page
+sends changes only 400 ms after typing stops and never mid-composition; a failed pull keeps the last
+good document. A leave in progress finishes its save even if the screen unmounts. Before each save the
 "every 10 minutes" version rule runs. A failed save keeps the text and retries with the next change.
 
 **Editor page (`editor-web/`):**
 - New nodes (`blocks.ts`): blockquote, summary, Q&A, two columns (even or Cornell), simple tables
   (`@tiptap/extension-table` 3.32.2, no merged cells, max 12 columns). Content expressions mirror
   `checkDocStructure` exactly (list items and boxes hold simple blocks only, cells hold paragraphs).
+- `sanitize.ts`: pasted tables stay tables (table tags allowed with no attributes, except a valid
+  `data-block-id` on `<table>`).
 - `normalize.ts`: before every send, ragged pasted tables are padded and oversized ones become lines;
   then the document is validated with the app's schema. An invalid document is never sent (the screen
   shows a banner) instead of being silently dropped.
@@ -135,6 +148,8 @@ or Template, and on leaving the note (then the "When you left" version). Before 
 | Move up / down | ids kept |
 | Undo / redo | ids restored by history |
 | Delete | the id is gone (never moved onto another block) |
+| A keyboard splits the block itself (no Enter shortcut) | same as Enter: the id stays with the text, the empty line gets a new one |
+| Cut + paste of a table | stays a table, keeps its id |
 
 **IME and keyboards (UNVERIFIED on real phones):** conservative settings: no custom key handling while
 `view.composing`, the id pass waits for `compositionend`, documents aren't sent mid-composition, menus are

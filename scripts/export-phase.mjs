@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Phase export (rules section 5).
- *   node scripts/export-phase.mjs P0 prototype [--date 20261101]
+ *   node scripts/export-phase.mjs P0 prototype [--date 20261101] [--rev r2]
  *
  * Produces in exports/ (gitignored):
- *   StudyNotesApp-<phase>-<name>-<YYYYMMDD>.zip
+ *   StudyNotesApp-<phase>-<name>-<YYYYMMDD>[-r<N>].zip   (--rev for a re-export after review fixes)
  *   ...zip.sha256          checksum sidecar (a zip cannot contain its own hash)
  *   ...contents.txt        every file in the zip with its size
  *   PHASE_REPORT-<phase>.md  copy of the phase report with the checksum filled in (for Drive)
@@ -23,8 +23,10 @@ import JSZip from 'jszip';
 import rules from './lib/exportRules.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const [phase, name] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const dateArg = process.argv.includes('--date') ? process.argv[process.argv.indexOf('--date') + 1] : null;
+const flag = (n) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : null);
+const dateArg = flag('--date');
+const revArg = flag('--rev');
+const [phase, name] = process.argv.slice(2).filter((a, i, all) => !a.startsWith('--') && !['--date', '--rev'].includes(all[i - 1] ?? ''));
 
 if (!phase || !/^P\d+[a-z]?$/.test(phase) || !name || !/^[a-z0-9-]+$/.test(name)) {
   console.error('Usage: node scripts/export-phase.mjs <P0|P1|P4b...> <kebab-name> [--date YYYYMMDD]');
@@ -41,7 +43,11 @@ if (!/^\d{8}$/.test(ymd)) {
   console.error('Bad --date, expected YYYYMMDD');
   process.exit(2);
 }
-const zipBase = `StudyNotesApp-${phase}-${name}-${ymd}`;
+if (revArg !== null && !/^r[2-9]\d?$/.test(revArg)) {
+  console.error('Bad --rev, expected r2, r3, ...');
+  process.exit(2);
+}
+const zipBase = `StudyNotesApp-${phase}-${name}-${ymd}${revArg ? `-${revArg}` : ''}`;
 const reportPath = join(root, 'docs', 'phases', phase, 'PHASE_REPORT.md');
 const testingPath = join(root, 'docs', 'TESTING_ON_DEVICE.md');
 for (const p of [reportPath, testingPath]) {

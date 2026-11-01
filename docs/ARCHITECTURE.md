@@ -18,7 +18,7 @@ and the rules every later phase follows.
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX |
+| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX. Gaegu (Pastel Highlight's header, ~3 MB per weight, full Korean set) is why `MAX_FONT_BASE64` is 4.5 M and fonts cross the bridge one face per message; P5 replaces it with a Latin subset |
 
 ## Modules
 
@@ -74,6 +74,13 @@ template), Home (`homeSummary`, exam countdowns), templates (`applyTemplateToNot
    sync goes through a zod schema first: `validateNoteDoc`, `validatePack`, `spikeResultSchema`,
    bridge `toWebSchema`/`toNativeSchema`, Groq `responseSchema`, `reviewLogSchema`.
 5. **Every module has tests** in its `__tests__/` folder.
+6. **The editor page's one allowed exception.** `editor-web/` is bundled separately into the WebView
+   (no `@/` alias, no React Native), so it imports shared code by **relative path**, and only from
+   three dependency-free places: `src/core/document` (schema, parse, ids: the same document rules on
+   both sides of the bridge), `src/modules/editor/protocol` (the bridge messages) and
+   `src/modules/stylepacks/web` (pack CSS and fonts, the web-safe subset of stylepacks). ESLint
+   allows exactly these paths for `editor-web/` and rejects any other `../../src/...` import, so
+   nothing native (Expo, React Native, storage) can leak into the page bundle.
 
 ## Key data structures
 
@@ -149,7 +156,9 @@ note. Tapping opens the note at the block (`scrollToBlock`).
 
 **Editor.** `EditorView` loads `generated/editorHtml.ts` (built by `scripts/build-editor.mjs`
 from `editor-web/`). The page has one inline script pinned by a SHA-256 CSP hash and no network.
-Native sends `load` (doc), `setPack` (pack JSON), `setFonts` (base64 faces), `command`, `requestDoc`
+Native sends `load` (doc), `setPack` (pack JSON), `setFonts` (base64 faces, **one face per message**: the
+first replaces, the rest carry `append: true`, because Pastel's faces together exceed the 6 M-char bridge
+limit), `command`, `requestDoc`
 and `ping`. The WebView re-validates each, applies it, and sends `ready`, `doc` (debounced 400 ms),
 `metric`, `pong` and `error`. Native validates every inbound message and every document again.
 

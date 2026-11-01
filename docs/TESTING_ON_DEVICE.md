@@ -111,6 +111,8 @@ The first time, it may ask to install `@expo/ngrok`; answer **Y**.
 
 **What works on iPhone with Expo Go:** all of P1 (notes, editor, subjects, templates, Beautify, history,
 styles, search), and in the developer menu the P0 editor, export, FSRS, audio timestamps and ink spikes.
+The **developer menu exists only in Expo Go (`npm run start:go`) and EAS development builds**, never in
+the preview APK or a store build.
 **What does not:** the P0 90-minute **background** recording spike. In Expo Go, recording stops when the
 screen locks. A background-capable iPhone build needs an EAS development build signed with a paid
 Apple Developer account. You chose Android-only for now, so this spike runs on Android only.
@@ -167,7 +169,9 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
    project folder).
 3. Open the link it prints on your Android phone, download the APK and install it (allow installs from
    your browser for this install only).
-4. Open **NotedPo**. Everything in section 8 "P1" works offline in this build.
+4. Open **NotedPo**. Everything in section 8 "P1" works offline in this build, **except the developer
+   menu** (Typing diagnostics, the P0 spikes): tapping the version does nothing in the APK, on purpose
+   (its test screens send audio without the 18+ check). Do step 24 in Expo Go.
 
 > The APK is **NotedPo** with the final app id `io.github.bantutti.notedpo`, so later builds install as
 > updates over this one (your notes stay). If you ever installed an older test build with a different id,
@@ -274,7 +278,7 @@ Gboard) keep their own clipboard history: delete the key there too (long-press i
 **Groq key for the P0 audio timestamps spike** (developer menu):
 1. Go to https://console.groq.com and sign in (free plan).
 2. Open **API Keys** > **Create API Key**, name it `study-notes-test`, and copy the key (starts with `gsk_`).
-3. In the app: Me > tap the version 7 times > **Developer menu** > **AI key** > paste > **Save key** >
+3. In the app **running in Expo Go**: Me > tap the version 7 times > **Developer menu** > **AI key** > paste > **Save key** >
    **Test key**. Expected: "Key works." The screen then shows only a masked version like `gsk_…3fQa`.
 4. **Never share the key, never paste it into chats or issues, never commit it or put it in `.env`.** If
    you think it leaked, delete it in the Groq console and create a new one.
@@ -360,7 +364,8 @@ Use Expo Go (sections 3 and 4) or the APK (4c). Write PASS / FAIL and notes next
 23. **Delete all data:** Me > Delete all data. *Expected:* back to Welcome with nothing left.
 
 **Typing diagnostics (please do this; it replaces guessing about keyboards)**
-24. Me > tap the version number **7 times** > **Developer menu** > **Typing diagnostics**. For each keyboard
+24. **In Expo Go** (`npm run start:go`; the APK has no developer menu): Me > tap the version number
+    **7 times** > **Developer menu** > **Typing diagnostics**. For each keyboard
     you have (Gboard, Samsung Keyboard, SwiftKey, the iPhone keyboard): type for about a minute, including a
     long word, an autocorrected word, Enter at the start of a line, a `- ` list and voice typing. Tap
     **Copy log** and paste it into your report with the keyboard's name. The log has no note text, only
@@ -381,6 +386,15 @@ Use Expo Go (sections 3 and 4) or the APK (4c). Write PASS / FAIL and notes next
     emoji is fine); an exam date `2026-02-30` says "That date does not exist."
 30. *Another user's note is not readable:* no accounts exist in P1. Covered by the backend tests (P2a list
     below, item 4).
+
+**Fixes from the code review (P1 r2)**
+31. *The last word is kept:* in a note, type a word and **immediately** press the phone's Home button (or
+    swipe the app away to the app switcher). Reopen the note. *Expected:* the word is there. Repeat while a
+    word is still underlined by the keyboard (mid-word), then press Back. *Expected:* the word is there.
+32. *Tables survive copy and paste:* insert a table (+ > Table), type in two cells, select the whole table,
+    **Cut**, put the cursor on a line below and **Paste**. *Expected:* still a table with your text.
+33. *No developer menu in the APK:* in the APK (not Expo Go), Me > tap the version number 10 times.
+    *Expected:* nothing happens and no "Developer menu" row appears.
 
 ### P0: spike lab (developer menu)
 

@@ -57,6 +57,15 @@ All notable changes, one section per phase.
 - App identity (confirmed by Rey): display name **NotedPo** (`app.json` name and the strings table), Android package
   and iOS bundle id `io.github.bantutti.notedpo`, URL scheme and Expo slug `notedpo` (were P0 placeholders).
 - P0 spike screens moved under `/dev` (developer menu).
+- **Review fixes (P1 r2):** `requestDoc` rejects instead of returning an empty document (M1); flush and
+  leave pull the live document from the editor (M2); WebView crash recovery re-sends pack, fonts and the
+  newest document and remounts on Android (M3); the developer menu exists only in dev mode or development
+  builds (M4); links with backslashes rejected and hosts shown as punycode (L1); pasted tables stay tables
+  (L2); keyboard-made splits keep ids with the text (L3); editor-web import rule documented and linted
+  (L4); WAL checkpoint after purge (L5); Undo works for empty notes and purge wipes their titles (L6).
+  `eas.json` sets `EXPO_PUBLIC_APP_VARIANT`.
+- **Fonts:** Pastel Highlight's Gaegu header font now loads (`MAX_FONT_BASE64` 3 M -> 4.5 M; fonts sent one
+  face per bridge message; skipped faces logged and listed, never dropped silently). TODO(P5): Latin subsets.
 - Keyboard toolbar: the P3b sparkle slot is a fixed, live slot (actions registered later appear at once;
   `isAvailable` honoured); the editor action registry gains `subscribe`/`revision`. New dev dependency
   `test-renderer` 1.3.1 for component tests. `expo-crypto` and `expo-device` pinned exactly.

@@ -34,6 +34,7 @@ import {
   expoAssetReader,
   loadFaces,
   type AssetReader,
+  type FaceSkip,
   type FontFaceData,
   type PackRegistry,
   type StylePack,
@@ -44,7 +45,7 @@ import { createTemplateRegistry, type TemplateRegistry } from '@/modules/templat
 import { createGroqTranscriber, fileSizeOf, type TranscriptionProvider } from '@/modules/voice';
 import { Directory, Paths } from 'expo-file-system';
 
-import type { AppDataDeps } from './appData';
+import { devToolsAllowed, type AppDataDeps } from './appData';
 import { beautifyLiteAction } from './editorActions';
 
 import { createNoteStore, type NoteStore } from './noteStore';
@@ -67,7 +68,11 @@ export interface Services {
   editorActions: EditorActionRegistry;
   /** Adapters for the app data lifecycle (database, wipe). */
   appData: AppDataDeps;
+  /** Developer menu allowed in this build (dev mode or a development build only). */
+  devTools: boolean;
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
+  /** Font faces that could not be loaded so far (diagnostics; family, weight, reason, size only). */
+  fontSkips(): readonly FaceSkip[];
 }
 
 export interface Adapters {
@@ -82,6 +87,8 @@ export interface Adapters {
   randomBytes: (n: number) => Uint8Array;
   device: ReturnType<typeof getDeviceInfo>;
   isDev: boolean;
+  /** EAS build profile (EXPO_PUBLIC_APP_VARIANT from eas.json), unset in Expo Go and local runs. */
+  appVariant?: string | null;
   linkPorts: LinkPorts;
   database: Pick<AppDataDeps, 'openDriver' | 'deleteDatabase' | 'wipeFiles'>;
 }
@@ -91,6 +98,11 @@ export function createServicesWith(a: Adapters): Services {
   const ids = createIdGenerator(a.randomBytes);
   const keyVault = createKeyVault(a.secretStore);
   const faceCache = new Map<string, Promise<FontFaceData[]>>();
+  const skips: FaceSkip[] = [];
+  const onSkip = (s: FaceSkip) => {
+    if (!skips.some((x) => x.family === s.family && x.weight === s.weight && x.style === s.style)) skips.push(s);
+    logger.warn('fonts.face_skipped', { family: s.family, weight: s.weight, style: s.style, reason: s.reason, chars: s.chars });
+  };
   return {
     logger,
     ids,
@@ -113,6 +125,7 @@ export function createServicesWith(a: Adapters): Services {
     links: createLinkOpener(a.linkPorts),
     templates: createTemplateRegistry(),
     editorActions: createEditorActionRegistry([beautifyLiteAction]),
+    devTools: devToolsAllowed({ isDev: a.isDev, variant: a.appVariant }),
     appData: {
       ...a.database,
       wipeSecrets: () => keyVault.remove('groq'),
@@ -123,7 +136,7 @@ export function createServicesWith(a: Adapters): Services {
       const key = `${pack.fonts.header}|${pack.fonts.body}`;
       let p = faceCache.get(key);
       if (!p) {
-        p = loadFaces(pack, a.readAsset).catch((e: unknown) => {
+        p = loadFaces(pack, a.readAsset, onSkip).catch((e: unknown) => {
           faceCache.delete(key);
           throw e;
         });
@@ -131,6 +144,7 @@ export function createServicesWith(a: Adapters): Services {
       }
       return p;
     },
+    fontSkips: () => [...skips],
   };
 }
 
@@ -147,6 +161,7 @@ export function createServices(): Services {
     randomBytes: secureRandomBytes,
     device: getDeviceInfo(),
     isDev: __DEV__,
+    appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? null,
     linkPorts: expoLinkPorts,
     database: { openDriver: () => openExpoDriver(), deleteDatabase: () => deleteExpoDatabase(), wipeFiles: wipeAppFiles },
   });

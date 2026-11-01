@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -216,6 +216,55 @@ describe('delete, undo and wipe (decision Q11)', () => {
     expect(JSON.stringify(raw!.document)).toBe(EMPTY_DOC_JSON);
     expect(await store.versions.list(n.id)).toHaveLength(0);
     expect(await store.search('secret')).toHaveLength(0);
+  });
+
+  it('deleting an EMPTY note can be undone too (review L6)', async () => {
+    const { store } = await makeStore();
+    const n = await store.notes.create({ stylePackId: PACK, document: { type: 'doc', content: [] } }); // stored as the empty doc
+    expect(JSON.stringify((await store.notes.get(n.id))!.document)).toBe(EMPTY_DOC_JSON);
+    const token = await store.notes.remove([n.id]);
+    expect(await store.notes.list({ scope: 'all' })).toHaveLength(0);
+    expect(await store.undo(token)).toBe(true);
+    expect((await store.notes.list({ scope: 'all' })).map((x) => x.id)).toEqual([n.id]);
+  });
+
+  it('an empty note with a title is still wiped after the window, and a wiped note never comes back', async () => {
+    const { store, clock } = await makeStore();
+    const n = await store.notes.create({ stylePackId: PACK, title: 'Groceries', tags: ['home'], document: { type: 'doc', content: [] } });
+    const token = await store.notes.remove([n.id]);
+    clock.advance(UNDO_WINDOW_MS + 1);
+    expect(await store.purge()).toBe(1);
+    expect(await store.notes.get(n.id)).toMatchObject({ deleted: true, title: '', tags: [] });
+    expect(await store.undo(token)).toBe(false);
+    expect(await store.purge()).toBe(0); // nothing left to wipe
+
+    // Wiped early (app went to the background) inside the same millisecond: still not resurrected.
+    const m = await store.notes.create({ stylePackId: PACK, document: { type: 'doc', content: [] } });
+    const t2 = await store.notes.remove([m.id]);
+    expect(await store.purge(true)).toBe(0); // an empty, untitled note has nothing to wipe ...
+    expect(await store.undo(t2)).toBe(true); // ... so Undo still works
+    const k = await store.notes.create({ stylePackId: PACK, title: 'x' });
+    const t3 = await store.notes.remove([k.id]);
+    expect(await store.purge(true)).toBe(1);
+    expect(await store.undo(t3)).toBe(false);
+  });
+
+  it('purged text does not linger in the WAL file (review L5)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sn-wal-'));
+    try {
+      const path = join(dir, 'test.db');
+      const { store } = await makeStore({ path });
+      const secret = 'zq-private-diary-entry-7741';
+      const n = await store.notes.create({ stylePackId: PACK, title: secret, document: doc(para(`${secret} about my day`)) });
+      await store.notes.remove([n.id]);
+      expect(await store.purge(true)).toBe(1);
+      const bytes = (f: string) => (existsSync(f) ? readFileSync(f).toString('latin1') : '');
+      expect(bytes(`${path}-wal`)).not.toContain(secret);
+      expect(bytes(path)).not.toContain(secret);
+      await store.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('deleting a subject can move its notes and folders to the Inbox, with undo', async () => {
