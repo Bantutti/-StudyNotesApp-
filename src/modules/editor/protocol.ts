@@ -105,7 +105,8 @@ export const toNativeSchema = z.discriminatedUnion('type', [
   }),
   z.object({ v, type: z.literal('pong'), reqId, sentAt: z.number() }),
   z.object({ v, type: z.literal('metric'), name: z.enum(METRICS), ms: z.number().min(0).max(600_000) }),
-  z.object({ v, type: z.literal('error'), code: z.enum(ERROR_CODES) }),
+  /** reqId is set when the error answers a request (requestDoc): native rejects that request. */
+  z.object({ v, type: z.literal('error'), code: z.enum(ERROR_CODES), reqId: reqId.nullable().optional() }),
   /** A link was tapped. Native re-validates and opens it OUTSIDE the app (links.ts). */
   z.object({ v, type: z.literal('openLink'), href: z.string().max(2_000) }),
   /** Answer to requestSelection: block ids touched by the selection, top-level first. */

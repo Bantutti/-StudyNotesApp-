@@ -1,7 +1,7 @@
 import { createLogger, createSeqIdGenerator, memorySink, userMessage } from '@/core';
 
 import { nodeSqliteDriver } from '../../../test/nodeSqlite';
-import { createAppDataController, createTapUnlock, isOnboarded, KEY_ONBOARDED, KV_APP, type AppDataDeps } from '../appData';
+import { createAppDataController, createTapUnlock, devMenuUnlocked, devToolsAllowed, isOnboarded, KEY_DEV_MENU, KEY_ONBOARDED, KV_APP, type AppDataDeps } from '../appData';
 
 function fakeTimers() {
   let t = Date.UTC(2026, 10, 1);
@@ -145,7 +145,7 @@ describe('app data controller', () => {
 describe('developer menu unlock', () => {
   it('needs 7 taps within 3 seconds', () => {
     let t = 0;
-    const u = createTapUnlock({ now: () => t });
+    const u = createTapUnlock({ now: () => t, enabled: true });
     for (let i = 0; i < 6; i++) {
       expect(u.tap()).toBe(6 - i);
       t += 100;
@@ -153,5 +153,36 @@ describe('developer menu unlock', () => {
     expect(u.tap()).toBe(0);
     t += 10_000;
     expect(u.tap()).toBe(6); // window expired, counting restarts
+  });
+
+  it('only dev mode (__DEV__) or a development build allows developer tools (review M4)', () => {
+    expect(devToolsAllowed({ isDev: true })).toBe(true); // Expo Go / Metro dev
+    expect(devToolsAllowed({ isDev: false, variant: 'development' })).toBe(true); // EAS development build
+    expect(devToolsAllowed({ isDev: false, variant: 'preview' })).toBe(false); // the APK Rey installs
+    expect(devToolsAllowed({ isDev: false, variant: 'production' })).toBe(false);
+    expect(devToolsAllowed({ isDev: false, variant: null })).toBe(false);
+    expect(devToolsAllowed({ isDev: false })).toBe(false);
+    expect(devToolsAllowed({ isDev: false, variant: 'Development' })).toBe(false); // exact match only
+  });
+
+  it('a disabled tap counter never unlocks, however fast or often you tap', () => {
+    let t = 0;
+    const u = createTapUnlock({ now: () => t });
+    for (let i = 0; i < 50; i++) {
+      expect(u.tap()).toBe(7);
+      t += 50;
+    }
+  });
+
+  it('a stored unlock (from a dev session) does not open the menu in a release build', async () => {
+    const { d } = deps();
+    const ctl = createAppDataController(d, userMessage);
+    await ctl.open();
+    const st = ctl.getSnapshot().status;
+    if (st.kind !== 'ready') throw new Error('store not ready');
+    const store = st.store;
+    await store.kv.set(KV_APP, KEY_DEV_MENU, true);
+    expect(await devMenuUnlocked(store, false)).toBe(false);
+    expect(await devMenuUnlocked(store, true)).toBe(true);
   });
 });

@@ -73,6 +73,13 @@ template), Home (`homeSummary`, exam countdowns), templates (`applyTemplateToNot
    sync goes through a zod schema first: `validateNoteDoc`, `validatePack`, `spikeResultSchema`,
    bridge `toWebSchema`/`toNativeSchema`, Groq `responseSchema`, `reviewLogSchema`.
 5. **Every module has tests** in its `__tests__/` folder.
+6. **The editor page's one allowed exception.** `editor-web/` is bundled separately into the WebView
+   (no `@/` alias, no React Native), so it imports shared code by **relative path**, and only from
+   three dependency-free places: `src/core/document` (schema, parse, ids: the same document rules on
+   both sides of the bridge), `src/modules/editor/protocol` (the bridge messages) and
+   `src/modules/stylepacks/web` (pack CSS and fonts, the web-safe subset of stylepacks). ESLint
+   allows exactly these paths for `editor-web/` and rejects any other `../../src/...` import, so
+   nothing native (Expo, React Native, storage) can leak into the page bundle.
 
 ## Key data structures
 

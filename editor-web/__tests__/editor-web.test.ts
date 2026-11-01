@@ -4,6 +4,7 @@
 import { validateNoteDoc, listBlockIds, SAMPLE_NOTE } from '../../src/core/document';
 import { runCommand } from '../src/commands';
 import { createEditor } from '../src/createEditor';
+import { requestDocReply } from '../src/replies';
 import { stripDangerousHtml } from '../src/sanitize';
 
 let counter = 0;
@@ -124,5 +125,25 @@ describe('paste sanitizer', () => {
   });
   it('refuses huge pastes', () => {
     expect(stripDangerousHtml('a'.repeat(1_000_001))).toBe('');
+  });
+});
+
+describe('requestDoc reply (review M1: never a stand-in document)', () => {
+  it('a valid live document is sent with the request id', () => {
+    const r = requestDocReply(SAMPLE_NOTE, 7);
+    expect(r).toMatchObject({ type: 'doc', reqId: 7, reason: 'request' });
+    expect(validateNoteDoc((r as { doc: unknown }).doc).ok).toBe(true);
+  });
+
+  it('an invalid live document becomes an error with the same request id, not an empty doc', () => {
+    const bad = { type: 'doc', content: [{ type: 'script', content: [{ type: 'text', text: 'x' }] }] };
+    const r = requestDocReply(bad, 42);
+    expect(r).toEqual({ v: 1, type: 'error', code: 'invalid_doc', reqId: 42 });
+    expect(JSON.stringify(r)).not.toContain('"content":[]');
+  });
+
+  it('an oversized live document is a too_large error for the request', () => {
+    const big = { type: 'doc', content: Array.from({ length: 30_000 }, (_, i) => ({ type: 'paragraph', content: [{ type: 'text', text: `line ${i} `.repeat(20) }] })) };
+    expect(requestDocReply(big, 3)).toEqual({ v: 1, type: 'error', code: 'too_large', reqId: 3 });
   });
 });

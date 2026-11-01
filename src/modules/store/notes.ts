@@ -246,23 +246,30 @@ export function createNotesRepo(deps: NotesDeps) {
       return rows.map((r) => ({ tag: str(r.tag), count: Number(r.c) }));
     },
 
-    /** Soft delete (tombstone). Text stays until purge so Undo can bring it back. */
-    async softDelete(tx: SqlExecutor, ids: readonly string[]): Promise<string[]> {
+    /**
+     * Soft delete (tombstone) at time `at`. Text stays until purge so Undo can
+     * bring it back; `at` goes into the undo token.
+     */
+    async softDelete(tx: SqlExecutor, ids: readonly string[], at: number = deps.now()): Promise<string[]> {
       if (ids.length === 0) return [];
       const live = await tx.all(`SELECT id FROM notes WHERE deleted = 0 AND id IN ${inList(ids)}`, [...ids]);
       const hit = live.map((r) => str(r.id));
       if (hit.length) {
-        await tx.run(`UPDATE notes SET deleted = 1, updated = ? WHERE id IN ${inList(hit)}`, [deps.now(), ...hit]);
+        await tx.run(`UPDATE notes SET deleted = 1, updated = ? WHERE id IN ${inList(hit)}`, [at, ...hit]);
       }
       return hit;
     },
 
-    /** Brings back notes deleted within the undo window (not yet wiped). */
-    async undelete(tx: SqlExecutor, ids: readonly string[]): Promise<number> {
+    /**
+     * Brings back notes deleted at `deletedAt` and untouched since: a purge
+     * bumps `updated`, so a wiped note never comes back. Works for notes whose
+     * document is the empty doc too (the empty doc is not the wiped marker).
+     */
+    async undelete(tx: SqlExecutor, ids: readonly string[], deletedAt: number): Promise<number> {
       if (ids.length === 0) return 0;
       const r = await tx.run(
-        `UPDATE notes SET deleted = 0, updated = ? WHERE deleted = 1 AND document != ? AND id IN ${inList(ids)}`,
-        [deps.now(), EMPTY_DOC_JSON, ...ids],
+        `UPDATE notes SET deleted = 0, updated = ? WHERE deleted = 1 AND updated = ? AND id IN ${inList(ids)}`,
+        [Math.max(deps.now(), deletedAt + 1), deletedAt, ...ids],
       );
       return r.changes;
     },
@@ -274,10 +281,20 @@ export function createNotesRepo(deps: NotesDeps) {
      * overwritten.
      */
     async purgeDeleted(tx: SqlExecutor, cutoff: number): Promise<number> {
-      const rows = await tx.all('SELECT id FROM notes WHERE deleted = 1 AND document != ? AND updated <= ?', [EMPTY_DOC_JSON, cutoff]);
+      // Anything left to wipe: text, a title, tags, ink, versions (an empty note can still have a title).
+      const rows = await tx.all(
+        `SELECT id FROM notes n WHERE deleted = 1 AND updated <= ? AND (document != ? OR title != '' OR tags != '[]'
+           OR inkLayerRef IS NOT NULL OR EXISTS (SELECT 1 FROM noteVersions v WHERE v.note = n.id))`,
+        [cutoff, EMPTY_DOC_JSON],
+      );
+      const t = deps.now();
       for (const r of rows) {
         const id = str(r.id);
-        await tx.run("UPDATE notes SET document = ?, title = '', tags = '[]', inkLayerRef = NULL WHERE id = ?", [EMPTY_DOC_JSON, id]);
+        // updated moves past the deletion time: Undo (which needs it unchanged) can't revive a wiped note.
+        await tx.run(
+          "UPDATE notes SET document = ?, title = '', tags = '[]', inkLayerRef = NULL, updated = MAX(?, updated + 1) WHERE id = ?",
+          [EMPTY_DOC_JSON, t, id],
+        );
         await tx.run('DELETE FROM noteVersions WHERE note = ?', [id]);
         await removeNoteFromIndex(tx, id);
       }

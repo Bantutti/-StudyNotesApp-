@@ -160,15 +160,34 @@ export async function resetAllData(store: Store, deps: AppDataDeps): Promise<Sto
 
 export const isOnboarded = async (store: Store) => (await store.kv.get(KV_APP, KEY_ONBOARDED, z.boolean())) === true;
 
-/** Counts taps (e.g. on the version number) to unlock the developer menu: 7 taps within 3 s. */
-export function createTapUnlock(opts: { taps?: number; windowMs?: number; now?: () => number } = {}) {
+/**
+ * Developer tools (the P0 spike lab: Groq key screen, voice and timestamps
+ * that send audio without the 18+ gate or consent, Typing diagnostics) exist
+ * only in development: Metro dev mode (__DEV__, e.g. Expo Go with
+ * `npm run start:go`) or an EAS "development" build. Never in preview or
+ * store builds, whatever was stored on the device.
+ */
+export function devToolsAllowed(build: { isDev: boolean; variant?: string | null }): boolean {
+  return build.isDev === true || build.variant === 'development';
+}
+
+/** The developer menu is open only when the build allows it AND it was unlocked on this device. */
+export async function devMenuUnlocked(store: Store, allowed: boolean): Promise<boolean> {
+  if (!allowed) return false;
+  return (await store.kv.get(KV_APP, KEY_DEV_MENU, z.boolean())) === true;
+}
+
+/** Counts taps (e.g. on the version number) to unlock the developer menu: 7 taps within 3 s. Never unlocks when disabled. */
+export function createTapUnlock(opts: { taps?: number; windowMs?: number; now?: () => number; enabled?: boolean } = {}) {
   const need = opts.taps ?? 7;
   const windowMs = opts.windowMs ?? 3_000;
   const now = opts.now ?? Date.now;
+  const enabled = opts.enabled ?? false;
   let times: number[] = [];
   return {
     /** Returns how many taps remain (0 = unlocked by this tap). */
     tap(): number {
+      if (!enabled) return need;
       const t = now();
       times = [...times.filter((x) => t - x <= windowMs), t];
       const left = Math.max(0, need - times.length);
