@@ -49,7 +49,7 @@ export default function TimestampSpike() {
     if (!(await keyVault.has('groq'))) {
       Alert.alert('Groq key needed', 'Add your free Groq key first.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Open settings', onPress: () => router.push('/settings') },
+        { text: 'Open settings', onPress: () => router.push('/dev/settings') },
       ]);
       return;
     }

@@ -17,6 +17,8 @@ function adapters(over: Partial<Adapters> = {}): Adapters {
     randomBytes: (n) => new Uint8Array(n).fill(7),
     device: { os: 'android', osVersion: '15', model: 'Test', runtime: 'expo-go', isTablet: false },
     isDev: false,
+    linkPorts: { openExternal: async () => undefined, confirm: async () => false },
+    database: { openDriver: async () => { throw new Error('unused'); }, deleteDatabase: async () => undefined, wipeFiles: async () => undefined },
     ...over,
   };
 }
@@ -36,6 +38,13 @@ describe('composition root', () => {
     await s.keyVault.set('groq', KEY);
     expect(await s.transcriber.testKey()).toBe(true);
     expect(calls).toEqual([`Bearer ${KEY}`]);
+  });
+
+  it('developer tools only in dev mode or a development build (review M4)', () => {
+    expect(createServicesWith(adapters({ isDev: false })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'preview' })).devTools).toBe(false);
+    expect(createServicesWith(adapters({ isDev: false, appVariant: 'development' })).devTools).toBe(true);
+    expect(createServicesWith(adapters({ isDev: true })).devTools).toBe(true);
   });
 
   it('caches font faces per font pair', async () => {

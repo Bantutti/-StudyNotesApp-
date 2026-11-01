@@ -74,6 +74,28 @@ function renderNode(n: DocNode, doodle: string): string {
       return `<div class="pk-def" data-term="${escapeHtml(n.attrs.term)}">${renderNodes(n.content)}</div>`;
     case 'horizontalRule':
       return '<hr>';
+    case 'blockquote':
+      return `<blockquote class="pk-quote">${renderNodes(n.content)}</blockquote>`;
+    case 'summary':
+      return `<div class="pk-sum">${renderNodes(n.content)}</div>`;
+    case 'qa':
+      return `<div class="pk-qa">${renderNodes(n.content)}</div>`;
+    case 'qaQuestion':
+      return `<div class="pk-q">${renderNodes(n.content)}</div>`;
+    case 'qaAnswer':
+      return `<div class="pk-a">${renderNodes(n.content)}</div>`;
+    case 'columns':
+      return `<div class="pk-cols" data-layout="${n.attrs?.layout === 'cornell' ? 'cornell' : 'even'}">${renderNodes(n.content)}</div>`;
+    case 'column':
+      return `<div class="pk-col">${renderNodes(n.content)}</div>`;
+    case 'table':
+      return `<table class="pk-table"><tbody>${renderNodes(n.content)}</tbody></table>`;
+    case 'tableRow':
+      return `<tr>${renderNodes(n.content)}</tr>`;
+    case 'tableHeader':
+      return `<th>${renderNodes(n.content)}</th>`;
+    case 'tableCell':
+      return `<td>${renderNodes(n.content)}</td>`;
   }
 }
 

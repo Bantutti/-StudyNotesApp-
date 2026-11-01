@@ -24,3 +24,16 @@
   extensions in `editor-web/src`, to `export/html.ts` and `export/docx.ts`, then add tests in all three.
 - New sensitive field name: extend `SENSITIVE_FIELD` in `redact.ts` and add a test.
 - Never log objects, errors or user text; pass error codes (`errorCode(e)`).
+
+## Added in P1
+- `limits.ts`: P2a's cloud caps mirrored (ids, text lengths in UTF-16 units, document 600,000
+  characters and 900,000 bytes), `utf16String()`.
+- `document/storage.ts`: `prepareDocForSave()` (schema, non-null unique `blockId` on every block,
+  cloud caps, usage ratio), `emptyNoteDoc()`, `EMPTY_DOC_JSON`.
+- `document/text.ts`: `extractTextBlocks()` (search rows), `countWords()`, `firstLine()`.
+- `BLOCK_ID_ATTR = 'blockId'` and `getBlockId(node)`: the one way to read a block id (decision Q7).
+- Schema v2 and `checkDocStructure()` (see editor.md).
+- `color.ts`: WCAG contrast, `ensureContrast()`, `solidColors()`.
+- `strings.ts`: every user-facing string, `t()` and `tCount()` (plan 9.8, Filipino later).
+- `core/ui/tokens.ts`: plan 9.5 chrome tokens, light and dark, with role-based contrast fixes.
+- Redaction also drops titles, terms, queries, tags, snippets, previews, links and card text.

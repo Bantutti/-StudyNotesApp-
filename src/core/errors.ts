@@ -17,6 +17,10 @@ export type ErrorCode =
   | 'timeout'
   | 'provider_error'
   | 'unsupported'
+  /** The user cancelled (e.g. an AI request). Not a failure: show no error. */
+  | 'cancelled'
+  /** A consent screen must be accepted first (e.g. first send to an AI provider). */
+  | 'consent'
   | 'internal';
 
 export class AppError extends Error {

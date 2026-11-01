@@ -33,3 +33,9 @@ export function usePackFaces(packId: string) {
   const current = loaded && loaded.key === pack.id ? loaded : null;
   return { pack, faces: current ? current.faces : null, fontError: current?.error ?? false, missing: missingFamilies(pack) };
 }
+
+/** Template dependencies for createNoteIn / applyTemplateToNote. */
+export function useTemplateDeps() {
+  const { templates, ids } = useServices();
+  return { templates, ids };
+}

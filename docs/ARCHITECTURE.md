@@ -1,51 +1,62 @@
 # Architecture
 
-Phase: **P0 (spike lab)**. This describes what exists now and the rules every later phase follows.
+Phase: **P1 (core app)**, with P2a (backend) and P3a (AI engine) merged. This describes what exists now
+and the rules every later phase follows.
 
 ## Stack
 
 | Layer | Choice (pinned) | Why |
 |---|---|---|
 | App framework | Expo SDK 58, React Native 0.88, React 19.3, TypeScript 6 (strict) | One codebase for Android and iPhone; EAS builds iOS without a Mac |
-| Navigation | Expo Router 58 (`src/app/`) | File-based routes, the Expo default |
-| Editor | TipTap 3.32 inside `react-native-webview` 14 | Rich text with a JSON document model; runs offline in a locked-down WebView |
+| Navigation | Expo Router 58 (`src/app/`): stack + bottom tabs | File-based routes, the Expo default |
+| Local data | expo-sqlite 58.0.15 (SQLite with FTS5), in Expo Go | Local-first notes, full-text search, no account needed |
+| Icons | @expo/vector-icons 15.1.1 (Ionicons) | Bundled in Expo Go |
+| Editor | TipTap 3.32 (+ extension-table) inside `react-native-webview` 14 | Rich text with a JSON document model; runs offline in a locked-down WebView |
 | Validation | zod 4.6 | One schema language at every trust boundary, shared by app and WebView |
 | Scheduling | ts-fsrs 6.0 (FSRS-7 model) | Modern spaced repetition, pure TypeScript |
 | Drawing | @shopify/react-native-skia 2.14 + Gesture Handler 3.3 + Reanimated 4.7 | Ink is drawn on the UI thread |
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL) | Bundled, licence allows embedding in PDF/DOCX |
+| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX |
 
 ## Modules
 
 ```
-                    src/app (screens)
-                         │  useServices()
-                         ▼
-                 src/composition  ── the ONLY place adapters are chosen
-        ┌───────────┬────┴─────┬──────────┬────────┬────────┬──────┐
-        ▼           ▼          ▼          ▼        ▼        ▼      ▼
-     editor      export     review      voice     ink       ai   stylepacks
-        │           │                     │                         ▲
-        │           └──── uses ───────────┼──── packs, fonts ───────┘
-        ▼                                 ▼
-   editor-web (inside WebView)        Groq API (HTTPS, user's key)
-        │
-        └──────────────► all modules depend on src/core
+          src/app (routes: tabs, onboarding, note editor, subjects, search, history, style, dev)
+                │   src/screens (shared screen pieces: NoteCard, NoteBrowser, EditorToolbar, sheets)
+                ▼   useServices() · useAppData() · use cases
+          src/composition ── the ONLY place adapters are chosen; app use cases live here
+   ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬────┐
+   ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼    ▼
+ store  editor  templates  beautify  stylepacks  export   review   voice   ink    ai
+   │      │                                                                       │
+ SQLite  editor-web (TipTap page inside the WebView)                    provider HTTPS
+   │
+   └── tables mirror firebase/src/schemas (P2a); P2b syncs them      all modules depend on src/core
 ```
 
 | Module | Responsibility | Public interface (index.ts) |
 |---|---|---|
-| `core` | Logger with redaction, errors, Result/validation, document model + block ids, results log, stats, base64, escaping, platform adapters, UI kit (`core/ui`) | see [modules/core.md](modules/core.md) |
-| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts | [modules/stylepacks.md](modules/stylepacks.md) |
-| `editor` | WebView host, bridge protocol, WebView hardening, generated CSP-pinned page | [modules/editor.md](modules/editor.md) |
-| `export` | PDF / DOCX / print exporters behind `Exporter` + ports | [modules/export.md](modules/export.md) |
-| `review` | FSRS scheduler wrapper, append-only logs, rebuild, on-device self-test | [modules/review.md](modules/review.md) |
-| `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter, WER and drift maths | [modules/voice.md](modules/voice.md) |
-| `ink` | Skia ink surface, palm-rejection policy, smoothness stats | [modules/ink.md](modules/ink.md) |
-| `ai` | BYOK key format, masking, key vault over a secure-storage port | [modules/ai.md](modules/ai.md) |
-| `auth`, `sync` | **Planned for P2.** Not created yet (rule: build only the current phase). | |
+| `core` | Logger with redaction, errors, Result/validation, document model v2 + block ids + structure rules, cloud limits mirror (`utf16String`, `syncedText`), document storage prep, text extraction, colour maths, strings, results log, platform adapters, UI kit and chrome tokens (`core/ui`) | [modules/core.md](modules/core.md) |
+| `store` | SQLite: tables that copy P2a's cloud docs, numbered migrations, repositories (subjects, folders, notes, versions, settings), block-level FTS5 search, undo-then-wipe deletes, Delete all data | [modules/store.md](modules/store.md) |
+| `editor` | WebView host, bridge protocol, WebView hardening, links opened outside the app, page previews, the **editor action hook** for P3b, generated CSP-pinned page | [modules/editor.md](modules/editor.md) |
+| `templates` | Template schema v1 (validated data), 7 built-ins, instantiate/apply with fresh block ids | [modules/templates.md](modules/templates.md) |
+| `beautify` | Beautify Lite: on-device rules that never change words and keep block ids | [modules/beautify.md](modules/beautify.md) |
+| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts; P1 packs Pastel Highlight + Clear Read v2 | [modules/stylepacks.md](modules/stylepacks.md) |
+| `export` | PDF / DOCX / print exporters behind `Exporter` + ports (P1 blocks render; P6 polishes) | [modules/export.md](modules/export.md) |
+| `review` | FSRS scheduler wrapper, append-only logs, rebuild, on-device self-test (P4c builds on it) | [modules/review.md](modules/review.md) |
+| `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
+| `ink` | Skia ink surface, palm-rejection policy, smoothness stats (P4b builds on it) | [modules/ink.md](modules/ink.md) |
+| `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
+| `auth`, `sync` | **Planned for P2b.** Not created yet. | |
+
+**Composition** (`src/composition`) also holds the app's use cases, all unit-tested on real SQLite:
+onboarding (`finishOnboarding`, `skipOnboarding`), notes (`createNoteIn` with subject default pack and
+template), Home (`homeSummary`, exam countdowns), templates (`applyTemplateToNote`), style
+(`applyPackToNote`), versions (`checkpointWhileEditing`, `checkpointOnLeave`), editor actions
+(`runEditorAction`, `beautifyLiteAction`), autosave (`createAutosave`, `createNoteSession`), search
+(`createSearchController`) and the app data lifecycle (`createAppDataController`: open, undo, wipe, reset).
 
 ### Module rules (enforced)
 
@@ -62,32 +73,78 @@ Phase: **P0 (spike lab)**. This describes what exists now and the rules every la
    sync goes through a zod schema first: `validateNoteDoc`, `validatePack`, `spikeResultSchema`,
    bridge `toWebSchema`/`toNativeSchema`, Groq `responseSchema`, `reviewLogSchema`.
 5. **Every module has tests** in its `__tests__/` folder.
+6. **The editor page's one allowed exception.** `editor-web/` is bundled separately into the WebView
+   (no `@/` alias, no React Native), so it imports shared code by **relative path**, and only from
+   three dependency-free places: `src/core/document` (schema, parse, ids: the same document rules on
+   both sides of the bridge), `src/modules/editor/protocol` (the bridge messages) and
+   `src/modules/stylepacks/web` (pack CSS and fonts, the web-safe subset of stylepacks). ESLint
+   allows exactly these paths for `editor-web/` and rejects any other `../../src/...` import, so
+   nothing native (Expo, React Native, storage) can leak into the page bundle.
 
 ## Key data structures
 
-**Note document (`core/document`).** ProseMirror/TipTap JSON. Allowed nodes: paragraph, heading
-(1 to 3), bulletList, orderedList, listItem, callout, definition (with `term`), horizontalRule,
-hardBreak, text. Marks: bold, italic, underline, strike, highlight (`key` k0 to k5), link (http,
-https or mailto only). Limits: 2 MB JSON, depth 16, 50,000 nodes, 20,000 characters per text node.
-Unknown attributes are stripped.
+**Note document (`core/document`, schema v2).** ProseMirror/TipTap JSON. Nodes: paragraph, heading (1 to
+3), bulletList, orderedList, listItem, callout, definition (`term`), horizontalRule, hardBreak, text, and
+since P1 blockquote, summary, qa (qaQuestion + qaAnswer), columns (`layout` even or cornell, exactly two
+columns, not nested) and simple tables (table > tableRow > tableHeader | tableCell, no merged cells, at most
+12 columns and 200 rows). Marks: bold, italic, underline, strike, highlight (`key` k0 to k5), link (http,
+https or mailto only). `checkDocStructure()` enforces nesting; the editor's content expressions mirror it.
+Limits: the cloud's 600,000 characters and 900,000 bytes, depth 16, 50,000 nodes.
 
-**Stable block ids.** Every block carries `blockId` (`b_` + 16 random chars). Ids survive edits,
-new blocks get new ids (`keepOnSplit: false`), and pasted duplicates are re-issued. Flashcards,
-audio anchors and versions will point to block ids (plan v0.2), so they must never silently change.
+**Stable block ids.** Every block carries `attrs.blockId` (`b_` + 16 random chars; decision Q7, the same
+attribute P2a's cloud schema reads). Read it with `getBlockId()`. Ids survive edits, Enter, turn-into,
+undo, moves, Beautify, templates, restore and pack switches; pasted copies and duplicates get fresh ids;
+cut + paste keeps them (decision Q6). Every block may carry `audioAnchor` (P2a's shape, used from P4).
 
-**Highlights store a key, not a colour.** `highlight{key:'k2'}` means "the pack's third
-highlighter". Switching packs recolours every note, and exports composite the colour over paper
-exactly like the validator does.
+**Local database (`store`, migration 1).** Synced tables copy P2a's cloud docs field for field: `users,
+subjects, folders, notes, cards, reviewLogs, recordings, assets, stylePacks, templates` with `id, owner,
+schemaVersion, created, updated, rev, deleted` (guest: owner NULL, rev 0). Local only: `noteVersions`
+(last 20 per note), `kv`, and the FTS5 index `search` + `searchMap` (one row per text block). STRICT tables,
+no foreign keys between synced tables (sync order is arbitrary). The contract test proves every row maps to
+a valid cloud doc (`toCloudDoc` is the reference mapping for P2b).
 
-**Review logs (`review`).** Append-only `{id, cardId, reviewedAt, grade}`. Devices merge logs by
-union on `id`, sort by `(reviewedAt, id)`, and rebuild card state by replay. Fuzz is off, so the
-same log gives the same card on every device: no review conflicts to resolve.
+**Highlights store a key, not a colour.** `highlight{key:'k2'}` means "the pack's third highlighter". P1's
+two packs share the meanings and order (Key idea, Definition, Example, Formula), so switching keeps meaning.
 
-**Spike results (`core/results`).** JSONL in the app's document folder, schema-checked on read and
-write, at most 500 entries. Metrics only: numbers, booleans and short strings (max 200 chars, max 40
-keys). No note text, transcripts, file names or keys.
+**Review logs (`review`).** Append-only `{id, cardId, reviewedAt, grade}`, merged by union and replayed.
 
-## How the pieces connect (per spike)
+**Spike results (`core/results`).** JSONL, metrics only (developer menu).
+
+## How the app connects (P1)
+
+**Start-up.** The root layout builds Services, the theme (system light/dark) and the app data controller,
+which opens SQLite, runs migrations, sets `secure_delete`, purges expired deletions and shows a loading or
+error screen. `/` sends first-time users to onboarding, everyone else to Home.
+
+**Editing.** The note screen loads the note into `EditorView`. The page posts a validated document 400 ms
+after each change; `createNoteSession` autosaves it 1 s later (at least every 5 s, flushed on background
+and leave), running the 10-minute version rule first. One transaction stores the note and its search rows.
+The keyboard toolbar sends commands; the page reports toolbar state. Links go to the native "Open link?"
+dialog, then the OS browser.
+
+**Editor actions (P3b hook).** Beautify Lite (and later AI) run through `runEditorAction`: current
+document from the page, `action.run()`, schema check, "Before …" version, save, show, exact Undo.
+
+**Search.** `createSearchController` debounces input into `store.search()`, which turns the text into safe
+quoted prefix terms, ranks titles and terms above text, and returns plain-text snippet parts grouped by
+note. Tapping opens the note at the block (`scrollToBlock`).
+
+## Backend (Firebase, P2a)
+
+- Firestore uses **top-level collections** (`users, subjects, folders, notes, cards, reviewLogs, recordings,
+  assets, stylePacks, templates`), each doc with `owner`. Storage uses
+  `users/{uid}/{audio|images|ink|attachments}/{assetId}.{ext}`.
+- The note document, recording segments and pack/template definitions are **capped JSON strings**
+  (Firestore's 20-level nesting limit; rules can't measure maps).
+- Lifecycle on every synced doc: `schemaVersion, created/updated (server time), rev (old + 1), deleted
+  (tombstone)`. Review logs are create-only and merged by union.
+- Account deletion is client-driven (`firebase/src/deletion`), with a rules-level "deletion in progress" lock.
+- `firebase/src` (schemas) is SDK-free and is imported by P1's contract tests; `firebase/src/deletion`
+  needs the Firebase JS SDK (P2b). `firebase/` is a **separate npm project** (own lockfile; the root
+  TypeScript and ESLint configs skip it).
+- Details: [backend/DATA_MODEL.md](backend/DATA_MODEL.md).
+
+## How the P0 spikes connect (developer menu)
 
 **Editor.** `EditorView` loads `generated/editorHtml.ts` (built by `scripts/build-editor.mjs`
 from `editor-web/`). The page has one inline script pinned by a SHA-256 CSP hash and no network.
@@ -128,10 +185,24 @@ frame-interval histogram; the screen polls stats every 500 ms.
 | Speech preset 32 kbps mono AAC | 90 minutes ≈ 21.6 MB fits Groq's 25 MB limit in one upload | High quality (≈ 86 MB per 90 min) |
 | Expo Router + `src/app` | Expo default; deep links later | React Navigation config by hand |
 | No backend in P0 | Phase rule; removes a whole attack surface while spiking | Early Firebase |
+| Local tables copy the cloud docs field for field (P1) | P2b's sync is a straight copy; a contract test runs P2a's schemas on every row | Local-only shapes plus a mapping layer |
+| Plain SQL migrations with `PRAGMA user_version`, tested on Node's built-in SQLite (P1) | No ORM dependency; real FTS5 and migration tests in Jest | Drizzle (3 new dependencies) |
+| One FTS5 row per text block (P1, Q10) | Results open at the matching line; the same index serves "Ask my notes" later | Note-level index |
+| Delete: 8 s Undo, then wipe text, keep a tombstone (P1, Q11) | Privacy (no deleted text lingering), and sync can still delete the cloud copy | 30-day trash |
+| Smart paste and in-place id restore (P1, Q6) | Cards and audio anchors keep pointing at the right text through every edit | Always-fresh ids on paste |
+| Editor actions as one registry and one run path (P1) | Beautify Lite and P3b's AI share validation, versions and exact Undo; P3b touches no editor internals | AI screens calling the store directly |
+| Slash menu inside the page, toolbar native (P1) | Pack-accurate previews without per-keystroke bridge traffic; toolbar is fast and accessible | All-native menus |
+| Conservative IME handling plus Typing diagnostics (P1) | Android keyboards are unverified; data from real phones instead of guesses | Custom key handling for shortcuts |
+| AI edits are proposals, never direct writes (P3a) | The AI sees block aliases, not ids; output is schema data with five inline marks, so no links or HTML can come from the AI. Undo is exact only while the note is unchanged; otherwise use version history | Letting the AI return documents |
 
 ## Known structural limits (to revisit)
 
-- Editor script is about 500 KB (zod is ~40% of it). If boot time on low-end phones is slow, move the
-  WebView schemas to `zod/mini` or hand-written validators in P1.
-- `style-src 'unsafe-inline'` in the editor CSP (needed to inject pack and font CSS at runtime). See SECURITY.md.
-- Palm rejection is decided per gesture; a palm touching first can block the pen (P4b: per-touch tracking).
+- **Android/iOS keyboard behaviour in the editor is unverified on real phones** (Gboard composition,
+  keyboard covering the toolbar). Typing diagnostics collect data; tune in the device check.
+- Editor script is about 586 KB (TipTap + tables + zod). If boot is slow on low-end phones, move the
+  WebView schemas to a lighter validator.
+- `style-src 'unsafe-inline'` in the editor CSP (needed to inject pack and font CSS). See SECURITY.md.
+- The note screen's toolbar sits above the keyboard through `KeyboardAvoidingView` (iOS padding, Android
+  height); a native keyboard-controller library would need a development build.
+- Folders show one level in the screens (the data model supports nesting).
+- Palm rejection is decided per gesture (P4b: per-touch tracking).

@@ -1,7 +1,7 @@
 {
   "schema": 3,
   "id": "clear-read",
-  "version": 1,
+  "version": 2,
   "name": "Clear Read",
   "meta": {
     "mood": "Plain, high-contrast, easy on the eyes",
@@ -46,6 +46,18 @@
       "color": "#BFE0FF",
       "opacity": 1.0,
       "meaning": "Definition"
+    },
+    {
+      "id": "peach",
+      "color": "#FFC9A3",
+      "opacity": 1.0,
+      "meaning": "Example"
+    },
+    {
+      "id": "lilac",
+      "color": "#E3D2FF",
+      "opacity": 1.0,
+      "meaning": "Formula"
     }
   ],
   "highlightKey": {

@@ -138,6 +138,9 @@ export function packAttrs(p: StylePack): Record<string, string> {
  *   .pk > h1.pk-h1 > span.t | h2.pk-h2 | h3.pk-h3 | p | ul.pk-ul | ol.pk-ol
  *   div.pk-def[data-term] > (div.pk-def-l + div.pk-term)? + p...
  *   div.pk-call > p... | hr | mark.hl[data-k=k0..k5]
+ *   blockquote.pk-quote | div.pk-sum | div.pk-qa > div.pk-q + div.pk-a
+ *   div.pk-cols[data-layout=even|cornell] > div.pk-col x2 | table.pk-table > tbody > tr > th|td
+ * Body text stays in --ink (4.5:1 checked); --accent only for labels and headers (3:1).
  */
 export const BASE_CSS = `
 .pk{position:relative;background-color:var(--paper);background-image:var(--bg-img);background-size:var(--bg-size);color:var(--ink);font-family:var(--bfont);font-size:var(--bsize);line-height:var(--gap);padding:var(--gap) 22px var(--gap) var(--padl);-webkit-print-color-adjust:exact;print-color-adjust:exact;overflow-wrap:anywhere}
@@ -190,6 +193,20 @@ export const BASE_CSS = `
 .pk ol{padding-left:26px}
 .pk ol>li::marker{color:var(--accent);font-weight:700}
 .pk hr{border:0;height:18px;margin:calc(var(--gap)*.25) 0;background-image:var(--divider);background-size:var(--divider-size);background-repeat:var(--divider-repeat)}
+.pk-quote{margin:calc(var(--gap)*.25) 0;padding:0 0 0 14px;border-left:3px solid var(--accent2);font-style:italic;color:var(--ink)}
+.pk-sum{margin:calc(var(--gap)*.5) 0;padding:calc(var(--gap)*.25) 14px calc(var(--gap)*.4);background:var(--soft);border-radius:10px;border-top:3px solid var(--accent);break-inside:avoid}
+.pk-sum::before{content:"Summary";display:block;font:700 .62em/2 var(--bfont);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.pk-qa{margin:calc(var(--gap)*.5) 0;padding:calc(var(--gap)*.2) 14px;border:1.5px dashed var(--accent2);border-radius:10px;break-inside:avoid}
+.pk-q,.pk-a{position:relative;padding-left:28px;min-height:var(--gap)}
+.pk-q{font-weight:700}
+.pk-q::before,.pk-a::before{position:absolute;left:0;top:0;font-family:var(--hfont);font-weight:var(--hw);color:var(--accent)}
+.pk-q::before{content:"Q"}.pk-a::before{content:"A";color:var(--accent2)}
+.pk-cols{display:flex;gap:14px;margin:calc(var(--gap)*.25) 0}
+.pk-col{flex:1 1 0;min-width:0}
+.pk-cols[data-layout=cornell]>.pk-col:first-child{flex:0 0 30%;border-right:1.5px solid var(--accent2);padding-right:10px;font-weight:700}
+.pk-table{border-collapse:collapse;width:100%;margin:calc(var(--gap)*.25) 0;table-layout:fixed}
+.pk-table td,.pk-table th{border:1px solid var(--accent2);padding:2px 8px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+.pk-table th{background:var(--soft);font-weight:700}
 .pk-corner{position:absolute;top:8px;right:10px}
 .pk-tape{position:absolute;top:-6px;right:24px;width:86px;height:26px;background:var(--washi);opacity:.8;transform:rotate(6deg)}
 `;

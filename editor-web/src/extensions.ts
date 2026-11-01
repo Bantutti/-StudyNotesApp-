@@ -1,84 +1,18 @@
 /**
  * TipTap extensions for the study-notes document model.
- * - BlockId: every block gets a stable random id (kept on edits, new on split,
- *   de-duplicated on paste). Cards, audio anchors and versions point to it.
+ * - BlockId (blockIdPlugin.ts): every block keeps a stable id through edits,
+ *   splits, turn-into, paste and moves. Cards, audio anchors and versions point to it.
  * - Heading: levels 1-3; h1 wraps content in span.t for pack header styles.
  * - Callout / Definition: study blocks styled by the pack.
  * - PackHighlight: highlight stores a pack KEY (k0..k5), never a colour,
  *   so switching packs recolours highlights automatically.
  */
-import { Extension, Mark, mergeAttributes, Node } from '@tiptap/core';
+import { Mark, mergeAttributes, Node } from '@tiptap/core';
 import { Heading } from '@tiptap/extension-heading';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
 
-import { BLOCK_ID, BLOCK_TYPES, HIGHLIGHT_KEYS } from '../../src/core/document/schema';
+import { HIGHLIGHT_KEYS } from '../../src/core/document/schema';
 
-export type RandomBytes = (n: number) => Uint8Array;
-
-const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZabcdefghjkmnpqrstvwxyz';
-
-export function makeIdFactory(random: RandomBytes) {
-  return () => {
-    const bytes = random(16);
-    let s = 'b_';
-    for (let i = 0; i < 16; i++) s += ALPHABET[(bytes[i] as number) % ALPHABET.length];
-    return s;
-  };
-}
-
-export const BlockId = Extension.create<{ newId: () => string }>({
-  name: 'blockId',
-  addOptions() {
-    return { newId: () => 'b_unset' };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: [...BLOCK_TYPES],
-        attributes: {
-          blockId: {
-            default: null,
-            keepOnSplit: false,
-            parseHTML: (el: HTMLElement) => {
-              const v = el.getAttribute('data-block-id');
-              return v && BLOCK_ID.test(v) ? v : null;
-            },
-            renderHTML: (attrs: Record<string, unknown>) =>
-              typeof attrs.blockId === 'string' ? { 'data-block-id': attrs.blockId } : {},
-          },
-        },
-      },
-    ];
-  },
-  addProseMirrorPlugins() {
-    const newId = this.options.newId;
-    const types = new Set<string>(BLOCK_TYPES);
-    return [
-      new Plugin({
-        key: new PluginKey('blockId'),
-        appendTransaction: (trs, _old, state) => {
-          if (!trs.some((t) => t.docChanged) && trs.length > 0) return null;
-          const tr = state.tr;
-          const seen = new Set<string>();
-          let changed = false;
-          state.doc.descendants((node, pos) => {
-            if (!types.has(node.type.name)) return;
-            const id = node.attrs.blockId as unknown;
-            if (typeof id === 'string' && BLOCK_ID.test(id) && !seen.has(id)) {
-              seen.add(id);
-              return;
-            }
-            const fresh = newId();
-            seen.add(fresh);
-            tr.setNodeMarkup(pos, undefined, { ...node.attrs, blockId: fresh });
-            changed = true;
-          });
-          return changed ? tr.setMeta('addToHistory', false) : null;
-        },
-      }),
-    ];
-  },
-});
+export { BlockId, makeIdFactory, type RandomBytes } from './blockIdPlugin';
 
 export const PackHeading = Heading.extend({
   renderHTML({ node, HTMLAttributes }) {

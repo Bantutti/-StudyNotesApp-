@@ -1,4 +1,12 @@
 export { ServicesProvider, useServices } from './ServicesContext';
 export { createServices, createServicesWith, type Services, type Adapters } from './services';
-export { usePackFaces } from './hooks';
+export { usePackFaces, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
+export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
+export { createTapUnlock, devMenuUnlocked, devToolsAllowed, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
+export * from './useCases';
+export { runEditorAction, beautifyLiteAction, beautifyMessage, type ActionOutcome } from './editorActions';
+export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOINT_MS } from './versions';
+export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
+export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
+export { createNoteSession, type NoteSession } from './noteSession';

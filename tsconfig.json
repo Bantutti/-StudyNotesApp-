@@ -26,6 +26,7 @@
     "node_modules",
     "dist-check",
     "exports",
-    "editor-web/dist"
+    "editor-web/dist",
+    "firebase"
   ]
 }

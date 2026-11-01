@@ -13,6 +13,8 @@ module.exports = defineConfig([
       'exports/*',
       'editor-web/dist/*',
       'src/modules/editor/generated/*',
+      // firebase/ is a separate npm project (P2a) with its own ESLint config and tsconfig.
+      'firebase/**',
       '.expo/*',
     ],
   },
@@ -35,6 +37,28 @@ module.exports = defineConfig([
               group: ['@/core/*', '!@/core/ui'],
               message: 'Import shared core through "@/core" (or "@/core/ui" for UI pieces).',
             },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The editor page (bundled into the WebView, no "@/" alias) may import shared code by relative
+    // path, but only these dependency-free parts (docs/ARCHITECTURE.md, module rule 6).
+    files: ['editor-web/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // The app's src/ (two levels up from editor-web/src and editor-web/__tests__), except the
+              // three allowed places. "../src/..." from the tests is editor-web's own code.
+              regex: '^\\.\\./\\.\\./(\\.\\./)*src/(?!(core/document(/[A-Za-z]+)?|modules/editor/protocol|modules/stylepacks/web)$)',
+              message:
+                'editor-web may only import src/core/document, src/modules/editor/protocol and src/modules/stylepacks/web (ARCHITECTURE.md, module rule 6).',
+            },
+            { group: ['@/*'], message: 'editor-web has no "@/" alias; use the allowed relative paths.' },
           ],
         },
       ],

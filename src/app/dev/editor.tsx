@@ -11,7 +11,7 @@ import { highlighterColor, P0_PACK_IDS } from '@/modules/stylepacks';
 type Metrics = { boot?: number; load?: number; pack?: number; fonts?: number; pingP50?: number };
 
 export default function EditorSpike() {
-  const { notes, logger, results, packs } = useServices();
+  const { notes, logger, results, packs, links } = useServices();
   const editor = useRef<EditorHandle>(null);
   const [packId, setPackId] = useState<string>(P0_PACK_IDS[0]);
   const { pack, faces } = usePackFaces(packId);
@@ -121,6 +121,7 @@ export default function EditorSpike() {
           ref={editor}
           logger={logger}
           onReady={onReady}
+          onOpenLink={(href) => void links(href)}
           onChange={(doc) => {
             notes.set(doc);
             setBlocks(countBlocks(doc));

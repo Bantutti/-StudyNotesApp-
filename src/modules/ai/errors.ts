@@ -39,8 +39,8 @@ export type RateLimitScope = 'minute' | 'day';
 
 /**
  * Nearest core ErrorCode for each kind, so code that only understands core
- * codes still behaves sensibly. `cancelled` and the consent kinds have no
- * exact core code yet; the PR proposes adding 'cancelled' and 'consent'.
+ * codes still behaves sensibly. Core gained 'cancelled' and 'consent' in P1
+ * (P3a MERGE_NOTES §1); age and per-subject blocks stay permission_denied.
  */
 const CORE_CODE: Record<AiErrorKind, ErrorCode> = {
   missing_key: 'missing_key',
@@ -51,8 +51,8 @@ const CORE_CODE: Record<AiErrorKind, ErrorCode> = {
   provider_error: 'provider_error',
   too_large: 'too_large',
   invalid_output: 'validation_failed',
-  cancelled: 'internal',
-  consent_required: 'permission_denied',
+  cancelled: 'cancelled',
+  consent_required: 'consent',
   age_required: 'permission_denied',
   blocked: 'permission_denied',
   empty_scope: 'validation_failed',
