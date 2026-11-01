@@ -268,14 +268,14 @@ export default function NoteScreen() {
             if (code === 'too_large') setBanner('This note is too long to save. Split it into two notes.');
           }}
         />
-        <NoteInkOverlay ink={ink} state={inkState} pack={pack} tablet={tablet} />
+        <NoteInkOverlay ink={ink} state={inkState} pack={pack} tablet={tablet} getEditor={() => editor.current} />
       </View>
       <View style={styles.focusRow}>
         <Pressable accessibilityRole="button" accessibilityLabel={focusMode ? 'Leave focus mode' : 'Focus mode'} onPress={() => setFocusMode((f) => !f)} hitSlop={8}>
           <Text style={{ color: th.muted, fontSize: th.type.caption }}>{focusMode ? 'Show title and modes' : 'Focus mode'}</Text>
         </Pressable>
       </View>
-      {inkState.drawMode && !tablet ? <NoteInkBar ink={ink} state={inkState} pack={pack} /> : null}
+      {inkState.drawMode && !tablet ? <NoteInkBar ink={ink} state={inkState} pack={pack} getEditor={() => editor.current} /> : null}
       {inkState.drawMode ? null : (
       <EditorToolbar
         state={edState}

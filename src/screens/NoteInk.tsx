@@ -66,7 +66,7 @@ function liveColour(state: NoteInkState, pack: StylePack | null): string {
   return state.tools.custom ?? pens[state.tools.pen];
 }
 
-export function openInkMenu(ink: NoteInk, state: NoteInkState): void {
+export function openInkMenu(ink: NoteInk, state: NoteInkState, getEditor?: () => EditorHandle | null): void {
   const nextMode: Record<InkInputMode, InkInputMode> = { auto: 'stylus', stylus: 'finger', finger: 'auto' };
   const hidden = ink.detachedCount();
   const buttons: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }[] = [
@@ -82,6 +82,7 @@ export function openInkMenu(ink: NoteInk, state: NoteInkState): void {
       },
     },
   ];
+  if (getEditor) buttons.push({ text: S.sketchTaller, onPress: () => getEditor()?.command('sketchTaller') });
   if (hidden > 0) {
     buttons.push({
       text: S.detached(hidden),
@@ -98,7 +99,7 @@ export function openInkMenu(ink: NoteInk, state: NoteInkState): void {
   Alert.alert(S.menuTitle, undefined, buttons);
 }
 
-function toolbarProps(ink: NoteInk, state: NoteInkState, pack: StylePack | null) {
+function toolbarProps(ink: NoteInk, state: NoteInkState, pack: StylePack | null, getEditor?: () => EditorHandle | null) {
   const { pens, highlighter } = packColours(pack);
   return {
     side: state.side,
@@ -111,7 +112,7 @@ function toolbarProps(ink: NoteInk, state: NoteInkState, pack: StylePack | null)
     onTools: (p: Parameters<NoteInk['setTools']>[0]) => ink.setTools(p),
     onUndo: () => ink.undo(),
     onRedo: () => ink.redo(),
-    onMore: () => openInkMenu(ink, state),
+    onMore: () => openInkMenu(ink, state, getEditor),
     onDone: () => ink.setDrawMode(false),
     onDeleteSelection: () => ink.deleteSelection(),
     onRecolourSelection: () => ink.recolourSelection(),
@@ -121,7 +122,7 @@ function toolbarProps(ink: NoteInk, state: NoteInkState, pack: StylePack | null)
 }
 
 /** Over the editor page (inside the same box as EditorView). Draw mode only. */
-export function NoteInkOverlay({ ink, state, pack, tablet }: { ink: NoteInk; state: NoteInkState; pack: StylePack | null; tablet: boolean }) {
+export function NoteInkOverlay({ ink, state, pack, tablet, getEditor }: { ink: NoteInk; state: NoteInkState; pack: StylePack | null; tablet: boolean; getEditor?: () => EditorHandle | null }) {
   if (!state.drawMode) return null;
   return (
     <>
@@ -145,12 +146,12 @@ export function NoteInkOverlay({ ink, state, pack, tablet }: { ink: NoteInk; sta
         onZoom={(s) => ink.zoom(s)}
         onStylusSeen={() => ink.stylusSeen()}
       />
-      {tablet ? <InkToolbar variant="floating" {...toolbarProps(ink, state, pack)} /> : null}
+      {tablet ? <InkToolbar variant="floating" {...toolbarProps(ink, state, pack, getEditor)} /> : null}
     </>
   );
 }
 
 /** The phone toolbar (bottom). */
-export function NoteInkBar({ ink, state, pack }: { ink: NoteInk; state: NoteInkState; pack: StylePack | null }) {
-  return <InkToolbar variant="bar" {...toolbarProps(ink, state, pack)} />;
+export function NoteInkBar({ ink, state, pack, getEditor }: { ink: NoteInk; state: NoteInkState; pack: StylePack | null; getEditor?: () => EditorHandle | null }) {
+  return <InkToolbar variant="bar" {...toolbarProps(ink, state, pack, getEditor)} />;
 }

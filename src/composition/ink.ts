@@ -9,7 +9,7 @@
  * garbage collected.
  */
 import { listBlockIds, type IdGenerator, type Logger } from '@/core';
-import { createInkService, expoInkFiles, type InkFilesPort, type InkService, type InkStorePort } from '@/modules/ink';
+import { createInkService, expoInkFiles, type InkDownloadPort, type InkFilesPort, type InkService, type InkStorePort } from '@/modules/ink';
 import type { Store } from '@/modules/store';
 
 /** Store -> the slice the ink service uses. */
@@ -31,6 +31,7 @@ export function inkStorePort(store: Store): InkStorePort {
       await store.assets.update(assetId, { size });
     },
     removeAsset: (assetId) => store.assets.remove(assetId),
+    setAssetLocalPath: (assetId, localPath) => store.assets.setLocalPath(assetId, localPath),
     async inkOrphans() {
       return (await store.assets.inkOrphans()).map((a) => ({ id: a.id, deleted: a.deleted, size: a.size, localPath: a.localPath }));
     },
@@ -50,10 +51,14 @@ export function inkStorePort(store: Store): InkStorePort {
 const cache = new WeakMap<Store, InkService>();
 
 /** The InkService for a Store (created and started once per Store). */
-export function inkServiceFor(store: Store, deps: { ids: IdGenerator; logger: Logger; files?: InkFilesPort }): InkService {
+export function inkServiceFor(
+  store: Store,
+  deps: { ids: IdGenerator; logger: Logger; files?: InkFilesPort; download?: InkDownloadPort },
+): InkService {
   let svc = cache.get(store);
   if (!svc) {
-    const created = createInkService({ files: deps.files ?? expoInkFiles, store: inkStorePort(store), ids: deps.ids, logger: deps.logger });
+    // download: P2b's pipeline plugs in here once merged (registerInkMerger + this port).
+    const created = createInkService({ files: deps.files ?? expoInkFiles, store: inkStorePort(store), ids: deps.ids, logger: deps.logger, download: deps.download });
     cache.set(store, created);
     svc = created;
     void created

@@ -117,6 +117,16 @@ export function createAssetsRepo(deps: AssetsDeps) {
       return { ...cur, size, localPath, updated };
     },
 
+    /**
+     * Records where a DOWNLOADED file now lives on this device. localPath is
+     * local only, so `updated` is NOT bumped: this must not look like a
+     * synced change (P2b would upload the asset again).
+     */
+    async setLocalPath(tx: SqlExecutor, id: string, localPath: string | null): Promise<void> {
+      checkPath(localPath);
+      await tx.run('UPDATE assets SET localPath = ? WHERE id = ? AND deleted = 0', [localPath, id]);
+    },
+
     /** Tombstone: P2b deletes the cloud file and erases the cloud fields. */
     async markDeleted(tx: SqlExecutor, id: string): Promise<void> {
       await tx.run('UPDATE assets SET deleted = ?, localPath = NULL, updated = ? WHERE id = ? AND deleted = 0', [int01(true), deps.now(), id]);

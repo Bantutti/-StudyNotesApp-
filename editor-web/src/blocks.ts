@@ -3,7 +3,7 @@
  * checkDocStructure() in src/core/document/schema.ts EXACTLY, so the editor
  * can never produce a document the app would reject:
  *   SIMPLE      = paragraph | heading | bulletList | orderedList | horizontalRule
- *   COLUMN_FLOW = every top-level block except columns
+ *   COLUMN_FLOW = every top-level block except columns (incl. the P4b sketch block)
  * Rendered HTML uses the same pk-* classes as export (stylepacks BASE_CSS).
  */
 import { mergeAttributes, Node } from '@tiptap/core';
@@ -13,7 +13,43 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 
 export const SIMPLE = '(paragraph | heading | bulletList | orderedList | horizontalRule)';
 export const COLUMN_FLOW =
-  '(paragraph | heading | bulletList | orderedList | callout | definition | horizontalRule | blockquote | summary | qa | table)';
+  '(paragraph | heading | bulletList | orderedList | callout | definition | horizontalRule | blockquote | summary | qa | table | sketch)';
+
+/** Sketch block height limits (mirror SKETCH_HEIGHT in src/core/document/schema.ts). */
+const SKETCH_MIN = 120;
+const SKETCH_MAX = 2400;
+const clampHeight = (v: unknown) => {
+  const n = typeof v === 'number' ? v : Number.parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(SKETCH_MAX, Math.max(SKETCH_MIN, Math.round(n))) : 400;
+};
+
+/**
+ * P4b sketch block (decision Q2): a framed drawing area in the note flow.
+ * An atom (no text inside); its drawing lives in the note's ink layer,
+ * anchored to this block's id. The height is the only attribute, clamped
+ * on the way in (HTML paste) and out.
+ */
+export const Sketch = Node.create({
+  name: 'sketch',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: false,
+  addAttributes() {
+    return {
+      height: {
+        default: 400,
+        parseHTML: (el: HTMLElement) => clampHeight(el.getAttribute('data-height')),
+        renderHTML: (attrs: Record<string, unknown>) => {
+          const h = clampHeight(attrs.height);
+          return { 'data-height': String(h), style: `height:${h}px` };
+        },
+      },
+    };
+  },
+  parseHTML: () => [{ tag: 'div.pk-sketch' }],
+  renderHTML: ({ HTMLAttributes }) => ['div', mergeAttributes(HTMLAttributes, { class: 'pk-sketch', 'aria-label': 'Sketch' })],
+});
 
 /** List items: a paragraph first, then simple blocks only (no callouts or tables inside lists). */
 export const StudyListItem = ListItem.extend({ content: `paragraph ${SIMPLE}*` });
@@ -117,5 +153,5 @@ export const StudyTable = Table.extend({
 
 export const P1_BLOCKS = [
   StudyListItem, StudyBlockquote, Summary, Qa, QaQuestion, QaAnswer, Columns, Column,
-  StudyTable, StudyTableRow, StudyTableHeader, StudyTableCell,
+  StudyTable, StudyTableRow, StudyTableHeader, StudyTableCell, Sketch,
 ];

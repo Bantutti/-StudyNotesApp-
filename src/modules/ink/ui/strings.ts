@@ -25,6 +25,7 @@ export const INK_STRINGS = {
   input: { auto: 'Pen input: automatic', stylus: 'Pen input: stylus only', finger: 'Pen input: finger draws' } as const,
   side: { left: 'Toolbar on the left', right: 'Toolbar on the right' } as const,
   customColour: 'Custom pen colour',
+  sketchTaller: 'Make the selected sketch taller',
   detached: (n: number) => (n === 1 ? 'Delete 1 hidden drawing' : `Delete ${n} hidden drawings`),
   detachedHelp:
     'Hidden drawings belong to lines you deleted. They come back if you undo or restore that line. Delete them to free space.',

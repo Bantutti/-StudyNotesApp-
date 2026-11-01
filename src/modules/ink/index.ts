@@ -59,4 +59,7 @@ export { routePointer, penCancelsTouch, pastScrollSlop, PALM_AFTER_PEN_MS, PEN_C
 // Service: local saving, publishing for sync, recovery.
 export { createInkService, publishedPath, workingPath, WORKING_SAVE_DEBOUNCE_MS, type InkService, type InkSession, type PublishResult, type InkSource } from './service/inkService';
 export { expoInkFiles } from './service/expoInkFiles';
+
+// Sync hand-off (P2b's asset pipeline plugs in here).
+export { inkAssetMerger, registerInkMerger, type AssetMergerRegistry, type InkDownloadPort } from './sync';
 export type { InkFilesPort, InkStorePort, InkNoteInfo, InkAssetInfo } from './service/ports';

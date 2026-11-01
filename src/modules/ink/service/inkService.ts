@@ -28,6 +28,7 @@ import { emptyInkLayer, parseInkJson, serializeInk, type InkLayer } from '../mod
 import { purgeUnrecoverable, type OpContext } from '../model/layer';
 import { INK_LIMITS } from '../model/limits';
 import { mergeInkLayers } from '../model/merge';
+import type { InkDownloadPort } from '../sync';
 import type { InkFilesPort, InkStorePort } from './ports';
 
 export const WORK_DIR = 'ink/work';
@@ -42,6 +43,8 @@ export interface InkServiceDeps {
   store: InkStorePort;
   ids: IdGenerator;
   logger: Logger;
+  /** P2b's download pipeline (optional): fetches the cloud copy when this device has none (M8). */
+  download?: InkDownloadPort;
   now?: () => number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (h: unknown) => void;
@@ -113,8 +116,25 @@ export function createInkService(deps: InkServiceDeps) {
     let published: InkLayer | null = null;
     let damaged = false;
     const asset = note.inkLayerRef ? await deps.store.getAsset(note.inkLayerRef) : null;
-    if (asset && !asset.deleted && asset.localPath) {
-      publishedText = await deps.files.read(asset.localPath);
+    if (asset && !asset.deleted) {
+      publishedText = asset.localPath ? await deps.files.read(asset.localPath) : null;
+      // M8: no local copy yet (e.g. a new device): ask P2b's pipeline for the cloud copy.
+      if (publishedText === null && deps.download) {
+        const text = await deps.download(asset.id).catch(() => null);
+        if (text !== null) {
+          const r = parseInkJson(text, { expectedNote: noteId });
+          if (r.ok) {
+            const path = publishedPath(asset.id);
+            await deps.files.writeAtomic(path, text);
+            await deps.store.setAssetLocalPath(asset.id, path);
+            publishedText = text;
+            log.info('downloaded', { strokes: r.value.strokes.length });
+          } else {
+            damaged = true; // a tampered or damaged cloud copy is never stored
+            log.warn('download_rejected', { code: r.error.code });
+          }
+        }
+      }
       if (publishedText !== null) {
         const r = parseInkJson(publishedText, { expectedNote: noteId });
         if (r.ok) published = r.value;

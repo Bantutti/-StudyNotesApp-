@@ -24,6 +24,8 @@ export const COMMANDS = [
   'h1', 'h2', 'h3', 'paragraph',
   // structure
   'bulletList', 'orderedList', 'callout', 'definition', 'hr', 'blockquote', 'summary', 'qa', 'columns', 'cornell', 'table',
+  // P4b sketch block
+  'sketch', 'sketchTaller',
   // tables
   'addRowAfter', 'addColumnAfter', 'deleteRow', 'deleteColumn', 'deleteTable',
   // block menu

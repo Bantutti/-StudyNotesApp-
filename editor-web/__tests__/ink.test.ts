@@ -180,3 +180,50 @@ describe('editor page ink layers', () => {
     expect(src).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|setAttribute\(\s*['"]style/);
   });
 });
+
+describe('sketch block on the editor page (P4b)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createEditor } = require('../src/createEditor') as typeof import('../src/createEditor');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { runCommand } = require('../src/commands') as typeof import('../src/commands');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { validateNoteDoc } = require('../../src/core/document') as typeof import('../../src/core/document');
+  let n = 0;
+  const mount = () => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    return createEditor({ element: el, random: (k) => Uint8Array.from({ length: k }, (_, i) => (i * 31 + n++) & 0xff) });
+  };
+
+  it('inserts a sketch with an id and a height, and the document stays valid', () => {
+    const ed = mount();
+    ed.commands.setContent({ type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'b_PARA000000001' }, content: [{ type: 'text', text: 'Diagram' }] }] });
+    ed.commands.setTextSelection(3);
+    expect(runCommand(ed, 'sketch')).toBe(true);
+    const json = ed.getJSON();
+    const sk = json.content?.find((c) => c.type === 'sketch');
+    expect(sk?.attrs).toMatchObject({ height: 400, blockId: expect.stringMatching(/^b_/) });
+    expect(validateNoteDoc(json).ok).toBe(true);
+    // Rendered as a framed drawing area with the stored height.
+    const dom = ed.view.dom.querySelector('.pk-sketch') as HTMLElement;
+    expect(dom.getAttribute('data-height')).toBe('400');
+    expect(dom.style.height).toBe('400px');
+    ed.destroy();
+  });
+
+  it('makes the selected sketch taller, up to 2400 px', () => {
+    const ed = mount();
+    ed.commands.setContent({ type: 'doc', content: [{ type: 'sketch', attrs: { blockId: 'b_SKETCH00000001', height: 2300 } }] });
+    ed.commands.setNodeSelection(0);
+    expect(runCommand(ed, 'sketchTaller')).toBe(true);
+    expect(ed.getJSON().content?.[0]?.attrs?.height).toBe(2400);
+    ed.destroy();
+  });
+
+  it('clamps a pasted sketch height', () => {
+    const ed = mount();
+    ed.commands.setContent('<div class="pk-sketch" data-height="99999"></div>');
+    expect(ed.getJSON().content?.[0]).toMatchObject({ type: 'sketch', attrs: { height: 2400 } });
+    ed.destroy();
+  });
+});

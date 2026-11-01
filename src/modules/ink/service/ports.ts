@@ -40,6 +40,8 @@ export interface InkStorePort {
   createInkLayer(noteId: string, input: { id: string; localPath: string; size: number }): Promise<{ noteUpdated: number }>;
   /** New size after the published file was rewritten (one synced row update = one P2b upload). */
   setAssetSize(assetId: string, size: number): Promise<void>;
+  /** Local-only: records where a downloaded ink file lives (no synced change). */
+  setAssetLocalPath(assetId: string, localPath: string): Promise<void>;
   /** Tombstones an asset (P2b deletes the cloud copy). */
   removeAsset(assetId: string): Promise<void>;
   /** Live ink assets no note points at any more. */

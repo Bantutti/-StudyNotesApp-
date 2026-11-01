@@ -211,6 +211,8 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
       list: (type: AssetType): Promise<Asset[]> => assets.listByType(db, type),
       update: (id: string, patch: { size?: number; localPath?: string | null }) => db.transaction((tx) => assets.update(tx, id, patch)),
       remove: (id: string) => db.transaction((tx) => assets.markDeleted(tx, id)),
+      /** Local-only: where a downloaded file lives (does not bump `updated`, so it never syncs). */
+      setLocalPath: (id: string, localPath: string | null) => db.transaction((tx) => assets.setLocalPath(tx, id, localPath)),
       /** Ink assets that no note points at any more (deleted notes after the undo window). */
       inkOrphans: (): Promise<Asset[]> => assets.inkOrphans(db),
       /**
