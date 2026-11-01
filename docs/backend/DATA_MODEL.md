@@ -72,7 +72,7 @@ The rules can't parse JSON, so these checks must run **on load** (plan §17: "sc
 
 - §D.4.1: the document root is `{ "type": "doc", "content": [...] }`; nodes have only `type, attrs, content, text, marks`.
 - §D.4.2: at most 64 levels deep and at most 50,000 nodes.
-- §D.4.3: every **top-level block** has `attrs.id` (a stable block id), and ids are unique across the whole document.
+- §D.4.3: block ids live in `attrs.blockId` (P0's name, used across the app; decided by Rey on 2026-11-01, replacing `attrs.id`). Every **top-level block** must have a **non-null** `attrs.blockId` (missing or `null` is rejected). Deeper blocks may omit it or set it to `null`. Every string `blockId`, at any depth, matches `^[A-Za-z0-9_-]{1,64}$` and is unique across the whole document. `attrs.id` is not a block id. The app must assign ids (P0's `ensureBlockIds`) before uploading, because P0 allows `null` ids locally.
 - §D.4.4: optional `attrs.audioAnchor = { recordingId, startMs, endMs }` with `endMs ≥ startMs` (plan F11).
 - Segments: `[{ id, start, end, text }]` with unique ids and `end ≥ start`.
 - Pack and template definitions: must be a JSON object here. **The full style-pack v3 validator must also run on load.**

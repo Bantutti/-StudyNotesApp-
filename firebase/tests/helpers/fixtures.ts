@@ -27,12 +27,12 @@ export const VALID_DOCUMENT_JSON = JSON.stringify({
   content: [
     {
       type: 'heading',
-      attrs: { id: 'blk_h1', level: 1 },
+      attrs: { blockId: 'blk_h1', level: 1 },
       content: [{ type: 'text', text: 'Osmosis' }],
     },
     {
       type: 'definition',
-      attrs: { id: 'blk_def1', audioAnchor: { recordingId: 'rec0000000000000001', startMs: 1000, endMs: 4500 } },
+      attrs: { blockId: 'blk_def1', audioAnchor: { recordingId: 'rec0000000000000001', startMs: 1000, endMs: 4500 } },
       content: [{ type: 'text', text: 'Movement of water across a membrane', marks: [{ type: 'highlight' }] }],
     },
   ],

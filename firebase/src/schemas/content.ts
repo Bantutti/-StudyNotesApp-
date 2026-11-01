@@ -9,7 +9,9 @@
  * SCOPE NOTE: the editor (P1) owns the full block schema. This file checks only
  * the cloud-boundary invariants the backend relies on:
  *   - the document is a ProseMirror-style tree rooted at { type: 'doc' }
- *   - every top-level block has a stable, unique block id (plan §12)
+ *   - every top-level block has a stable, unique block id in attrs.blockId
+ *     (plan §12; attrs.blockId is P0's name, used across the app — decided by
+ *     Rey on 2026-11-01, replacing the earlier attrs.id)
  *   - optional audio anchors have the plan's shape (recording id, start ms, end ms)
  *   - depth and node count are bounded (stops "JSON bomb" style payloads)
  * See docs/backend/DATA_MODEL.md §D.4.
@@ -99,14 +101,30 @@ export function findDocumentProblem(root: unknown): DocumentProblem | null {
     if (shape !== null) return { message: shape, path };
     const n = node as Record<string, unknown>; // safe: nodeShapeProblem checked it is a plain object
 
-    // §D.4.3 — block ids: required on top-level blocks, optional deeper, unique everywhere.
+    // §D.4.3 — block ids live in attrs.blockId (P0's field name, used across the app).
+    //   Rule A: a TOP-LEVEL block (direct child of the doc root) must have a
+    //           non-null string blockId. Missing OR null is rejected: cards,
+    //           audio anchors and versions point at top-level ids, so a cloud
+    //           copy without one would leave them dangling. (Before 2026-11-01
+    //           a top-level `null` slipped through; that gap is now closed.)
+    //   Rule B: DEEPER nodes may omit blockId or set it to null. P0's editor
+    //           model types it as `string | null | undefined` on every block.
+    //   Rule C: every string blockId, at any depth, must match BLOCK_ID_PATTERN
+    //           (1 to 64 of A-Z a-z 0-9 _ -) and be unique across the whole note.
     const attrs = (n.attrs ?? {}) as Record<string, unknown>;
-    const id = attrs.id;
-    if (topLevel && id === undefined) return { message: 'Top-level block needs attrs.id', path };
-    if (id !== undefined && id !== null) {
-      if (typeof id !== 'string' || !BLOCK_ID_PATTERN.test(id)) return { message: 'Bad block id', path };
-      if (seenIds.has(id)) return { message: `Duplicate block id "${id}"`, path };
-      seenIds.add(id);
+    const blockId = attrs.blockId;
+    if (topLevel && (blockId === undefined || blockId === null)) {
+      // Diagnostic only: name the old key if a pre-fix writer used it, so the
+      // failure is easy to trace. attrs.id never counts as a block id.
+      const hint = attrs.id !== undefined ? ' (found attrs.id, the old name: rename it to attrs.blockId)' : '';
+      return { message: `Top-level block needs a non-null attrs.blockId${hint}`, path };
+    }
+    if (blockId !== undefined && blockId !== null) {
+      // Rule C, part 1: type and pattern. A number, object or bad string fails here.
+      if (typeof blockId !== 'string' || !BLOCK_ID_PATTERN.test(blockId)) return { message: 'Bad attrs.blockId', path };
+      // Rule C, part 2: uniqueness across the whole note (top-level and nested share one set).
+      if (seenIds.has(blockId)) return { message: `Duplicate attrs.blockId "${blockId}"`, path };
+      seenIds.add(blockId);
     }
 
     // §D.4.4 — audio anchor shape (null means "no anchor").

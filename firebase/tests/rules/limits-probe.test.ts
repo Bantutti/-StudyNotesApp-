@@ -45,7 +45,7 @@ describe('§L.4 string length unit', () => {
 
 describe('§L.6 document cap fits in one Firestore document', () => {
   it('a note whose document JSON is exactly 600,000 chars is stored', async () => {
-    const base = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { id: 'b1' }, content: [{ type: 'text', text: '' }] }] });
+    const base = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'b1' }, content: [{ type: 'text', text: '' }] }] });
     const pad = JSON_CAPS.document - base.length;
     const documentJson = base.replace('"text":""', `"text":"${'a'.repeat(pad)}"`);
     expect(documentJson.length).toBe(JSON_CAPS.document);

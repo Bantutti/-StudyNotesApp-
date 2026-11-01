@@ -11,8 +11,9 @@ import { JSON_INNER } from '../../src/schemas/limits.js';
 import { utf8ByteLength } from '../../src/schemas/primitives.js';
 import { ALICE } from '../helpers/env.js';
 import { validDoc, VALID_DOCUMENT_JSON } from '../helpers/fixtures.js';
+import { mapSampleAttrs, P0_SAMPLE_NOTE } from '../helpers/p0-sample.js';
 
-const block = (id: string, extra: Record<string, unknown> = {}) => ({ type: 'paragraph', attrs: { id, ...extra }, content: [{ type: 'text', text: 'x' }] });
+const block = (id: string, extra: Record<string, unknown> = {}) => ({ type: 'paragraph', attrs: { blockId: id, ...extra }, content: [{ type: 'text', text: 'x' }] });
 const docOf = (...content: unknown[]) => ({ type: 'doc', content });
 
 describe('utf8ByteLength (portable, Hermes-safe)', () => {
@@ -61,7 +62,7 @@ describe('note document (inside the JSON string)', () => {
   it(`rejects documents deeper than ${JSON_INNER.documentMaxDepth} levels without overflowing the stack`, () => {
     let node: Record<string, unknown> = { type: 'text', text: 'deep' };
     for (let i = 0; i < 10_000; i++) node = { type: 'blockquote', content: [node] };
-    const tooDeep = docOf({ ...node, attrs: { id: 'a' } });
+    const tooDeep = docOf({ ...node, attrs: { blockId: 'a' } });
     expect(noteDocumentSchema.safeParse(tooDeep).success).toBe(false);
   });
 
@@ -76,6 +77,101 @@ describe('note document (inside the JSON string)', () => {
     expect(big.length).toBeLessThan(600_000);
     const d = { ...validDoc('notes', ALICE), document: big };
     expect(noteSchema.safeParse(d).success).toBe(false);
+  });
+});
+
+/**
+ * attrs.blockId fix (Rey, 2026-11-01). Block ids use P0's field name,
+ * attrs.blockId, everywhere. DATA_MODEL §D.4.3:
+ *   Rule A  top-level block: non-null string blockId required
+ *   Rule B  deeper node: blockId optional, null allowed
+ *   Rule C  every string blockId matches BLOCK_ID_PATTERN and is unique in the note
+ */
+describe('attrs.blockId (DATA_MODEL §D.4.3)', () => {
+  // Helper: first issue message, so tests can check WHY a note failed, not just that it did.
+  const firstMessage = (doc: unknown): string | undefined => noteDocumentSchema.safeParse(doc).error?.issues[0]?.message;
+
+  it("(a) accepts P0's SAMPLE note verbatim: nested blocks, definition term, highlight marks", () => {
+    expect(noteDocumentSchema.safeParse(P0_SAMPLE_NOTE).success).toBe(true);
+  });
+
+  it('(a) accepts a note with P0-generator ids ("b_" + 16 chars) end to end through noteSchema', () => {
+    // Same alphabet and length as P0's createIdGenerator (src/core/ids.ts on main).
+    const doc = docOf(
+      { type: 'heading', attrs: { level: 1, blockId: 'b_3kQ9mZ7xR2tV8wYp' }, content: [{ type: 'text', text: 'Cell transport' }] },
+      {
+        type: 'definition',
+        attrs: { term: 'Diffusion', blockId: 'b_H4nB6cD1fG5jK8Ls' },
+        content: [{ type: 'paragraph', attrs: { blockId: 'b_q2W3e4R5t6Y7u8P9' }, content: [{ type: 'text', text: 'High to low concentration.' }] }],
+      },
+      {
+        type: 'bulletList',
+        attrs: { blockId: 'b_aB0cD1eF2gH3jK4m' },
+        content: [
+          {
+            type: 'listItem',
+            attrs: { blockId: 'b_N5pQ6rS7tV8wX9yZ' },
+            content: [{ type: 'paragraph', attrs: { blockId: 'b_zY9xW8vT7sR6qP5n' }, content: [{ type: 'text', text: 'No ATP needed' }] }],
+          },
+        ],
+      },
+    );
+    expect(noteDocumentSchema.safeParse(doc).success).toBe(true);
+    // And through the real collection schema, where the document is a JSON string.
+    expect(noteSchema.safeParse({ ...validDoc('notes', ALICE), document: JSON.stringify(doc) }).success).toBe(true);
+  });
+
+  it('(b) rejects a top-level block that uses attrs.id instead of attrs.blockId, and names the old key', () => {
+    expect(noteDocumentSchema.safeParse(docOf({ type: 'paragraph', attrs: { id: 'b_0000000000000001' }, content: [] })).success).toBe(false);
+    expect(firstMessage(docOf({ type: 'paragraph', attrs: { id: 'b_0000000000000001' } }))).toMatch(/found attrs\.id/);
+  });
+
+  it("(b) rejects P0's sample with every blockId renamed to id", () => {
+    const renamed = mapSampleAttrs(({ blockId, ...rest }) => ({ ...rest, id: blockId }));
+    expect(noteDocumentSchema.safeParse(renamed).success).toBe(false);
+  });
+
+  it('(c) rejects a top-level blockId: null (the gap closed on 2026-11-01)', () => {
+    expect(noteDocumentSchema.safeParse(docOf({ type: 'paragraph', attrs: { blockId: null }, content: [] })).success).toBe(false);
+    expect(firstMessage(docOf({ type: 'paragraph', attrs: { blockId: null } }))).toBe('Top-level block needs a non-null attrs.blockId');
+  });
+
+  it("(c) rejects a P0 note whose ids were stripped to null (P0 makeLongSample style) until ids are assigned", () => {
+    // P0's makeLongSample() sets every blockId to null; ensureBlockIds() must run before upload.
+    const stripped = mapSampleAttrs((a) => ({ ...a, blockId: null }));
+    expect(noteDocumentSchema.safeParse(stripped).success).toBe(false);
+  });
+
+  it('Rule B: deeper blocks may omit blockId or set it to null', () => {
+    const doc = docOf({
+      type: 'bulletList',
+      attrs: { blockId: 'top1' },
+      content: [
+        { type: 'listItem', attrs: { blockId: null }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x' }] }] },
+      ],
+    });
+    expect(noteDocumentSchema.safeParse(doc).success).toBe(true);
+  });
+
+  it('Rule C: ids are unique across the whole note, including top-level vs nested', () => {
+    const dup = docOf(block('same'), { type: 'callout', attrs: { blockId: 'top2' }, content: [block('same')] });
+    expect(firstMessage(dup)).toBe('Duplicate attrs.blockId "same"');
+  });
+
+  it.each([
+    ['a', true],
+    ['A-z_0-9', true],
+    ['x'.repeat(64), true],
+    ['x'.repeat(65), false],
+    ['', false],
+    ['bad id!', false],
+    [42, false],
+  ])('Rule C: blockId %j valid = %s (pattern 1 to 64 of A-Z a-z 0-9 _ -)', (blockId, ok) => {
+    const doc = docOf({ type: 'paragraph', attrs: { blockId }, content: [] });
+    expect(noteDocumentSchema.safeParse(doc).success).toBe(ok);
+    // The same pattern applies to nested ids (null/missing aside).
+    const nested = docOf({ type: 'callout', attrs: { blockId: 'top3' }, content: [{ type: 'paragraph', attrs: { blockId } }] });
+    expect(noteDocumentSchema.safeParse(nested).success).toBe(ok);
   });
 });
 
