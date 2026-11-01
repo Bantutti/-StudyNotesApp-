@@ -4,6 +4,7 @@
 import { validateNoteDoc, listBlockIds, SAMPLE_NOTE } from '../../src/core/document';
 import { runCommand } from '../src/commands';
 import { createEditor } from '../src/createEditor';
+import { createFontState, MAX_FACES } from '../src/fonts';
 import { requestDocReply } from '../src/replies';
 import { stripDangerousHtml } from '../src/sanitize';
 
@@ -147,3 +148,36 @@ describe('requestDoc reply (review M1: never a stand-in document)', () => {
     expect(requestDocReply(big, 3)).toEqual({ v: 1, type: 'error', code: 'too_large', reqId: 3 });
   });
 });
+
+describe('font faces in the page (sent one per message)', () => {
+  const face = (family: string, weight = 400, base64 = 'AAAA') => ({ family, weight, style: 'normal', base64 });
+
+  it('the first message replaces, appends add, and a new pack starts over', () => {
+    const st = createFontState();
+    expect(st.apply([face('Gaegu')], false)).toContain("font-family:'Gaegu'");
+    const css = st.apply([face('Nunito', 700)], true)!;
+    expect(css).toContain('Gaegu');
+    expect(css).toContain('Nunito');
+    expect(st.count).toBe(2);
+    expect(st.apply([face('Cinzel')], false)).not.toContain('Gaegu');
+    expect(st.count).toBe(1);
+  });
+
+  it('accepts the largest shipped face (Nanum Gothic Bold, 2.76 M chars) and rejects invalid ones without changing anything', () => {
+    // P5: Gaegu ships as a Latin subset, so the cap is back to 3 M (was 4.5 M in P1 PR #9).
+    const st = createFontState();
+    expect(st.apply([face('Nanum Gothic', 700, 'A'.repeat(2_763_184))], false)).not.toBeNull();
+    expect(st.apply([face('Gaegu', 700, 'A'.repeat(3_000_001))], true)).toBeNull(); // over MAX_FONT_BASE64
+    expect(st.apply([face('Gaegu', 400, 'A'.repeat(4_219_900))], true)).toBeNull(); // the old full Gaegu file
+    expect(st.apply([face('Comic Sans')], true)).toBeNull(); // not an allowed family
+    expect(st.apply([{ ...face('Nunito'), base64: 'x<y' }], true)).toBeNull();
+    expect(st.count).toBe(1);
+  });
+
+  it('keeps at most MAX_FACES faces', () => {
+    const st = createFontState();
+    for (let i = 0; i < MAX_FACES; i++) expect(st.apply([face('Nunito')], i > 0)).not.toBeNull();
+    expect(st.apply([face('Nunito')], true)).toBeNull();
+  });
+});
+

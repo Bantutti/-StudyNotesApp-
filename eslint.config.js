@@ -66,8 +66,8 @@ module.exports = defineConfig([
     },
   },
   {
-    // Node build scripts may print to the console.
-    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    // Node build scripts may print to the console (scripts/, and C1's static-site generator in web/).
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js', 'web/**/*.mjs'],
     rules: { 'no-console': 'off' },
   },
 ]);

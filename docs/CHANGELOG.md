@@ -48,6 +48,8 @@ All notable changes, one section per phase.
   (L2); keyboard-made splits keep ids with the text (L3); editor-web import rule documented and linted
   (L4); WAL checkpoint after purge (L5); Undo works for empty notes and purge wipes their titles (L6).
   `eas.json` sets `EXPO_PUBLIC_APP_VARIANT`.
+- **Fonts:** Pastel Highlight's Gaegu header font now loads (`MAX_FONT_BASE64` 3 M -> 4.5 M; fonts sent one
+  face per bridge message; skipped faces logged and listed, never dropped silently). TODO(P5): Latin subsets.
 - Keyboard toolbar: the P3b sparkle slot is a fixed, live slot (actions registered later appear at once;
   `isAvailable` honoured); the editor action registry gains `subscribe`/`revision`. New dev dependency
   `test-renderer` 1.3.1 for component tests. `expo-crypto` and `expo-device` pinned exactly.

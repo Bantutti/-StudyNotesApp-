@@ -21,10 +21,11 @@ import {
   type ToNative,
   type ToWeb,
 } from '../../src/modules/editor/protocol';
-import { fontFaceCss, fontFaceDataSchema, packAttrs, packCss, validatePack } from '../../src/modules/stylepacks/web';
+import { packAttrs, packCss, validatePack } from '../../src/modules/stylepacks/web';
 import { runCommand } from './commands';
 import { createEditor, loadDoc } from './createEditor';
 import { createDiagnostics } from './diagnostics';
+import { createFontState } from './fonts';
 import { createBlockMenu } from './menu';
 import { checkOutgoingDoc, requestDocReply } from './replies';
 
@@ -56,6 +57,7 @@ const fontStyle = document.getElementById('fonts') as HTMLStyleElement;
 let changeTimer: ReturnType<typeof setTimeout> | null = null;
 let stateTimer: ReturnType<typeof setTimeout> | null = null;
 let suppressChange = false;
+const fonts = createFontState();
 
 /** The document to send: normalized, then validated with the app's schema. */
 function currentDoc(): unknown | null {
@@ -181,13 +183,9 @@ function handle(msg: ToWeb): void {
     }
     case 'setFonts': {
       const s = performance.now();
-      const faces = [];
-      for (const f of msg.faces) {
-        const parsed = fontFaceDataSchema.safeParse(f);
-        if (!parsed.success) return post({ v: 1, type: 'error', code: 'invalid_fonts' });
-        faces.push(parsed.data);
-      }
-      fontStyle.textContent = fontFaceCss(faces);
+      const css = fonts.apply(msg.faces, msg.append === true);
+      if (css === null) return post({ v: 1, type: 'error', code: 'invalid_fonts' });
+      fontStyle.textContent = css;
       post({ v: 1, type: 'metric', name: 'set_fonts_ms', ms: performance.now() - s });
       return;
     }

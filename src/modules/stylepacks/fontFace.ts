@@ -10,6 +10,13 @@ export interface FontFaceData {
   base64: string;
 }
 
+/**
+ * Largest accepted font face, in base64 characters (validated on both sides of the bridge).
+ * History: P1 PR #9 raised this to 4.5 M so the full Gaegu files fit; P5 ships Gaegu (and the
+ * other large CJK families) as Latin subsets, so it is back to 3 M. The largest bundled face is
+ * now Nanum Gothic Bold at 2,763,184 chars (it can't be subset: Reserved Font Names), and a test
+ * (v1packs.test.ts) fails if any bundled face exceeds this cap.
+ */
 export const MAX_FONT_BASE64 = 3_000_000;
 
 export const fontFaceDataSchema = z.object({

@@ -16,7 +16,7 @@ export {
   type BuiltInPackId,
   type PackRegistry,
 } from './registry';
-export { facesForPack, missingFamilies, loadFaces, headerSlot, BUNDLED_FACES, type AssetReader, type FontFaceAsset, type FaceSource } from './fonts';
+export { facesForPack, missingFamilies, loadFaces, headerSlot, BUNDLED_FACES, type AssetReader, type FaceSkip, type FontFaceAsset, type FaceSource } from './fonts';
 export { fontFaceCss, fontFaceDataSchema, MAX_FONT_BASE64, type FontFaceData } from './fontFace';
 export { expoAssetReader } from './fontLoader';
 export { swatchModel, swatchLabel, type SwatchModel } from './swatch';
