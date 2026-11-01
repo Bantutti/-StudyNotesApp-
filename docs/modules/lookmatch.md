@@ -5,7 +5,7 @@ style pack (schema v3), shown as matched chips with a slider toward the nearest 
 then saved as a custom pack. The output is always pack DATA that `validatePack` accepts; never CSS,
 HTML or URLs. Maths with derivations: `src/modules/lookmatch/MATCH_MATH.md` (code comments cite §X.Y).
 
-Status: P5 in progress. M2 (image intake) and M3 (on-device analysis) are done; M4 to M6 are coming.
+Status: P5 in progress. M2 (image intake), M3 (on-device analysis) and M4 (pack builder) are done; M5 (screens) and M6 (vision pass) are coming.
 
 ## Public interface (so far)
 - `intakeImages(picked, ports, { vision })`: checks, re-encodes, strips metadata, decodes, and
@@ -20,6 +20,26 @@ Status: P5 in progress. M2 (image intake) and M3 (on-device analysis) are done; 
   dotted or plain), line gap, pattern colour, margin (none, left or double) and texture; ink;
   accent and accent2; up to 4 highlighters (pen colour and opacity, plus what the photo shows); every
   palette swatch; and confidence (pattern strength, agreement between photos).
+
+- `rankPacks(analysis, packs)`: built-in packs from nearest to farthest (§7).
+- `buildPack({ id, name, analysis, base, choices?, hints? })`: a validated pack. The student's chip
+  choices win, then vision hints (enums only), then the photo, then the nearest pack. It throws
+  `PackBuildError` rather than ever returning an invalid pack.
+- `blendPacks(matched, target, t)` and `blendSteps(...)`: the 11-step slider. Every step is valid (§9).
+- `repairContrast(pack)` and `nudgeLightness(fg, bg, min)`: the smallest change that passes (§8).
+- `newCustomPackId(randomBytes)`: `ref-` + 20 base32 characters (100 bits). This is valid as a pack
+  id, as a custom id and as a P2a entity id.
+
+## Building the pack (M4, MATCH_MATH.md §7-§9)
+- **Nearest pack:** a weighted OKLab distance (paper ×3, accent ×1.5, ink, highlighters) plus
+  penalties for light/dark, paper type, margin and texture. Synthetic round trip: 13/13 (the plan
+  asks for at least 12/13).
+- **Fields from the photo:** paper colour, pattern, line gap, margin, texture, ink, header colour,
+  second accent and highlighters. **From the nearest pack:** fonts, header and block styles,
+  decorations, the highlight key and highlighter meanings. Derived: muted, callout fill, pens.
+- **Contrast repair** (§8): paper fixed, ink nudged, fills moved toward paper, accents nudged; then
+  `validatePack`. Fuzz-tested: 1,000 random analyses give 1,000 valid packs.
+- **Names:** the validator's text rule refuses markup, CSS and URLs (tested).
 
 ## On-device analysis (M3, MATCH_MATH.md §2-§6)
 1. OKLab conversion and lighting flattened by tile medians (§2).

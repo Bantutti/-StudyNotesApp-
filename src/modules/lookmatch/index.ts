@@ -23,3 +23,8 @@ export type { RgbaImage } from './analysis/pixels';
 export { analyzeImages, analyzeImagesAsync, type LookAnalysis, type AnalyzeProgress } from './analysis/analyze';
 export type { HighlighterGuess } from './analysis/roles';
 export type { PaperType, PaperMargin, Texture } from './analysis/pattern';
+export { buildPack, finalize, PackBuildError, CHIP_ENUMS, type BuildInput, type MatchChoices, type VisionHints } from './build/builder';
+export { blendPacks, blendSteps, BLEND_STEPS } from './build/blend';
+export { rankPacks, packDistance } from './build/nearest';
+export { repairContrast, nudgeLightness } from './build/repair';
+export { newCustomPackId } from './build/ids';

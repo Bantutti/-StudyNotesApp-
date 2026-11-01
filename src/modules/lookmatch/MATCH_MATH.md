@@ -1,8 +1,7 @@
 # Match a look: the maths
 
 Companion to `src/modules/lookmatch`. Code comments cite these sections as §X.Y. Everything here
-runs on the phone with no network. Sections §7-§9 (pack builder, contrast repair, blend slider) are
-filled in at M4, and §10 (vision merge) at M6.
+runs on the phone with no network. §10 (vision merge) is filled in at M6.
 
 Notation: an image has width W and height H. Colours are sRGB with 8-bit channels (0-255) or
 OKLab (L, a, b). ΔE is the OKLab distance (§1.3).
@@ -280,9 +279,93 @@ the JS engine (Hermes) has no JIT, so the budget is under 2 s for 3 photos on a 
 
 ---
 
-## §7 Nearest pack (M4)
-## §8 Contrast repair (M4)
-## §9 Blend slider (M4)
-### §9.1 Colour blending
-Colours are blended in OKLab (`mixLab`), linearly in each of L, a and b, then gamut-mapped (§1.5).
+## §7 Nearest pack and building the pack
+
+### §7.1 Distance to a built-in pack
+For an analysis A and pack P, lower is closer:
+
+    d(A, P) = 3·ΔE(paper) + 1·ΔE(ink) + 1.5·ΔE(accent, if found) + 1·H(A, P)
+            + 2·[appearance differs] + 0.25·[paper type differs] + 0.08·[margin differs] + 0.05·[texture differs]
+
+The paper colour carries the most weight because it dominates what a page "looks like". The
+categorical terms are penalties on the same scale (0.25 is about a clearly different colour).
+Ties are broken by pack id, so the ranking is deterministic.
+
+### §7.2 Highlighter term
+H(A, P) is the mean, over the highlighters seen in the photo, of the distance to the closest
+highlighter of P as it looks on P's paper (the validator's sRGB composite, §4.3). It is 0 when the
+photo shows none.
+
+Measured (synthetic round trip): a page drawn in pack X has X as its nearest pack for 13 of 13
+packs. The test allows 1 miss, the plan's target.
+
+### §7.3 Field sources
+For each field, the first available source wins: the student's chip choice, then a vision hint
+(M6, enums only), then the photo analysis, then the nearest pack. Fonts, header and block styles,
+decorations, the highlight key and highlighter meanings come from the nearest pack unless a chip or
+hint says otherwise. Highlighters found in the photo take the nearest pack's ids and meanings by
+position; if none are found, the nearest pack's highlighters are used.
+
+### §7.4 Derived colours
+- muted = OKLab mix of ink toward paper by 0.35 (secondary text);
+- soft (callout fill) = mix of paper toward accent by 0.08;
+- a plain page still needs paper.line (schema): mix of paper toward ink by 0.12;
+- pens = [ink, accent, accent2], and the ink-layer highlighter = the first highlighter's colour.
+
+Then §8 repair, then `validatePack`. A pack that still fails throws instead of being returned.
+1,000 random analyses (any colours, any pattern) against random nearest packs all pass.
+
+## §8 Contrast repair
+The schema v3 rules: ink on paper, on the callout fill and on every highlighter composited over
+paper must be at least 4.5:1; muted on paper at least 4.5:1; accent, accent2 and each pen on paper
+at least 3:1. Repair aims at min · 1.03, so rounding to #RRGGBB can't push a colour back under.
+
+### §8.1 Lightness nudge (text and graphics on paper)
+Keep a and b, move L toward 0 or 1, and find by bisection (30 steps) the smallest move that reaches
+the target:
+
+    find L* between L₀ and the extreme E with contrast(Lab(L*, a, b), bg) ≥ 1.03·min, |L* − L₀| minimal
+
+E is 0 (darker) first on light backgrounds (L ≥ 0.6) and 1 otherwise. If that extreme cannot
+reach the target, the other one is tried. Contrast is monotonic in L along this path, apart from
+gamut mapping near the ends, so bisection finds the boundary. Example: a pale pink accent on white
+becomes a deeper pink at 3.0-3.4:1, not black.
+
+### §8.2 Fills under text (callout fill, highlighters)
+Text sits on these, so we move the fill toward the paper instead of changing the ink again. A
+highlighter first loses opacity in 0.05 steps down to the schema minimum of 0.25, which keeps the
+pen's colour. Then its colour moves toward paper by the smallest t ∈ [0, 1] that passes:
+
+    fill(t) = OKLab mix(fill, paper, t),    t = 1 gives the paper itself
+
+t = 1 always passes, because ink on paper was fixed first.
+
+### §8.3 Order
+The paper is never changed (the student chose it). Then ink on paper; then the fills under ink
+(soft, highlighters); then muted, accent, accent2 and the pens on paper. Each step only depends on
+colours that were already fixed.
+
+## §9 Blend slider (decision Q6 = A)
+There are 11 positions t = 0, 0.1, ..., 1. t = 0 is the matched look and t = 1 the target (the
+nearest built-in pack, or the note's current pack via a chip).
+
+### §9.1 Colours
+Linear in OKLab for each of L, a and b, then gamut-mapped (§1.5): c(t) = (1 − t)·c₀ + t·c₁. Blending
+in OKLab keeps the middle steps from going muddy or grey, as sRGB blends of complementary colours do.
+
+### §9.2 Numbers
+Linear, then clamped and rounded to what the schema allows: lineGap is an integer in 22-34,
+headerScale is in 1.5-2.8 at 0.01, and highlighter opacity is in 0.25-1 at 0.01.
+
+### §9.3 Choices
+Enums, fonts and booleans can't be "half": they come from the matched side for t < 0.5 and from the
+target for t ≥ 0.5. A font's weight and style switch together with the font.
+
+### §9.4 Highlighters
+The side that wins at t (§9.3) sets how many there are. Each blends with the other side's
+highlighter at the same position when there is one.
+
+Every step is repaired (§8) and validated, so all 11 positions are valid packs (tested). The id,
+name and meta always come from the matched side.
+
 ## §10 Vision merge (M6)
