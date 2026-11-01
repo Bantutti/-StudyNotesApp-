@@ -96,9 +96,17 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
   useEffect(() => {
     if (isReady.current && pack) send({ v: 1, type: 'setPack', pack });
   }, [pack, send]);
+  /** One face per message: a pack's faces together can exceed MAX_BRIDGE_CHARS (Gaegu ~4.2 M chars each). */
+  const sendFonts = useCallback(
+    (list: readonly FontFaceData[]) => {
+      if (list.length === 0) return send({ v: 1, type: 'setFonts', faces: [] });
+      list.forEach((f, i) => send({ v: 1, type: 'setFonts', faces: [f], append: i > 0 }));
+    },
+    [send],
+  );
   useEffect(() => {
-    if (isReady.current && faces) send({ v: 1, type: 'setFonts', faces: [...faces] });
-  }, [faces, send]);
+    if (isReady.current && faces) sendFonts(faces);
+  }, [faces, sendFonts]);
 
   /** The page is gone (crash): fail what is waiting; the next 'ready' restores everything. */
   const lost = () => {
@@ -130,7 +138,7 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
       case 'ready': {
         isReady.current = true;
         if (pack) send({ v: 1, type: 'setPack', pack });
-        if (faces) send({ v: 1, type: 'setFonts', faces: [...faces] });
+        if (faces) sendFonts(faces);
         const doc = props.getDoc?.();
         if (doc) send({ v: 1, type: 'load', doc });
         props.onReady?.();
@@ -184,7 +192,7 @@ export const EditorView = forwardRef<EditorHandle, Props>(function EditorView(pr
   useImperativeHandle(ref, () => ({
     load: (doc) => send({ v: 1, type: 'load', doc }),
     setPack: (pack) => send({ v: 1, type: 'setPack', pack }),
-    setFonts: (faces) => send({ v: 1, type: 'setFonts', faces: [...faces] }),
+    setFonts: (list) => sendFonts(list),
     command: (name, arg) => send({ v: 1, type: 'command', name, arg }),
     requestDoc: () => request<NoteDoc>((reqId) => ({ v: 1, type: 'requestDoc', reqId })),
     requestSelection: () => request<string[]>((reqId) => ({ v: 1, type: 'requestSelection', reqId })),

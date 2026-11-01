@@ -14,7 +14,7 @@ import { createPackRegistry, DEFAULT_PACK_ID } from '@/modules/stylepacks';
 
 import { webviewMock } from '../../../../test/mocks/react-native-webview';
 import { EditorView, type EditorHandle } from '../EditorView';
-import { encode, type ToNative } from '../protocol';
+import { decode, encode, MAX_BRIDGE_CHARS, toWebSchema, type ToNative } from '../protocol';
 
 const pack = createPackRegistry().getOrDefault(DEFAULT_PACK_ID);
 const docA: NoteDoc = { type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'b_firstversion01' }, content: [{ type: 'text', text: 'opened' }] }] };
@@ -121,3 +121,27 @@ describe('EditorView: WebView crash recovery (review M3)', () => {
     await act(async () => root.unmount());
   });
 });
+
+describe('EditorView: fonts go one face per message (Gaegu is ~4.2 M chars per face)', () => {
+  it('sends a replace message, then appends, each under MAX_BRIDGE_CHARS', async () => {
+    webviewMock.reset();
+    const big = (n: number) => 'A'.repeat(n);
+    const faces = [
+      { family: 'Gaegu', weight: 400, style: 'normal', base64: big(4_219_900) },
+      { family: 'Gaegu', weight: 700, style: 'normal', base64: big(3_949_040) },
+      { family: 'Nunito', weight: 400, style: 'normal', base64: big(176_268) },
+    ] as const;
+    const root = createRoot();
+    await act(async () => {
+      root.render(<EditorView logger={createLogger({ sink: memorySink() })} pack={pack} faces={faces} getDoc={() => docA} />);
+    });
+    await fromWeb(root, { v: 1, type: 'ready' });
+    const fontMsgs = webviewMock.posted.filter((m) => m.includes('"setFonts"'));
+    expect(fontMsgs).toHaveLength(3);
+    expect(fontMsgs.every((m) => m.length <= MAX_BRIDGE_CHARS)).toBe(true);
+    expect(fontMsgs.map((m) => (JSON.parse(m) as { append?: boolean }).append)).toEqual([false, true, true]);
+    for (const m of fontMsgs) expect(decode(m, toWebSchema).ok).toBe(true);
+    await act(async () => root.unmount());
+  });
+});
+

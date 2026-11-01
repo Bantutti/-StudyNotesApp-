@@ -4,7 +4,7 @@
 |---|---|
 | Phase | P1, core app (Track A, Developer worker), plan approved by Rey Nov 1, 2026 |
 | Date | 2026-11-01 (Asia/Manila) |
-| Revision | **r2**: independent review fixes (M1–M4, L1–L6, Info). r1 stays in Drive for comparison |
+| Revision | **r2**: independent review fixes (M1–M4, L1–L6, Info). r1 stays in Drive for comparison. Follow-up after the P1 merge (main 91882b6): Gaegu font fix (P1-S24), branch `fix/p1-gaegu-font`, PR "Fix: load the default pack's Gaegu header font" (no new zip) |
 | Zip | `{{ZIP_NAME}}` ({{ZIP_FILES}} files, {{ZIP_BYTES}} bytes) |
 | SHA-256 | `{{ZIP_SHA256}}` |
 | Code | GitHub `Bantutti/-StudyNotesApp-`, branch `phase/p1-core-app`, PR #5 (includes P0, P3a and P2a from `main`) |
@@ -53,10 +53,10 @@ Android APK (no PC needed afterwards): `npx eas-cli@latest build --profile previ
 
 | Gate | Result |
 |---|---|
-| Unit tests | **467 passed**, 10 skipped (P3a opt-in live tests) in 50 suites (app + web). Includes 8 P2a contract tests, editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes, and the r2 review tests (each fails on r1's code: 26 tests in 10 suites) |
+| Unit tests | **476 passed**, 10 skipped (P3a opt-in live tests) in 51 suites (app + web). Includes 8 P2a contract tests, editor block-id/editor tests, store, search, templates, Beautify, autosave, versions, use cases, routes, and the r2 review tests (each fails on r1's code: 26 tests in 10 suites) |
 | Type check (`tsc --noEmit`, strict) | Pass |
 | Lint (`eslint . --max-warnings 0`, React Compiler rules, editor-web import rule) | Pass |
-| Editor page integrity (`npm run check:editor`) | Pass: CSP hash matches the single inline script (586,724 bytes, `sha256-iZyRrKzLILPEX0UW4lBatEFKLq/+ShLiUmqzGWUpCbQ=`) |
+| Editor page integrity (`npm run check:editor`) | Pass: CSP hash matches the single inline script (586,948 bytes, `sha256-Gd2ejNmWyPcPayBzZh2wRYu86cDESqefeOxCU6IzUkE=`) |
 | Production dependency audit | **0 vulnerabilities** |
 | Full audit (incl. dev tools) | 7 low (deepmerge via Jest; dev-only, no fix): accepted, P0-S6 |
 | Secret scan (secretlint + custom patterns) and export content scan | Clean |
@@ -75,7 +75,7 @@ sections 1 and 2 exactly:
 | Unzip to an empty folder; confirm no `.env` inside | Pass (`.env.example` only; `PHASE_REPORT.md` and `TESTING_ON_DEVICE.md` at the root) |
 | `npm ci` | Pass in 17 s (install-script warnings as documented) |
 | `copy .env.example .env` (Linux: `cp`) | Pass |
-| `npm run verify` | Pass: editor page up to date, types, lint, **467/467 tests** (10 skipped), secret scan, prod audit 0 |
+| `npm run verify` | Pass: editor page up to date, types, lint, **476/476 tests** (10 skipped), secret scan, prod audit 0 |
 | `npm run bundle:check` | Pass: Android and iOS Hermes bundles (8.1 MB each) |
 | `npm run start:go` (headless) | Pass: Metro running, manifest `runtimeVersion exposdk:58.0.0` (Expo Go SDK 58), app name "NotedPo", Android dev bundle served (14.3 MB, HTTP 200) |
 
@@ -92,7 +92,7 @@ behaviour is **unverified**: run Typing diagnostics (checklist step 24) and send
 |---|---|---|
 | High | 0 | |
 | Medium | 7 fixed | Pasted copy stealing an id; Undo after load blanking the page; deleted id moved to another block. Review r2: empty-doc reply to requestDoc (M1), last word lost on leave/background (M2), WebView crash recovery (M3), developer menu in release builds (M4) |
-| Low | 10 fixed, 2 accepted | Fixed: UTF-16 tag read, redaction gaps, in-app links (C1), silently dropped edits; review r2: backslash/IDN link spoofing (L1), pasted tables (L2), keyboard-made splits (L3), editor-web imports (L4), WAL after purge (L5), Undo for empty notes (L6). Accepted: no DB encryption in P1 (Q5), `style-src 'unsafe-inline'` |
+| Low | 11 fixed, 2 accepted | Fixed: UTF-16 tag read, redaction gaps, in-app links (C1), silently dropped edits; review r2: backslash/IDN link spoofing (L1), pasted tables (L2), keyboard-made splits (L3), editor-web imports (L4), WAL after purge (L5), Undo for empty notes (L6); Gaegu font silently skipped (P1-S24, cap 4.5 M, TODO P5 subsets). Accepted: no DB encryption in P1 (Q5), `style-src 'unsafe-inline'` |
 | Info | 4 | TipTap `window.open` unreachable; diagnostics metadata-only; keyboards unverified; RNTL removed |
 
 ## 6. Export contents check
