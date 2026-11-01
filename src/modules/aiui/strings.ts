@@ -113,6 +113,11 @@ export const AI_EN = {
   'ai.consent.privacy': '{provider} privacy',
   'ai.consent.terms': '{provider} terms',
   'ai.consent.yes': 'Yes, send to {provider}',
+  'ai.consent.titleImage': 'Send photos to {provider}?',
+  'ai.consent.yesImage': 'Yes, send photos to {provider}',
+  'ai.settings.consentImageYes': 'You allowed sending photos to this provider.',
+  'ai.settings.consentImageNo': 'Photos: not allowed (asked only if you use photo matching).',
+  'ai.settings.withdrawImage': 'Withdraw photo permission',
   'ai.consent.no': 'Not now',
   'ai.consent.change': 'You can withdraw this any time in Me → AI.',
 

@@ -17,7 +17,8 @@ export { testAndSaveKey } from './flow/keys';
 export { errorView } from './flow/messages';
 export { createDemoProviders, demoAnswer } from './flow/demo';
 export type { FlowSnapshot, FlowStep, ErrorView, NextStep, SaveKeyResult, ScopeChoice, UsageLine, ProviderStatus } from './flow/types';
-export { createGateStore, type GateStore, type AgeStatus } from './gate/gateStore';
+export { createGateStore, GATE_FILE_VERSION, type GateStore, type AgeStatus } from './gate/gateStore';
+export { checkCanSend, assertCanSend, type SendRequest, type SendCheck } from './gate/sendCheck';
 export { createReportsStore, REPORT_REASONS, REPORT_COMMENT_MAX, MAX_REPORTS, type ReportsStore, type AiReport, type ReportReason } from './gate/reportsStore';
 export { checkYear, checkMonth, checkDay, localDate, recheckDueAt, ADULT_AGE, type AgeStep, type LocalDate } from './gate/ageRule';
 export { buildDiffRows, initialAccepted, type DiffRow } from './diff/viewModel';
@@ -25,4 +26,6 @@ export { wordDiff, MAX_DIFF_WORDS, type DiffSegment } from './diff/wordDiff';
 export { usageText, progressText, waitText } from './format';
 export type { AiScreenPorts, ClipboardPort } from './ports';
 export { AiFlowHost } from './components/AiFlowHost';
+/** Reusable consent screen; P5 renders it with kind="image" before its vision pass. */
+export { ConsentStep } from './components/ConsentStep';
 export { AiSettingsScreen, type SubjectsPort } from './components/AiSettingsScreen';

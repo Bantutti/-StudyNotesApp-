@@ -75,7 +75,7 @@ describe('AI settings', () => {
     expect(await w.vault.has('groq')).toBe(false);
     await fire(one(root, 'ai-settings-withdraw-groq'), 'onPress');
     await settle();
-    expect(await w.ui.gate.hasConsent('groq', 1)).toBe(false);
+    expect(await w.ui.gate.hasConsent('groq', 1, 'text')).toBe(false);
     await fire(one(root, 'ai-settings-subject-s_bio000000000001'), 'onValueChange', true);
     await settle();
     expect(list[0]!.aiAllowed).toBe(false);

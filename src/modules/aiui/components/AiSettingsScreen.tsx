@@ -38,6 +38,7 @@ interface ProviderRow {
   id: Provider;
   masked: string | null;
   consentVersion: number | null;
+  imageConsentVersion: number | null;
   usage: string;
   tokens: number;
 }
@@ -70,7 +71,8 @@ export function AiSettingsScreen(props: { aiui: AiUi; keyVault: KeyVault; ports:
         return {
           id,
           masked: key ? maskKey(key) : null, // the raw key is dropped right here
-          consentVersion: await aiui.gate.consentVersion(id),
+          consentVersion: await aiui.gate.consentVersion(id, 'text'),
+          imageConsentVersion: await aiui.gate.consentVersion(id, 'image'),
           usage: usageText({ provider: id, requests: u.requests, dailyLimit: u.limits[primary]?.rpd ?? null, remaining: u.remainingRequests, checkedOn: u.limitsCheckedOn }),
           tokens: u.inputTokens + u.outputTokens,
         };
@@ -194,10 +196,22 @@ export function AiSettingsScreen(props: { aiui: AiUi; keyVault: KeyVault; ports:
                 kind="secondary"
                 label={ta('ai.settings.withdraw')}
                 onPress={async () => {
-                  await aiui.gate.withdrawConsent(r.id);
+                  await aiui.gate.withdrawConsent(r.id, 'text');
                   await load();
                 }}
                 testID={`ai-settings-withdraw-${r.id}`}
+              />
+            ) : null}
+            <BodyText>{r.imageConsentVersion === info.imageConsent.version ? ta('ai.settings.consentImageYes') : ta('ai.settings.consentImageNo')}</BodyText>
+            {r.imageConsentVersion !== null ? (
+              <AppButton
+                kind="secondary"
+                label={ta('ai.settings.withdrawImage')}
+                onPress={async () => {
+                  await aiui.gate.withdrawConsent(r.id, 'image');
+                  await load();
+                }}
+                testID={`ai-settings-withdraw-image-${r.id}`}
               />
             ) : null}
             <Chip

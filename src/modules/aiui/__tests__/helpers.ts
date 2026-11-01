@@ -121,8 +121,8 @@ export async function flowWorld(opts: { steps?: FakeStep[]; adult?: boolean | nu
   if (opts.mistralKey) await vault.set('mistral', MISTRAL_KEY);
   if (opts.adult !== undefined && opts.adult !== null) await ui.gate.recordAge(opts.adult);
   if (opts.consent) {
-    await ui.gate.giveConsent('groq', 1);
-    await ui.gate.giveConsent('mistral', 1);
+    await ui.gate.giveConsent('groq', 1, 'text');
+    await ui.gate.giveConsent('mistral', 1, 'text');
   }
   const ctx = (over: Partial<EditorActionContext> = {}): EditorActionContext => ({
     noteId: 'n_test0000000000001',

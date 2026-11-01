@@ -37,7 +37,7 @@ import {
   type NewChange,
 } from './proposal/build';
 import type { CardDraft, Proposal, QuizDraft } from './proposal/types';
-import { modelTpm, PROVIDER_CATALOG, providerModels, type ProviderInfo } from './providers/catalog';
+import { modelTpm, PROVIDER_CATALOG, providerModels, type ConsentKind, type ProviderInfo } from './providers/catalog';
 import { createOpenAiCompatibleProvider, GROQ_CONFIG, MISTRAL_CONFIG } from './providers/openaiCompatible';
 import type { ChatProvider, ChatResult, KeyTestResult } from './providers/types';
 import { createTokenPacer, MAX_PACE_WAIT_MS, type TokenPacer } from './transport/pacer';
@@ -61,7 +61,7 @@ export interface AiGatePort {
    * and this consent version (PROVIDER_CATALOG[p].consent.version). Apple
    * guideline 5.1.2(i): a stored "yes" for an older version must return false.
    */
-  hasConsent(provider: Provider, consentVersion: number): Promise<boolean>;
+  hasConsent(provider: Provider, consentVersion: number, kind: ConsentKind): Promise<boolean>;
 }
 
 export interface AiEngineDeps {
@@ -179,7 +179,8 @@ export function createAiEngine(deps: AiEngineDeps): AiEngine {
 
     if (req.aiAllowed !== true) throw new AiError('blocked', label);
     if (!(await deps.gate.isAdultConfirmed())) throw new AiError('age_required', label);
-    if (!(await deps.gate.hasConsent(req.provider, info.consent.version))) throw new AiError('consent_required', label);
+    // Every engine run sends note TEXT, so only a text consent counts (P3b: kinds are separate).
+    if (!(await deps.gate.hasConsent(req.provider, info.consent.version, 'text'))) throw new AiError('consent_required', label);
     if (!(await deps.keyVault.has(req.provider))) throw new AiError('missing_key', label);
     if (deps.isOnline && !(await deps.isOnline())) throw new AiError('offline', label);
 

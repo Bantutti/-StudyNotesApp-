@@ -26,10 +26,11 @@ function adapters(over: Partial<Adapters> = {}): Adapters {
 }
 
 describe('composition root', () => {
-  it('wires the key vault into the transcriber', async () => {
+  it('wires the key vault into the transcriber (development build; release is gated, see aiWiring.test)', async () => {
     const calls: string[] = [];
     const s = createServicesWith(
       adapters({
+        isDev: true,
         fetchFn: (async (_u: unknown, init?: RequestInit) => {
           calls.push(String((init?.headers as Record<string, string>).Authorization));
           return { ok: true, status: 200, json: async () => ({}) };
@@ -38,9 +39,6 @@ describe('composition root', () => {
     );
     await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' });
     await s.keyVault.set('groq', KEY);
-    // P3b: release builds reach Groq only after the 18+ answer and Groq consent.
-    await s.aiui.gate.recordAge(true);
-    await s.aiui.gate.giveConsent('groq', 1);
     expect(await s.transcriber.testKey()).toBe(true);
     expect(calls).toEqual([`Bearer ${KEY}`]);
   });

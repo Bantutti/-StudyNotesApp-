@@ -16,7 +16,7 @@ import {
   type ResultsStore,
   type TextFilePort,
 } from '@/core';
-import { createKeyVault, expoSecretStore, PROVIDER_CATALOG, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
+import { createKeyVault, expoSecretStore, type AiEngine, type KeyVault, type SecretStorePort } from '@/modules/ai';
 import { createAiUi, type AiFileName, type AiUi } from '@/modules/aiui';
 import {
   createDocxExporter,
@@ -152,13 +152,14 @@ export function createServicesWith(a: Adapters): Services {
 }
 
 /**
- * Release builds: Groq transcription only after the 18+ answer and the
- * current Groq consent. P4 must extend the Groq consent wording to audio
- * (and bump its version) before shipping lecture transcription.
+ * Release builds: no Groq transcription yet. Audio is its own data kind, and
+ * a text consent must never authorise it (Lead, Nov 1: kinds are separate),
+ * so release stays closed until P4 adds an 'audio' consent kind to the
+ * catalog and replaces this with checkCanSend(gate, { provider: 'groq',
+ * kind: 'audio' }). Development builds keep the P0 spike screens working.
  */
-export async function transcriptionAllowed(isDev: boolean, aiui: AiUi): Promise<boolean> {
-  if (isDev) return true;
-  return (await aiui.gate.isAdultConfirmed()) && (await aiui.gate.hasConsent('groq', PROVIDER_CATALOG.groq.consent.version));
+export async function transcriptionAllowed(isDev: boolean, _aiui: AiUi): Promise<boolean> {
+  return isDev;
 }
 
 export function createServices(): Services {

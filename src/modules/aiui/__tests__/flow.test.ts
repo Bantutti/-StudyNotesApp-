@@ -104,7 +104,7 @@ describe('gates that stop before anything is sent', () => {
     await w.ui.flow.answerConsent(false);
     expect(step(w)).toEqual({ name: 'actions', notice: 'not_sent' });
     expect(w.groq.calls).toHaveLength(0);
-    expect(await w.ui.gate.hasConsent('groq', 1)).toBe(false);
+    expect(await w.ui.gate.hasConsent('groq', 1, 'text')).toBe(false);
     w.ui.flow.close();
     await p;
   });

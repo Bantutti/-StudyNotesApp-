@@ -27,7 +27,17 @@ export {
   type RunProgress,
 } from './engine';
 export { AI_ACTIONS, ACTION_DEFS, isActionId, type AiActionId, type ActionDef, type ActionKind } from './actions/registry';
-export { PROVIDER_CATALOG, providerInfo, providerModels, type ProviderInfo, type ModelLimits } from './providers/catalog';
+export {
+  PROVIDER_CATALOG,
+  CONSENT_KINDS,
+  consentBlock,
+  providerInfo,
+  providerModels,
+  type ProviderInfo,
+  type ModelLimits,
+  type ConsentBlock,
+  type ConsentKind,
+} from './providers/catalog';
 export type { ChatProvider, ChatRequest, ChatResult, KeyTestResult } from './providers/types';
 export { createFakeProvider, type FakeProvider, type FakeStep } from './providers/fake';
 export { AiError, isAiError, aiMessage, describeWait, AI_ERROR_KINDS, type AiErrorKind, type RateLimitScope } from './errors';

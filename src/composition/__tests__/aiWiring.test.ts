@@ -84,7 +84,7 @@ describe('AI action through runEditorAction (real store)', () => {
     const ui = createAiUi({ keyVault: s.keyVault, fetchFn: a.fetchFn, logger: s.logger, ids: s.ids, aiFile: a.aiFile, isDev: false, providers: { groq } });
     await s.keyVault.set('groq', GROQ_KEY);
     await ui.gate.recordAge(true);
-    await ui.gate.giveConsent('groq', 1);
+    await ui.gate.giveConsent('groq', 1, 'text');
 
     const w = await noteWorld();
     const action = createAiEditorAction({ flow: ui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
@@ -167,7 +167,7 @@ describe('Delete all data (P1 bugs fixed in P3b)', () => {
     const { a, aiFiles, wipedCount } = adapters();
     const s = createServicesWith(a);
     await s.aiui.gate.recordAge(true);
-    await s.aiui.gate.giveConsent('groq', 1);
+    await s.aiui.gate.giveConsent('groq', 1, 'text');
     await s.aiui.reports.add({ action: 'beautify', provider: 'groq', models: ['m'], promptVersion: 'v', reason: 'wrong', comment: '' });
     await s.ai.usage.record({ provider: 'groq', model: 'openai/gpt-oss-120b', ok: true, inputTokens: 10, outputTokens: 5, estimated: false });
     expect([...aiFiles.keys()].sort()).toEqual(['gate.json', 'reports.json', 'usage.json']);
@@ -176,7 +176,7 @@ describe('Delete all data (P1 bugs fixed in P3b)', () => {
     expect(wipedCount()).toBe(1);
     expect(aiFiles.size).toBe(0);
     expect(await s.aiui.gate.isAdultConfirmed()).toBe(false);
-    expect(await s.aiui.gate.hasConsent('groq', 1)).toBe(false);
+    expect(await s.aiui.gate.hasConsent('groq', 1, 'text')).toBe(false);
     expect(await s.aiui.reports.list()).toEqual([]);
     expect((await s.ai.usage.today('groq')).requests).toBe(0);
     expect(aiFiles.size).toBe(0); // reading didn't recreate any file
@@ -247,7 +247,7 @@ describe('P1 empty-document bug guard (Lead, Nov 1)', () => {
     const ui = createAiUi({ keyVault: s.keyVault, fetchFn: a.fetchFn, logger: s.logger, ids: s.ids, aiFile: a.aiFile, isDev: false, providers: { groq } });
     await s.keyVault.set('groq', GROQ_KEY);
     await ui.gate.recordAge(true);
-    await ui.gate.giveConsent('groq', 1);
+    await ui.gate.giveConsent('groq', 1, 'text');
     const w = await noteWorld();
     const action = createAiEditorAction({ flow: ui.flow, subjectAiAllowed: async () => true, storedNoteHasText: (id) => storedNoteHasText(w.store, id) });
     const running = runEditorAction(action, { store: w.store, ids: w.ids, host: w.host }, w.note.id);
@@ -267,7 +267,7 @@ describe('P1 empty-document bug guard (Lead, Nov 1)', () => {
 });
 
 describe('the AI gate is the only route to Groq in release builds', () => {
-  it('release: the transcriber gets no key until the 18+ answer and Groq consent', async () => {
+  it('release: the transcriber never gets the key, even after 18+ and TEXT consent (audio is its own kind, P4)', async () => {
     const calls: string[] = [];
     const { a } = adapters({
       fetchFn: (async (url: unknown) => {
@@ -277,26 +277,26 @@ describe('the AI gate is the only route to Groq in release builds', () => {
     });
     const s = createServicesWith(a);
     await s.keyVault.set('groq', GROQ_KEY);
-    await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' });
     await s.aiui.gate.recordAge(true);
-    await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' }); // consent still missing
-    expect(calls).toEqual([]);
-    await s.aiui.gate.giveConsent('groq', 1);
-    expect(await s.transcriber.testKey()).toBe(true);
-    expect(calls).toHaveLength(1);
-  });
-
-  it('release: an under-18 answer never unlocks Groq', async () => {
-    const { a } = adapters();
-    const s = createServicesWith(a);
-    await s.aiui.gate.recordAge(false);
-    await s.aiui.gate.giveConsent('groq', 1);
+    await s.aiui.gate.giveConsent('groq', 1, 'text');
+    await s.aiui.gate.giveConsent('groq', 1, 'image');
+    await expect(s.transcriber.testKey()).rejects.toMatchObject({ code: 'missing_key' });
     expect(await transcriptionAllowed(false, s.aiui)).toBe(false);
+    expect(calls).toEqual([]);
   });
 
   it('development builds keep the P0 spike screens working', async () => {
-    const { a } = adapters({ isDev: true });
+    const calls: string[] = [];
+    const { a } = adapters({
+      isDev: true,
+      fetchFn: (async (url: unknown) => {
+        calls.push(String(url));
+        return { ok: true, status: 200, json: async () => ({}) };
+      }) as unknown as typeof fetch,
+    });
     const s = createServicesWith(a);
-    expect(await transcriptionAllowed(true, s.aiui)).toBe(true);
+    await s.keyVault.set('groq', GROQ_KEY);
+    expect(await s.transcriber.testKey()).toBe(true);
+    expect(calls).toHaveLength(1);
   });
 });

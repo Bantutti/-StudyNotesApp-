@@ -211,7 +211,7 @@ export function createAiFlow(deps: AiFlowDeps): AiFlow {
     const provider = snap.provider;
     if (!(await deps.keyVault.has(provider))) return void (still() && go({ name: 'key', provider, replacing: false }));
     const version = PROVIDER_CATALOG[provider].consent.version;
-    if (!(await deps.gate.hasConsent(provider, version))) return void (still() && go({ name: 'consent', provider }));
+    if (!(await deps.gate.hasConsent(provider, version, 'text'))) return void (still() && go({ name: 'consent', provider }));
     if (!still()) return;
     await execute(gen);
   };
@@ -387,7 +387,7 @@ export function createAiFlow(deps: AiFlowDeps): AiFlow {
       const provider = snap.step.provider;
       if (!yes) return go({ name: 'actions', notice: 'not_sent' });
       set({ busy: true });
-      await deps.gate.giveConsent(provider, PROVIDER_CATALOG[provider].consent.version);
+      await deps.gate.giveConsent(provider, PROVIDER_CATALOG[provider].consent.version, 'text');
       await advance();
     },
 

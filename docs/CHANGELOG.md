@@ -16,6 +16,10 @@ All notable changes, one section per phase.
   subject, reports), Demo AI for development builds.
 - **ai module:** `testKey(provider, signal, candidateKey)` and `usage.reload()`.
 - Flashcards and Quiz me stay hidden (`AI_CARDS_ENABLED = false`); P4c turns them on with its screens.
+- Consent per data kind: `text` and `image` (catalog `imageConsent`), `checkCanSend`, `ConsentStep kind`,
+  gate file v2 (v1 migrates as text only).
+- Guards: the AI won't run on an empty hand-over or apply a result that removes all text; release builds
+  never reach Groq outside the gate.
 
 ### Fixed
 - Delete all data now removes the Mistral key and the `ai/` folder (usage, gate, reports) and drops cached

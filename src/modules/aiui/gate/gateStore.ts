@@ -8,31 +8,53 @@
  * Rules:
  * - Fail closed: an unreadable or invalid file means "no age, no consent".
  * - Only { adult, checkedAt } is kept for age: never the birth year.
- * - Consent is per provider AND per consent version (Apple 5.1.2(i)).
+ * - Consent is per provider, per DATA KIND (text, image) AND per version
+ *   (Apple 5.1.2(i)). A text "yes" never authorises images (Lead, Nov 1).
+ *   File v2; a v1 file (text consents only) is migrated, never widened.
  * - Never logs answers; logs only short event names.
  * - Device-local, never synced (it is not in the SQLite store that P2b syncs).
  */
 import * as z from 'zod';
 
 import type { Logger, TextFilePort } from '@/core';
-import { PROVIDERS, type AiGatePort, type Provider } from '@/modules/ai';
+import { CONSENT_KINDS, PROVIDERS, type AiGatePort, type ConsentKind, type Provider } from '@/modules/ai';
 
 import { recheckDueAt } from './ageRule';
 
-export const GATE_FILE_VERSION = 1;
+export const GATE_FILE_VERSION = 2;
 /** Anything bigger than this is not a file we wrote (§5 "fail closed"). */
 export const GATE_FILE_MAX_CHARS = 16_000;
 
 const ms = z.number().int().min(0);
 const consentSchema = z.strictObject({ version: z.number().int().min(1), at: ms });
+const perProvider = z.partialRecord(z.enum(PROVIDERS), consentSchema);
+const ageSchema = z.strictObject({ adult: z.boolean(), checkedAt: ms }).nullable();
 const fileSchema = z.strictObject({
   v: z.literal(GATE_FILE_VERSION),
-  age: z.strictObject({ adult: z.boolean(), checkedAt: ms }).nullable(),
-  consents: z.partialRecord(z.enum(PROVIDERS), consentSchema),
+  age: ageSchema,
+  /** One map per data kind: consents.text.groq, consents.image.groq, ... */
+  consents: z.partialRecord(z.enum(CONSENT_KINDS), perProvider),
   defaultProvider: z.enum(PROVIDERS).nullable(),
   fakeMode: z.boolean(),
 });
 export type GateFile = z.infer<typeof fileSchema>;
+
+/** v1 (P3b first build): consents were text only. Migrated as TEXT consents; never as image. */
+const fileSchemaV1 = z.strictObject({
+  v: z.literal(1),
+  age: ageSchema,
+  consents: perProvider,
+  defaultProvider: z.enum(PROVIDERS).nullable(),
+  fakeMode: z.boolean(),
+});
+
+function parseGateFile(json: unknown): GateFile | null {
+  const v2 = fileSchema.safeParse(json);
+  if (v2.success) return v2.data;
+  const v1 = fileSchemaV1.safeParse(json);
+  if (v1.success) return { ...v1.data, v: GATE_FILE_VERSION, consents: { text: v1.data.consents } };
+  return null;
+}
 
 /** What the screens need to know about the age answer (§1.4). */
 export type AgeStatus =
@@ -46,9 +68,11 @@ export interface GateStore extends AiGatePort {
   recordAge(adult: boolean): Promise<void>;
   /** Clears a minor answer so the age step can run again (only once re-check is available, §1.4). */
   clearAgeForRecheck(): Promise<boolean>;
-  consentVersion(provider: Provider): Promise<number | null>;
-  giveConsent(provider: Provider, version: number): Promise<void>;
-  withdrawConsent(provider: Provider): Promise<void>;
+  /** The engine's port (AiGatePort): true only for this provider, version AND kind. */
+  hasConsent(provider: Provider, version: number, kind: ConsentKind): Promise<boolean>;
+  consentVersion(provider: Provider, kind: ConsentKind): Promise<number | null>;
+  giveConsent(provider: Provider, version: number, kind: ConsentKind): Promise<void>;
+  withdrawConsent(provider: Provider, kind: ConsentKind): Promise<void>;
   defaultProvider(): Promise<Provider | null>;
   setDefaultProvider(provider: Provider | null): Promise<void>;
   /** Demo AI (fake provider) switch. The caller only honours it in development builds. */
@@ -82,8 +106,8 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
       if (raw !== null) {
         if (raw.length > GATE_FILE_MAX_CHARS) log.warn('gate_file_reset', { reason: 'size' });
         else {
-          const r = fileSchema.safeParse(JSON.parse(raw));
-          if (r.success) parsed = r.data;
+          const r = parseGateFile(JSON.parse(raw));
+          if (r) parsed = r;
           else log.warn('gate_file_reset', { reason: 'schema' });
         }
       }
@@ -108,7 +132,7 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
   return {
     // --- AiGatePort (read by the engine before every run) ------------------
     isAdultConfirmed: () => read((f) => f.age?.adult === true),
-    hasConsent: (provider, version) => read((f) => f.consents[provider]?.version === version),
+    hasConsent: (provider, version, kind) => read((f) => isKind(kind) && f.consents[kind]?.[provider]?.version === version),
 
     // --- Age ----------------------------------------------------------------
     ageStatus: () =>
@@ -133,19 +157,21 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
     },
 
     // --- Consent --------------------------------------------------------------
-    consentVersion: (provider) => read((f) => f.consents[provider]?.version ?? null),
-    giveConsent: async (provider, version) => {
+    consentVersion: (provider, kind) => read((f) => (isKind(kind) ? (f.consents[kind]?.[provider]?.version ?? null) : null)),
+    giveConsent: async (provider, version, kind) => {
       if (!Number.isInteger(version) || version < 1) throw new Error('bad_consent_version');
+      if (!isKind(kind)) throw new Error('bad_consent_kind');
       await update((f) => {
-        f.consents[provider] = { version, at: now() };
+        (f.consents[kind] ??= {})[provider] = { version, at: now() };
       });
-      log.info('consent_given', { provider, version });
+      log.info('consent_given', { provider, version, kind });
     },
-    withdrawConsent: async (provider) => {
+    withdrawConsent: async (provider, kind) => {
+      if (!isKind(kind)) throw new Error('bad_consent_kind');
       await update((f) => {
-        delete f.consents[provider];
+        delete f.consents[kind]?.[provider];
       });
-      log.info('consent_withdrawn', { provider });
+      log.info('consent_withdrawn', { provider, kind });
     },
 
     // --- Preferences ------------------------------------------------------------
@@ -164,6 +190,11 @@ export function createGateStore(deps: { file: TextFilePort; logger: Logger; now?
       cache = null;
     },
   };
+}
+
+/** Runtime check (callers in plain JS or a typo must not widen consent). */
+function isKind(k: unknown): k is ConsentKind {
+  return typeof k === 'string' && (CONSENT_KINDS as readonly string[]).includes(k);
 }
 
 /** Deep copy of the (small, JSON-only) gate file. */

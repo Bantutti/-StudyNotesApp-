@@ -38,7 +38,9 @@ EditorToolbar sparkle slot (P1)
 | `AiFlowHost({ flow, ports })` | The modal. `ports.openLink(url)` uses P1's link opener (it confirms first and opens outside the app); `ports.clipboard` is optional. |
 | `AiSettingsScreen({ aiui, keyVault, ports, subjects, isDev })` | Me → AI (route `src/app/ai/settings.tsx`). |
 | `createAiFlow`, `visibleActions`, `AI_CARDS_ENABLED` | The controller (testable without React). Flashcards and Quiz me stay hidden until P4c (Q5 = B). |
-| `createGateStore` → `GateStore` | `ai/gate.json`: age result, per-provider consent, default provider, Demo AI switch. Implements the engine's `AiGatePort`. |
+| `createGateStore` → `GateStore` | `ai/gate.json`: age result, consent **per provider, per data kind (`text`, `image`) and per version**, default provider, Demo AI switch. Implements the engine's `AiGatePort`. |
+| `checkCanSend(gate, { provider, kind, aiAllowed? })`, `assertCanSend` | The one send check for any kind (§5.1): subject switch, 18+, consent for that kind at the catalog's current version. **P5 calls it with `kind: 'image'`** before its vision pass. |
+| `ConsentStep({ provider, kind, ... })` | The consent screen. `kind="image"` shows the catalog's `imageConsent` wording ("Send photos to Groq?"). P5 shows it and stores the answer with `gate.giveConsent(p, version, 'image')`. |
 | `createReportsStore` | `ai/reports.json`: local reports, metadata only, at most 50. |
 | `checkYear`, `checkMonth`, `checkDay`, `recheckDueAt` | The §1 age rule, exported so **P4 (Groq Whisper, also 18+) uses the same gate**. |
 | `wordDiff`, `buildDiffRows`, `usageText`, `progressText`, `errorView` | Pure helpers (tested). |
@@ -48,7 +50,7 @@ EditorToolbar sparkle slot (P1)
 | File | Holds | Never holds |
 |---|---|---|
 | `usage.json` | Request and token counts per provider per day (P3a) | Keys, note text, prompts, answers |
-| `gate.json` | `{adult, checkedAt}`, `{version, at}` per provider, the default provider, the Demo AI switch | The birth year, month or day |
+| `gate.json` (v2) | `{adult, checkedAt}`, `{version, at}` per data kind and provider, the default provider, the Demo AI switch | The birth year, month or day |
 | `reports.json` | Action, provider, model, prompt version, time, reason, an optional 200-character comment | Note text, AI output |
 
 Keys are kept only in the Keychain / Keystore (`expo-secure-store`, `WHEN_UNLOCKED_THIS_DEVICE_ONLY`), and
@@ -61,6 +63,8 @@ only in the `ai.groq.apiKey` / `ai.mistral.apiKey` slots.
   the birth month is the current month. Only the yes/no result and the date are stored. An under-18 answer
   sticks; a re-check is offered after one year (Q4 = A). Under-18s see one calm panel that points to Beautify
   Lite, with no nagging.
+- **Consent kinds are separate** (Lead, Nov 1): a text "yes" never authorises photos, and a photo "yes"
+  never authorises note text. Each kind has its own catalog wording and version.
 - **Consent (Apple 5.1.2(i)).** Before the first send to a provider, the consent screen shows that
   provider's `recipient`, `dataSent`, `purpose`, `dataUse` (plus Mistral's training opt-out steps), age rule,
   privacy and terms. "Yes, send to Groq" stores `{version}`; a new catalog version asks again. The engine
@@ -76,8 +80,9 @@ only in the `ai.groq.apiKey` / `ai.mistral.apiKey` slots.
   exact Undo).
 - **Empty-document guard** (P1 bug, Nov 1): the action refuses to run if the editor hands over a document
   with no text while the stored note has text, and Apply refuses a result that would remove all the text.
-- **Groq only through the gate:** in release builds, composition gives the Groq transcriber the key only
-  after the 18+ answer and the current Groq consent (`transcriptionAllowed` in `services.ts`).
+- **Groq only through the gate:** in release builds the Groq transcriber gets **no key at all** until P4
+  adds an `audio` consent kind (`transcriptionAllowed` in `services.ts`), because a text consent must not
+  authorise audio. Development builds keep the P0 spike screens working.
 - **Demo AI** works only in development builds, is labelled DEMO on every screen, sends nothing, and keeps its
   usage in memory.
 

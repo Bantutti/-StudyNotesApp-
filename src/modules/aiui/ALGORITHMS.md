@@ -179,17 +179,39 @@ module ("about 20 minutes"), so one rule produces every message.
 ## §5 Gate file (`ai/gate.json`, Q7 = A)
 
 ```
-{ v: 1,
+{ v: 2,
   age: { adult: boolean, checkedAt: ms } | null,
-  consents: { groq?: { version: int ≥ 1, at: ms }, mistral?: {...} },
+  consents: { text?:  { groq?: { version: int ≥ 1, at: ms }, mistral?: {...} },
+              image?: { groq?: {...}, mistral?: {...} } },
   defaultProvider: 'groq' | 'mistral' | null,
   fakeMode: boolean }            // honoured only in development builds
 ```
 
+**Migration.** A v1 file (which had `consents: { groq: {...} }`, text only) is read as
+`consents: { text: <v1 consents> }` and saved as v2 on the next write. It is never read as image
+consent.
+
 - **Fail closed.** A file that's missing, unreadable, over 16 KB or fails the zod schema reads as
   "no age, no consent". The student is asked again, and nothing is sent in the meantime.
-- **Consent is per provider and per version.** `hasConsent(p, v)` is true only when
-  `consents[p].version === v`. When the catalog bumps a consent version, the old "yes" stops
-  counting.
+- **Consent is per provider, per data kind and per version.** `hasConsent(p, v, k)` is true only when
+  `consents[k][p].version === v`. The kinds are `text` (note blocks) and `image` (P5's reference photos);
+  each has its own catalog wording (`consent`, `imageConsent`) and its own version. **A "yes" for one kind
+  never counts for another.** An unknown kind is refused at runtime. When the catalog bumps a version, the
+  old "yes" stops counting.
+
+### §5.1 The send check (`checkCanSend`)
+
+Every send to a provider, for any kind, passes the same ordered check:
+
+```
+aiAllowed === false (when the data belongs to a subject)  -> blocked
+not adult (unknown or minor)                              -> age_required
+!hasConsent(p, consentBlock(p, k).version, k)             -> consent_required
+otherwise                                                 -> ok (with the version that was checked)
+```
+
+The engine's note runs use it implicitly (the gate port is asked for kind `text`). P5's vision pass calls
+`checkCanSend(gate, { provider, kind: 'image' })` before sending a photo. Release builds have no audio
+kind yet, so Groq transcription stays closed until P4 adds `audio` the same way.
 - Writes are serialised, so two quick answers can't overwrite each other.
 - Delete all data removes the file (APP_FOLDERS has `ai`) and drops the in-memory copy (`forget()`).

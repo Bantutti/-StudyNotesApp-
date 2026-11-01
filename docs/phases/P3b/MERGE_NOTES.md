@@ -23,9 +23,17 @@ For the Lead when merging PR #7 (P3b AI screens).
   transcription with `services.aiui.gate.isAdultConfirmed()` (and the same consent screen: reuse
   `ConsentStep`, or add a transcription consent version to the catalog). The age helpers are exported from
   `@/modules/aiui`.
-- **P4 (voice), required:** release builds already gate the transcriber (`transcriptionAllowed` in
-  `services.ts`: 18+ answer plus the current Groq consent). Before shipping transcription, extend the Groq
-  consent's `dataSent` to cover audio and bump its version, so students are asked again.
+- **P4 (voice), required:** release builds give the transcriber **no key** today. To ship transcription:
+  add `'audio'` to `CONSENT_KINDS` and an `audioConsent` block to each catalog entry (in `consentBlock`),
+  show `ConsentStep kind="audio"`, then replace `transcriptionAllowed` with
+  `checkCanSend(gate, { provider: 'groq', kind: 'audio' })`.
+- **P5 (style packs, vision pass behind a flag):** before sending a reference photo, call
+  `checkCanSend(services.aiui.gate, { provider, kind: 'image' })` from `@/modules/aiui`. If it reports
+  `consent_required`, show `<ConsentStep provider={p} kind="image" … />` and store a yes with
+  `gate.giveConsent(p, consentBlock(p, 'image').version, 'image')`. If it reports `age_required`, the
+  student hasn't passed the 18+ check (send them through the AI panel, or reuse `AgeForm`). A text consent
+  never satisfies this. The image wording promises "no notes"; strip photo metadata (EXIF, location)
+  before sending, and if you then state that in the wording, bump `imageConsent.version`.
 - **P1's empty-document fix:** once it lands, keep P3b's guard anyway (defence in depth; test
   `aiWiring.test.ts` "P1 empty-document bug guard").
 - **P4c (review):** turn on `AI_CARDS_ENABLED` in `src/modules/aiui/flow/controller.ts`, add a preview for

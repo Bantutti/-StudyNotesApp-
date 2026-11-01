@@ -21,7 +21,7 @@ describe('gate store', () => {
   it('starts with no age and no consent', async () => {
     const { gate } = setup();
     expect(await gate.isAdultConfirmed()).toBe(false);
-    expect(await gate.hasConsent('groq', 1)).toBe(false);
+    expect(await gate.hasConsent('groq', 1, 'text')).toBe(false);
     expect(await gate.ageStatus()).toEqual({ kind: 'unknown' });
   });
 
@@ -29,12 +29,12 @@ describe('gate store', () => {
     ['not json', '{oops'],
     ['wrong shape', JSON.stringify({ v: 1, age: { adult: 'yes' } })],
     ['unknown field', JSON.stringify({ v: 1, age: { adult: true, checkedAt: 1, year: 2000 }, consents: {}, defaultProvider: null, fakeMode: false })],
-    ['future version', JSON.stringify({ v: 2, age: { adult: true, checkedAt: 1 }, consents: {}, defaultProvider: null, fakeMode: false })],
+    ['future version', JSON.stringify({ v: 3, age: { adult: true, checkedAt: 1 }, consents: {}, defaultProvider: null, fakeMode: false })],
     ['too big', 'x'.repeat(GATE_FILE_MAX_CHARS + 1)],
   ])('fails closed on a %s file', async (_name, raw) => {
     const { gate } = setup(raw);
     expect(await gate.isAdultConfirmed()).toBe(false);
-    expect(await gate.hasConsent('groq', 1)).toBe(false);
+    expect(await gate.hasConsent('groq', 1, 'text')).toBe(false);
   });
 
   it('stores only the age RESULT and the date checked', async () => {
@@ -49,18 +49,18 @@ describe('gate store', () => {
   it('consent counts only for that provider and that version', async () => {
     const { gate } = setup();
     const v = PROVIDER_CATALOG.groq.consent.version;
-    await gate.giveConsent('groq', v);
-    expect(await gate.hasConsent('groq', v)).toBe(true);
-    expect(await gate.hasConsent('mistral', PROVIDER_CATALOG.mistral.consent.version)).toBe(false);
+    await gate.giveConsent('groq', v, 'text');
+    expect(await gate.hasConsent('groq', v, 'text')).toBe(true);
+    expect(await gate.hasConsent('mistral', PROVIDER_CATALOG.mistral.consent.version, 'text')).toBe(false);
     // A bumped catalog version asks again (old "yes" stops counting).
-    expect(await gate.hasConsent('groq', v + 1)).toBe(false);
-    await gate.withdrawConsent('groq');
-    expect(await gate.hasConsent('groq', v)).toBe(false);
+    expect(await gate.hasConsent('groq', v + 1, 'text')).toBe(false);
+    await gate.withdrawConsent('groq', 'text');
+    expect(await gate.hasConsent('groq', v, 'text')).toBe(false);
   });
 
   it('rejects a nonsense consent version', async () => {
     const { gate } = setup();
-    await expect(gate.giveConsent('groq', 0)).rejects.toThrow('bad_consent_version');
+    await expect(gate.giveConsent('groq', 0, 'text')).rejects.toThrow('bad_consent_version');
   });
 
   it('a minor answer sticks; re-check only after a full year (§1.4)', async () => {
@@ -87,9 +87,9 @@ describe('gate store', () => {
 
   it('serialises quick writes (no lost update)', async () => {
     const { gate } = setup();
-    await Promise.all([gate.giveConsent('groq', 1), gate.giveConsent('mistral', 1), gate.recordAge(true), gate.setDefaultProvider('mistral')]);
-    expect(await gate.hasConsent('groq', 1)).toBe(true);
-    expect(await gate.hasConsent('mistral', 1)).toBe(true);
+    await Promise.all([gate.giveConsent('groq', 1, 'text'), gate.giveConsent('mistral', 1, 'text'), gate.recordAge(true), gate.setDefaultProvider('mistral')]);
+    expect(await gate.hasConsent('groq', 1, 'text')).toBe(true);
+    expect(await gate.hasConsent('mistral', 1, 'text')).toBe(true);
     expect(await gate.isAdultConfirmed()).toBe(true);
     expect(await gate.defaultProvider()).toBe('mistral');
   });
@@ -106,18 +106,18 @@ describe('gate store', () => {
   it('reloads from the file after forget() (Delete all data)', async () => {
     const { gate, file } = setup();
     await gate.recordAge(true);
-    await gate.giveConsent('groq', 1);
+    await gate.giveConsent('groq', 1, 'text');
     file.content = null; // the ai folder was deleted
     expect(await gate.isAdultConfirmed()).toBe(true); // still cached
     gate.forget();
     expect(await gate.isAdultConfirmed()).toBe(false);
-    expect(await gate.hasConsent('groq', 1)).toBe(false);
+    expect(await gate.hasConsent('groq', 1, 'text')).toBe(false);
   });
 
   it('logs event names only, never answers', async () => {
     const { gate, log } = setup();
     await gate.recordAge(false);
-    await gate.giveConsent('groq', 1);
+    await gate.giveConsent('groq', 1, 'text');
     const dump = log.dump();
     expect(dump).toContain('age_recorded');
     expect(dump).not.toMatch(/"adult"|false|true/);
