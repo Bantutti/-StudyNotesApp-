@@ -81,6 +81,9 @@ export const EN = {
   'search.empty': 'No notes match "{query}".',
   'me.deleteAll': 'Delete all data',
   'me.deleteAllAsk': 'This deletes every note, subject and setting on this phone. It can’t be undone.',
+  'me.dataAi': 'Your notes are saved on this phone. Nothing is uploaded: there is no account or sync yet. AI is optional: a note is sent only when you pick an AI action and allow that provider.',
+  'me.ai': 'AI',
+  'me.aiRow': 'Age check, keys, permissions, usage and reports',
   'mic.denied': 'Microphone permission denied. Enable it in Settings > Apps > {app} > Permissions.',
 } as const;
 

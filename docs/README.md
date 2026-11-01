@@ -23,7 +23,9 @@ P1 is the real offline app (guest mode: no account, no AI key):
 - **Hidden developer menu** (Me > tap the version 7 times): the P0 spike lab and Typing diagnostics.
 
 Also in the repo: the **P2a backend** (`firebase/`, Firestore and Storage rules with emulator tests) and the
-**P3a AI engine** (`src/modules/ai`, no screens until P3b). Accounts and sync arrive in P2b.
+**P3a AI engine** (`src/modules/ai`) with its **P3b screens** (`src/modules/aiui`: the sparkle button in the
+note toolbar, Me → AI). AI is optional, 18+ only, and uses your own free Groq or Mistral key. Accounts and
+sync arrive in P2b.
 
 ## App identity
 
@@ -106,6 +108,7 @@ src/composition/    composition root (dependency injection), app data lifecycle,
 src/core/           shared building blocks: logger, validation, document model v2, limits, strings, UI kit
 src/modules/        feature modules, each with a public index.ts and its own tests
   ai/               AI engine (P3a): providers, actions, proposals, usage meter, key vault
+  aiui/             AI screens (P3b): age check, key wizard, consent, action sheet, diff preview, settings
   beautify/         Beautify Lite (on-device rules)
   editor/           TipTap WebView host, bridge protocol, hardening, links, previews, action hook
   export/           PDF / DOCX / print exporters behind adapters

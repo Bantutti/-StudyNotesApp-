@@ -76,11 +76,9 @@ export default function Me() {
 
       <SectionHeader>Your data</SectionHeader>
       <Surface>
-        <BodyText muted>
-          Your notes are saved on this phone only. Nothing is uploaded: there is no account yet, and AI and sync are
-          not turned on.
-        </BodyText>
+        <BodyText muted>{t('me.dataAi')}</BodyText>
       </Surface>
+      <ListRow icon="sparkles-outline" title={t('me.ai')} subtitle={t('me.aiRow')} onPress={() => router.push('/ai/settings')} testID="me-ai" />
       <ListRow icon="trash-outline" title={t('me.deleteAll')} destructive onPress={confirmDeleteAll} testID="me-delete-all" />
 
       <SectionHeader>About</SectionHeader>

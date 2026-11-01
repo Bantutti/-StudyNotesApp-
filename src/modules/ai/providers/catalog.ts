@@ -56,18 +56,14 @@ export interface ProviderInfo {
    * The engine refuses to send until the gate reports a "yes" for THIS
    * provider AND THIS version (AiGatePort.hasConsent(provider, version)).
    */
-  consent: {
-    /** Always true: an explicit per-provider "yes" is required before the first send. */
-    required: true;
-    /** Bump whenever recipient/dataSent/purpose/dataUse wording changes; older "yes" answers stop counting. */
-    version: number;
-    /** Who receives the data, as named on the screen. */
-    recipient: string;
-    /** Exactly what leaves the device. */
-    dataSent: string;
-    /** Why it is sent. */
-    purpose: string;
-  };
+  consent: ConsentBlock;
+  /**
+   * P3b (Lead, Nov 1; Rey approved P5's "Match a look" photo feature): a
+   * SEPARATE consent for sending photos. A photo is a different data type
+   * from note text, so a text "yes" never authorises images (and vice versa).
+   * null = this provider is never sent photos (Rey: Groq only for images).
+   */
+  imageConsent: ConsentBlock | null;
   capabilities: {
     text: boolean;
     /** How we get structured output: strict = constrained decoding guarantees the schema. */
@@ -92,6 +88,24 @@ export interface ProviderInfo {
   /** What costs money, in one sentence. */
   paidNote: string;
 }
+
+/** What a consent screen shows and the gate versions (one per provider and data kind). */
+export interface ConsentBlock {
+  /** Always true: an explicit per-provider "yes" is required before the first send. */
+  required: true;
+  /** Bump whenever recipient/dataSent/purpose/dataUse wording changes; older "yes" answers stop counting. */
+  version: number;
+  /** Who receives the data, as named on the screen. */
+  recipient: string;
+  /** Exactly what leaves the device. */
+  dataSent: string;
+  /** Why it is sent. */
+  purpose: string;
+}
+
+/** The kinds of data a student consents to separately (P3b; P4 adds 'audio' the same way). */
+export const CONSENT_KINDS = ['text', 'image'] as const;
+export type ConsentKind = (typeof CONSENT_KINDS)[number];
 
 const GROQ_FREE_CHAT: ModelLimits = { rpm: 30, rpd: 1_000, tpm: 8_000, tpd: 200_000 };
 
@@ -119,6 +133,13 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
       recipient: 'Groq (GroqCloud, servers in the United States)',
       dataSent: 'The text of the note blocks you chose (your selection or the whole note) and your Groq API key. Nothing else from the app.',
       purpose: 'To run the AI action you picked and send the result back to this phone for you to review.',
+    },
+    imageConsent: {
+      required: true,
+      version: 1,
+      recipient: 'Groq (GroqCloud, servers in the United States)',
+      dataSent: 'The reference photos you picked for matching a look, and your Groq API key. Nothing else from the app: no notes.',
+      purpose: 'To describe the look of your photos (colours, paper, headings, layout) so the app can suggest a matching style pack for you to review.',
     },
     capabilities: { text: true, structuredOutput: 'strict', vision: false, transcription: true },
     models: { primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'] },
@@ -166,6 +187,8 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
       dataSent: 'The text of the note blocks you chose (your selection or the whole note) and your Mistral API key. Nothing else from the app.',
       purpose: 'To run the AI action you picked and send the result back to this phone for you to review.',
     },
+    // Photos go to Groq only (Rey, Nov 1). Mistral is never sent images.
+    imageConsent: null,
     capabilities: { text: true, structuredOutput: 'schema', vision: false, transcription: false },
     models: { primary: 'mistral-small-latest', fallbacks: [] },
     freeTier: {
@@ -179,6 +202,16 @@ export const PROVIDER_CATALOG: Record<Provider, ProviderInfo> = {
     paidNote: 'Free mode costs nothing. Only pay-as-you-go usage beyond the included amount costs money.',
   },
 };
+
+/** The consent block for one provider and data kind, or null when that provider never receives that kind. */
+export function consentBlock(id: Provider, kind: ConsentKind): ConsentBlock | null {
+  return kind === 'image' ? PROVIDER_CATALOG[id].imageConsent : PROVIDER_CATALOG[id].consent;
+}
+
+/** Providers that may receive a data kind (image: Groq only). */
+export function providersFor(kind: ConsentKind): Provider[] {
+  return (Object.keys(PROVIDER_CATALOG) as Provider[]).filter((p) => consentBlock(p, kind) !== null);
+}
 
 export function providerInfo(id: Provider): ProviderInfo {
   return PROVIDER_CATALOG[id];

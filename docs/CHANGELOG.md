@@ -2,6 +2,33 @@
 
 All notable changes, one section per phase.
 
+## P3b: AI screens (2026-11-01)
+
+### Added
+- **aiui module:** the AI modal over the note (action sheet, scope Selection/Whole note, provider chip,
+  usage "N of 1,000 today"), the 18+ age check (birth year with no default; month only in the boundary
+  year; day only in the birth month; result-only storage; re-check after a year), key wizard (catalog
+  badges, open key page outside the app, paste, Test then save, clipboard cleared), per-provider consent
+  (Apple 5.1.2(i)), run progress with Cancel, errors with one next step (Plan 9.6), diff preview (word
+  diff, per-block toggles, stale lock, Accept all, Discard), Apply through `runEditorAction` ("Before AI
+  change" version, exact 8-second Undo), "Report this AI result" (local only), Me → AI settings (age,
+  masked keys, Test/Replace/Remove, consent Withdraw, usage, default provider, "Never send to AI" per
+  subject, reports), Demo AI for development builds.
+- **ai module:** `testKey(provider, signal, candidateKey)` and `usage.reload()`.
+- Flashcards and Quiz me stay hidden (`AI_CARDS_ENABLED = false`); P4c turns them on with its screens.
+- Consent per data kind: `text` and `image` (catalog `imageConsent`), `checkCanSend`, `ConsentStep kind`,
+  gate file v2 (v1 migrates as text only).
+- Guards: the AI won't run on an empty hand-over or apply a result that removes all text; release builds
+  never reach Groq outside the gate.
+
+### Fixed
+- Delete all data now removes the Mistral key and the `ai/` folder (usage, gate, reports) and drops cached
+  AI state (P3b-S1, P3b-S2).
+- Closing an editor action with Cancel no longer shows an error alert on the note screen.
+
+### Dependencies
+- None added (component tests use P1's `test-renderer`).
+
 ## P1: core app (2026-11-01)
 
 ### Added

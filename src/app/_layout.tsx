@@ -7,7 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AppDataProvider, ServicesProvider, useServices } from '@/composition';
+import { AiWiring, AppDataProvider, ServicesProvider, useServices } from '@/composition';
 import { ThemeProvider, useTheme } from '@/core/ui';
 
 function Navigator() {
@@ -41,7 +41,9 @@ function Navigator() {
         <Stack.Screen name="version/[id]" options={{ title: 'Version' }} />
         <Stack.Screen name="style/[id]" options={{ presentation: 'formSheet', title: 'Style', sheetAllowedDetents: [0.6, 0.95] }} />
         <Stack.Screen name="dev" options={{ headerShown: false }} />
+        <Stack.Screen name="ai/settings" options={{ title: 'AI' }} />
       </Stack>
+      <AiWiring />
     </>
   );
 }
