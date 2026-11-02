@@ -12,4 +12,14 @@ export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosa
 export { createNoteSession, type NoteSession } from './noteSession';
 export { cleanPackName, loadCustomPacks, saveCustomPack, renameCustomPack, deleteCustomPack, packIsAvailable, PACK_NAME_MAX, MAX_CUSTOM_PACKS } from './customPacks';
 export { CustomPackLoader } from './CustomPackLoader';
+export { createSyncController, type SyncController, type SyncView, type UploadCounts } from './syncController';
+export { createCloudRuntime, type CloudRuntime, type CloudParts } from './cloudRuntime';
+export { SyncBridge } from './SyncBridge';
+export { useSyncView, useCloudSyncView, useNoteSync } from './syncHooks';
+export { previewPair, type PreviewLine, type PreviewMark } from './conflictPreview';
+export { countsText, maskEmail } from './syncText';
+export { bumpLockRevision, useLockRevision } from './lockRevision';
+export { AppLockGate } from './AppLockGate';
 export { AiWiring, useAiScreenPorts, subjectAiAllowed, storedNoteHasText, expoClipboard } from './aiWiring';
+export { inkServiceFor, inkStorePort } from './ink';
+export { createNoteInk, KV_INK, KEY_INK_PREFS, LIVE_CLEAR_FALLBACK_MS, RENDER_BATCH, type NoteInk, type NoteInkState, type InkPrefs } from './noteInk';

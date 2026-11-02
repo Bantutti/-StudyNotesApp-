@@ -1,6 +1,6 @@
 /**
  * Note editor (plan 9.4).
- * Top: title, mode switch Type · Draw (P4b placeholder) · Style, note
+ * Top: title, mode switch Type · Draw (P4b, screens/NoteInk.tsx) · Style, note
  * actions. Middle: the TipTap page in its pack. Bottom: the keyboard
  * toolbar with the P3b sparkle slot.
  * Saving: autosave (1 s after typing stops, at least every 5 s, flushed on
@@ -21,14 +21,17 @@ import {
   useAppData,
   usePackFaces,
   useServices,
+  useNoteSync,
 } from '@/composition';
 import { AppError, countWords, errorCode, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
 import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
 import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
 import { EditorToolbar } from '@/screens/EditorToolbar';
+import { SyncChip } from '@/screens/SyncChip';
 import { useEditorActionRunner } from '@/screens/editorActionHooks';
 import { BlockMenuSheet, InfoSheet, LinkSheet } from '@/screens/EditorSheets';
+import { NoteInkBar, NoteInkOverlay, useIsTablet, useNoteInk } from '@/screens/NoteInk';
 
 type Sheet = 'block' | 'link' | 'info' | null;
 
@@ -54,7 +57,31 @@ export default function NoteScreen() {
     session.setLiveSource(() => editor.current?.requestDoc() ?? Promise.resolve(null));
   }, [session]);
 
+  // P2b: sync around this note. A pull that changed it reloads the page the
+  // same way a change from History or Style does (only if the stored note
+  // differs from what this screen last saved or showed).
+  const noteSync = useNoteSync(id, () => {
+    void store.notes.get(id).then((n) => {
+      if (!n || n.deleted || !session.changedElsewhere(n.updated)) return;
+      session.shown(n.document);
+      editor.current?.load(n.document);
+      session.seen(n.updated);
+      setNote(n);
+      setTitle(n.title);
+      setBanner('Updated from your other device.');
+    });
+  });
+
   const { pack, faces } = usePackFaces(note?.stylePackId ?? '');
+  // P4b: ink (Draw mode, finished ink on the page, publish on leave).
+  const tablet = useIsTablet();
+  const { ink, state: inkState } = useNoteInk({
+    store,
+    noteId: id,
+    editor,
+    getLatestDoc: () => session.latestDoc,
+    onNoteUpdated: (u) => session.seen(u),
+  });
 
   // Load on focus. Coming back from History, Style or Template, reload when the stored note changed.
   useFocusEffect(
@@ -74,18 +101,25 @@ export default function NoteScreen() {
       });
       return () => {
         alive = false;
-        void session.leave().catch(() => logger.warn('note.leave_save_failed'));
+        void session
+          .leave()
+          .catch(() => logger.warn('note.leave_save_failed'))
+          .then(() => ink.leave()) // P4b: publish the drawing for sync (after the note is saved)
+          .catch(() => logger.warn('ink.leave_failed'));
       };
-    }, [store, id, session, logger]),
+    }, [store, id, session, logger, ink]),
   );
 
   // App to the background: save immediately.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s !== 'active') void session.flush();
+      if (s !== 'active') {
+        void session.flush();
+        void ink.flush(); // P4b: local ink working copy
+      }
     });
     return () => sub.remove();
-  }, [session]);
+  }, [session, ink]);
 
   const host = useMemo<EditorHost>(
     () => ({
@@ -131,6 +165,7 @@ export default function NoteScreen() {
 
   // EditorView sends pack, fonts and readyDoc on every 'ready' (also after a WebView restart).
   const onReady = () => {
+    ink.onEditorReady(); // P4b: show all ink again (also after a WebView restart)
     if (block) setTimeout(() => editor.current?.scrollToBlock(block), 350);
   };
 
@@ -189,6 +224,7 @@ export default function NoteScreen() {
           title: displayTitle({ ...note, title }),
           headerRight: () => (
             <View style={styles.headerButtons}>
+              <SyncChip />
               <IconButton icon="time-outline" label="History" onPress={() => void go('/history/[id]')} testID="note-history" />
               <IconButton icon="information-circle-outline" label="Note info and outline" onPress={() => void openInfo()} />
             </View>
@@ -211,8 +247,8 @@ export default function NoteScreen() {
             testID="note-title"
           />
           <View style={styles.modes}>
-            <Mode label={t('editor.mode.type')} active onPress={() => undefined} />
-            <Mode label={t('editor.mode.draw')} onPress={() => Alert.alert(t('editor.mode.draw'), t('editor.drawSoon'))} />
+            <Mode label={t('editor.mode.type')} active={!inkState.drawMode} onPress={() => ink.setDrawMode(false)} />
+            <Mode label={t('editor.mode.draw')} active={inkState.drawMode} onPress={() => ink.setDrawMode(true)} testID="note-draw" />
             <Mode label={t('editor.mode.style')} onPress={() => void go('/style/[id]')} testID="note-style" />
             <View style={styles.flex} />
             <IconButton icon="copy-outline" label="Add a template" onPress={() => void addTemplate()} />
@@ -225,6 +261,11 @@ export default function NoteScreen() {
           <Banner>{banner}</Banner>
         </View>
       ) : null}
+      {inkState.banner || inkState.showTip ? (
+        <Pressable style={styles.banner} onPress={() => (inkState.banner ? ink.dismissBanner() : ink.dismissTip())} accessibilityRole="button">
+          <Banner>{inkState.banner ?? 'Two fingers scroll the page while you draw. Tap to hide.'}</Banner>
+        </Pressable>
+      ) : null}
       <View style={[styles.page, { borderColor: th.line }]}>
         <EditorView
           ref={editor}
@@ -233,20 +274,31 @@ export default function NoteScreen() {
           faces={faces}
           getDoc={() => session.readyDoc(note.document)}
           onReady={onReady}
-          onChange={(d) => session.edited(d)}
+          
+          onChange={(d) => {
+            session.edited(d);
+            noteSync.edited();
+            ink.onDocChange(d); // P4b: keep ink on joined blocks
+          }}
+          onInkLayout={(l) => ink.onInkLayout(l)}
+          onInkAck={() => ink.onInkAck()}
           onState={setEdState}
+          
           onOpenLink={(href) => void links(href)}
           onBridgeError={(code) => {
             if (code === 'invalid_doc') setBanner('Your last change could not be checked, so it was not saved. Try undo, or copy the text to a new note.');
             if (code === 'too_large') setBanner('This note is too long to save. Split it into two notes.');
           }}
         />
+        <NoteInkOverlay ink={ink} state={inkState} pack={pack} tablet={tablet} getEditor={() => editor.current} />
       </View>
       <View style={styles.focusRow}>
         <Pressable accessibilityRole="button" accessibilityLabel={focusMode ? 'Leave focus mode' : 'Focus mode'} onPress={() => setFocusMode((f) => !f)} hitSlop={8}>
           <Text style={{ color: th.muted, fontSize: th.type.caption }}>{focusMode ? 'Show title and modes' : 'Focus mode'}</Text>
         </Pressable>
       </View>
+      {inkState.drawMode && !tablet ? <NoteInkBar ink={ink} state={inkState} pack={pack} getEditor={() => editor.current} /> : null}
+      {inkState.drawMode ? null : (
       <EditorToolbar
         state={edState}
         pack={pack}
@@ -258,6 +310,7 @@ export default function NoteScreen() {
         onBlockMenu={() => setSheet('block')}
         onLink={() => setSheet('link')}
       />
+      )}
       <BlockMenuSheet visible={sheet === 'block'} onClose={() => setSheet(null)} onCommand={command} />
       <LinkSheet visible={sheet === 'link'} onClose={() => setSheet(null)} onApply={(href) => command('link', href)} onRemove={() => command('unlink')} />
       <InfoSheet visible={sheet === 'info'} onClose={() => setSheet(null)} words={info.words} items={info.items} onJump={(b) => editor.current?.scrollToBlock(b)} />

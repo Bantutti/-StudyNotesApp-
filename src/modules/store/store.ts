@@ -8,13 +8,16 @@ import type { ZodType } from 'zod';
 
 import { AppError, type IdGenerator, type Logger, type NoteDoc } from '@/core';
 
+import { createAssetsRepo, type Asset, type AssetType } from './assets';
 import { migrate } from './migrations';
 import { createNotesRepo, type CreateNoteInput, type NotePatch, type SaveResult } from './notes';
 import { inList, str } from './rows';
 import { searchNotes } from './search';
 import { createKvRepo, createProfileRepo, type UserSettings } from './settings';
-import { createSqlDb, type SqlDriver } from './sql';
+
+import { createSqlDb, type SqlDriver, type SqlExecutor } from './sql';
 import { createStylePacksRepo, type StoredPack } from './stylePacks';
+
 import { createFoldersRepo, createSubjectsRepo, WIPED_NAME, type CreateSubjectInput, type SubjectPatch } from './subjects';
 import {
   UNDO_WINDOW_MS,
@@ -30,7 +33,27 @@ import {
   type VersionMeta,
   type VersionReason,
 } from './types';
+import { createSyncRepo, type SyncRepo } from './sync';
 import { createVersionsRepo } from './versions';
+
+/**
+ * The sync repo with every method bound to its own transaction (or, inside
+ * store.sync.run, to the shared one). Sync writes must always run inside a
+ * transaction: the "applying" flag pauses the outbox triggers, and a user
+ * edit must never slip in while it is set.
+ */
+type BoundSync = {
+  [K in Exclude<keyof SyncRepo, 'applying'>]: SyncRepo[K] extends (ex: SqlExecutor, ...a: infer A) => infer R ? (...a: A) => R : never;
+};
+
+function bindSync(repo: SyncRepo, run: <T>(fn: (ex: SqlExecutor) => Promise<T>) => Promise<T>): BoundSync {
+  const out: Record<string, unknown> = {};
+  for (const [k, f] of Object.entries(repo)) {
+    if (k === 'applying' || typeof f !== 'function') continue;
+    out[k] = (...a: unknown[]) => run((ex) => (f as (ex: SqlExecutor, ...rest: unknown[]) => Promise<unknown>)(ex, ...a));
+  }
+  return out as BoundSync;
+}
 
 export interface StoreDeps {
   ids: IdGenerator;
@@ -48,6 +71,8 @@ export interface StoreInfo {
 const ALL_TABLES = [
   'noteVersions', 'searchMap', 'search', 'kv', 'reviewLogs', 'cards', 'recordings', 'notes', 'folders',
   'subjects', 'assets', 'stylePacks', 'templates', 'users',
+  // P2b sync bookkeeping (syncState is reset, not deleted: the triggers read it).
+  'syncOutbox', 'syncCursors', 'syncConflicts', 'syncQuarantine', 'syncFiles',
 ] as const;
 
 export async function openStore(driver: SqlDriver, deps: StoreDeps) {
@@ -77,8 +102,10 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
   const notes = createNotesRepo(rd);
   const stylePacks = createStylePacksRepo(rd);
   const versions = createVersionsRepo(rd);
+  const assets = createAssetsRepo(rd);
   const kv = createKvRepo({ now, logger: log });
   const profile = createProfileRepo({ now, logger: log });
+  const syncRepo = createSyncRepo({ now });
 
   await profile.ensure(db);
 
@@ -212,6 +239,36 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
 
     search: (text: string): Promise<SearchHit[]> => searchNotes(db, text),
 
+    /** Files tracked for sync (P4b ink now, P4 audio later). */
+    assets: {
+      get: (id: string): Promise<Asset | null> => assets.get(db, id),
+      list: (type: AssetType): Promise<Asset[]> => assets.listByType(db, type),
+      update: (id: string, patch: { size?: number; localPath?: string | null }) => db.transaction((tx) => assets.update(tx, id, patch)),
+      remove: (id: string) => db.transaction((tx) => assets.markDeleted(tx, id)),
+      /** Local-only: where a downloaded file lives (does not bump `updated`, so it never syncs). */
+      setLocalPath: (id: string, localPath: string | null) => db.transaction((tx) => assets.setLocalPath(tx, id, localPath)),
+      /** Ink assets that no note points at any more (deleted notes after the undo window). */
+      inkOrphans: (): Promise<Asset[]> => assets.inkOrphans(db),
+      /**
+       * Creates a note's ink asset and links it (notes.inkLayerRef) in ONE
+       * transaction. Returns the asset and the note's new `updated`, which the
+       * editor session must mark as seen (otherwise it would reload the note).
+       */
+      createInkLayer: (noteId: string, input: { id: string; localPath: string; size: number }): Promise<{ asset: Asset; noteUpdated: number }> =>
+        db.transaction(async (tx) => {
+          const n = await tx.get<{ owner: string | null; deleted: number; inkLayerRef: string | null; updated: number }>(
+            'SELECT owner, deleted, inkLayerRef, updated FROM notes WHERE id = ?',
+            [noteId],
+          );
+          if (!n || n.deleted) throw new AppError('not_found', 'This note no longer exists.');
+          if (n.inkLayerRef) throw new AppError('validation_failed', 'This note already has a drawing.');
+          const asset = await assets.create(tx, { type: 'ink', id: input.id, localPath: input.localPath, size: input.size, owner: n.owner ?? null });
+          const noteUpdated = Math.max(now(), Number(n.updated));
+          await tx.run('UPDATE notes SET inkLayerRef = ?, updated = ? WHERE id = ?', [asset.id, noteUpdated, noteId]);
+          return { asset, noteUpdated };
+        }),
+    },
+
     kv: {
       get: <T>(ns: string, key: string, schema: ZodType<T>) => kv.get(db, ns, key, schema),
       set: (ns: string, key: string, value: unknown) => kv.set(db, ns, key, value),
@@ -256,6 +313,16 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
         }
       }),
 
+    /**
+     * Sync bookkeeping for the P2b sync engine (docs/modules/sync.md). Each
+     * call is its own transaction; run() groups several into one.
+     */
+    sync: {
+      ...bindSync(syncRepo, (fn) => db.transaction(fn)),
+      run: <T>(fn: (s: BoundSync) => Promise<T>): Promise<T> =>
+        db.transaction((tx) => fn(bindSync(syncRepo, (f) => f(tx)))),
+    },
+
     /** Wipes the text of everything deleted more than UNDO_WINDOW_MS ago. */
     purge,
 
@@ -267,6 +334,9 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
     wipeAll: async (): Promise<void> => {
       await db.transaction(async (tx) => {
         for (const t of ALL_TABLES) await tx.exec(`DELETE FROM ${t}`); // fixed table names
+        await tx.exec(
+          'UPDATE syncState SET uid = NULL, enabled = 0, applying = 0, initialSyncDone = 0, lastPushAt = NULL, lastPullAt = NULL, lastError = NULL',
+        );
       });
       await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
       await db.exec('VACUUM');
@@ -279,3 +349,5 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
 }
 
 export type Store = Awaited<ReturnType<typeof openStore>>;
+export type StoreSync = Store['sync'];
+export type { BoundSync as SyncOps };

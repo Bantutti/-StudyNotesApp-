@@ -93,6 +93,17 @@ free-tier training on notes (Mistral opt-out, Gemini not used).
 | Logging | Redaction also drops titles, terms, queries, search, snippets, previews, tags, links and card text fields. |
 | Accessibility of security prompts | Dialogs are native Alerts with plain wording ("This opens example.com in your browser, outside NotedPo."). |
 
+### P4b controls (drawing and ink)
+
+| Area | Control |
+|---|---|
+| Ink files are untrusted (local, cloud, bridge) | One loader (`parseInkJson`): size checked **before** `JSON.parse` (4 MiB), zod strict objects, integer deltas with step and cumulative coordinate bounds, colour allowed per tool (pack key or `#RRGGBB`), pressure length = point count, unique ids, stroke/point/tombstone caps, note id must match. One bad stroke rejects the file; the last good copy is kept and a banner explains. Errors never echo content. |
+| Editor page (MASVS-PLATFORM) | The page never parses ink: native sends ready path items checked by `inkItemSchema` (path alphabet `[MLQZ0-9 .-]` only, ≤ 200k chars, colour enum or hex, id patterns, ≤ 500 per message, ≤ 10,000 on the page). SVG built with `createElementNS` + `setAttribute`/`style.setProperty`; a test forbids `innerHTML` in the ink code. CSP unchanged. Layout messages from the page are bounded by `inkBlockBoxSchema`. |
+| Files (MASVS-STORAGE) | Ink in the app's private documents folder (`ink/`), written atomically (temp + move). `localPath` is relative and pattern-checked (no `..`, no leading `/`); the Expo adapter re-checks every path segment. Delete all data removes `ink/`; ink of deleted notes is tombstoned after the 8 s undo window and its file deleted. Not encrypted at rest (same as the database, P1-S6). |
+| Sync hand-off | The merger and download-on-open parse cloud copies as untrusted; a tampered copy is never stored. Recording a download location never looks like a synced change. Asset size = published bytes (P2a's Storage rule). |
+| Privacy (MASVS-PRIVACY) | Handwriting is note content: never logged (only event names and counts; tested), not in diagnostics results (metrics only), never sent anywhere except P2b's sync of the user's own file. Ink preferences stay on the device (kv `ink`). |
+| Availability | Caps on every axis (file, strokes, points, tombstones, items per message); full layers render in batches of 500 strokes; the layout feed is throttled (120 ms). |
+
 ### Untrusted content
 - **Pasted HTML:** parsed in an inert `DOMParser` document; script/style/iframe/object/embed/form/
   svg/math/img/media elements removed; unknown elements unwrapped to text (allowlist); `on*`,
@@ -223,6 +234,23 @@ test that fails on the code before it (checked by running the new tests against 
 | P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **P5 follow-up (done):** Gaegu, Gowun Dodum, Mochiy Pop One and Zen Maru Gothic ship as Latin subsets (52-98 KB as base64) and the cap is back to 3,000,000 (largest face: Nanum Gothic Bold, 2,763,184 chars; a test fails if any face exceeds the cap). |
 | P1-S23 | L6 | Low | Undo after deleting a note stored as the empty document did nothing (the empty doc doubled as the "wiped" marker), and an empty note with a title was never wiped. | **Fixed:** Undo needs the note untouched since its deletion time; a purge bumps `updated`, so a wiped note never comes back. Purge wipes anything left (text, title, tags, ink, versions). |
 
+## 4d. Findings and fixes (P4b)
+
+Severity scale: High / Medium / Low / Info. **No open High or Medium issue.**
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P4b-S1 | Medium | Hostile ink file (from a damaged disk or a tampered cloud copy) could carry huge coordinates, mismatched arrays or markup. | **Fixed by design:** single validating loader (size before parse, strict schema, cumulative bounds, caps); 24 rejection cases plus 500 seeded random mutations tested; tampered cloud copies never stored (test). |
+| P4b-S2 | Medium | SVG/markup injection into the editor page through ink. | **Fixed by design:** the page receives only schema-checked path strings with a 14-character alphabet; colours enum or hex; elements built without `innerHTML` (source test). |
+| P4b-S3 | Medium | Two-device conflicts could silently drop strokes (P2b's default for assets is last-push-wins). | **Fixed:** immutable strokes + tombstones, union merger registered for type `ink`; commutative, associative, idempotent (property tests); two-device simulation test. |
+| P4b-S4 | Low | Opening a very full drawing (5,000 strokes) rendered everything at once: ~1 s of JS work on Node in the bench. | **Fixed:** batches of 500 strokes with yields; test. Device numbers pending (diagnostics bench). |
+| P4b-S5 | Low | Recolouring a lasso selection dropped unchanged strokes from the selection, so a following Delete missed them. Found by tests. | **Fixed:** unchanged selected strokes stay selected; regression test. |
+| P4b-S6 | Low | Per-stroke upload would exceed the Storage free tier (5K uploads/month) and change the file mid-upload. | **Fixed by design:** working copy local only; published once per visit when bytes changed; test asserts no synced row change while drawing. |
+| P4b-S7 | Low | Strokes on a block created seconds before leaving could be purged as "unrecoverable" (the stored doc lags the editor). Found in review. | **Fixed:** `publish` also keeps the editor's live block ids; test. |
+| P4b-S8 | Low (accepted) | Tombstone compaction (oldest first beyond 5,000) can let a long-offline device bring back a stroke erased thousands of deletions ago. | Accepted and documented (INK_MATH §10.3). |
+| P4b-S9 | Low (accepted) | Ink files are not encrypted at rest. | Accepted with P1-S6 (revisit in P7). |
+| P4b-S10 | Info | Palm-rejection thresholds, latency and rendering speed are unverified on real hardware. | Hidden Ink diagnostics screen produces the numbers in Rey's device test. |
+
 ## 4c. Findings from P2a and P3a (merged)
 
 **P2a** (`docs/backend/SECURITY_REVIEW.md` §S.4): F-1 High (`@grpc/grpc-js` in the backend's dev tree)
@@ -243,6 +271,29 @@ dev-only advisories in `firebase-tools` **accepted**; F-6 to F-11 Low/Info as li
 | P3a-S6 | Info | Free tiers may train on prompts. | P3b shows data use and the Mistral opt-out in the key wizard and consent screen. |
 | P3a-S7 | Info | `testKey` skips the 18+/consent gates (sends only the key). | Accepted; the wizard asks the age question first. |
 
+## 4d. Findings and fixes (P2b: sign-in and sync, app side)
+
+Threat-model additions (plan §17): uploading to the wrong account, partial uploads, tampered sync data,
+another device writing during account deletion, tokens at rest, shoulder surfing. Reviewed: every new
+file in `src/modules/{store/sync.ts,sync,cloud,auth,applock,legal}`, `src/composition/{cloudRuntime,
+syncController,SyncBridge,AppLockGate}`, the new screens, `plugins/withEmulatorCleartext.js`, scripts.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P2b-S1 | Medium | No App Check (P2a F-3): any client with the (public) config can call the backend; the rules still enforce ownership, verified email, shapes and the deletion lock. | **Open, tracked**: needs React Native Firebase + a development build (decision Nov 1). Required before a real project goes live. |
+| P2b-S2 | Medium | Wrong-account upload (plan §17): guest notes or one person's notes uploading into another account. | **Fixed by design**: the database is bound to one uid (Q7); another account is refused until "Remove notes from this phone"; sync runs only when `syncState.uid` equals the verified uid (tests). |
+| P2b-S3 | Medium | Tampered or malformed cloud docs (rules can't look inside JSON strings). | **Fixed**: every pulled doc passes P2a's zod (including the note tree) and the app's own document schema, plus owner and id checks; failures are quarantined (ids and a field path only) and never rendered (unit + e2e). |
+| P2b-S4 | Medium | A second device re-uploading while (or after) the account is deleted. | **Fixed**: rules lock (P2a) + the engine treats a missing/marked profile as "account gone", stops, signs out and turns the notes into guest notes without uploading (e2e: 0 docs, 0 files, 0 users after deletion). |
+| P2b-S5 | Low | Firestore SDK console logs can include document paths and server messages. | **Fixed**: SDK log level silent; the app logs content-free codes only (tests check no email/password in logs). |
+| P2b-S6 | Low | Sign-in tokens at rest. | **Fixed**: Firebase session in Keychain/Keystore (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`), chunked; falls back to memory (signed out on restart), never a plain file (Q8). |
+| P2b-S7 | Low | Name/photo copied from Google/Apple (store forms would have to declare "Name"). | **Mitigated**: scopes pinned to `openid email` / email (test); top-level name and photo cleared after every sign-in (e2e). Firebase keeps the provider's own record when a token carries a name; real tokens with our scopes don't (reported to C1). |
+| P2b-S8 | Low | App lock is a screen gate, not encryption; a rooted/jailbroken phone or a backup tool can read the database. | **Accepted**: documented in the app and docs; encryption at rest revisit in P7 (P1-S6). |
+| P2b-S9 | Low | Cleartext http to the emulators from an APK. | **Fixed**: only the EAS `emulator` profile, only one private IPv4 (build fails otherwise), base config stays cleartext-off (test). The app refuses an emulator host unless the project id is `demo-*`, and a `demo-*` project without one. |
+| P2b-S10 | Low | Downloaded asset files and remote bytes given to a merger are untrusted. | **Mitigated**: path recomputed from the validated id and an extension allow-list, exact owner path required, size caps; P4/P4b must validate file contents (ink JSON with zod) before use; documented in docs/modules/sync.md. |
+| P2b-S11 | Low | Narrow race: a pull applies a newer copy of the OPEN note while the editor still holds edits from the last second (before autosave); the next autosave then overwrites the remote edit locally and uploads it (no conflict copy). | **Accepted for P2b**, mitigated by the 1 s autosave, a server re-read when a note opens, and pulls at most every 30 s while typing. Revisit in P7 (flush before applying an open note). |
+| P2b-S12 | Info | Account enumeration and password policy on a real project. | The app never reveals whether an account exists and requires 8+ characters; on a real project also turn on Firebase Email Enumeration Protection and a password policy (console). |
+
+P2a F-4 (no rate limits in the rules) stays **accepted** on the free plan. No High finding is open.
 ## 4d. Findings and fixes (P3b)
 
 | ID | Severity | Finding | Status |
@@ -283,8 +334,8 @@ No high-severity findings are open.
 |---|---|
 | MASVS-STORAGE | Keys in Keychain/Keystore; no secrets in files or logs; backups off (Android); notes in private SQLite with secure delete and wipe; no encryption at rest in P1 (P1-S6, revisit P7). |
 | MASVS-CRYPTO | No custom crypto. CSPRNG (expo-crypto) for ids. |
-| MASVS-AUTH | No accounts in the app yet (P2b). Backend rules require verified email and ownership (P2a). |
-| MASVS-NETWORK | HTTPS only, single fixed provider host, no cleartext. Certificate pinning: evaluate in P7. |
+| MASVS-AUTH | P2b: email sign-in with verification (sync refused until verified), re-sign-in before account deletion, no account enumeration, sessions in Keychain/Keystore, one account per phone, app lock (OS biometrics/PIN). App Check open (P2b-S1). |
+| MASVS-NETWORK | HTTPS only, single fixed provider host. Cleartext only in the EAS `emulator` profile to one private LAN address (P2b-S9). Certificate pinning: evaluate in P7. |
 | MASVS-PLATFORM | WebViews hardened (section 2), previews with JavaScript off; links open only in the OS browser after a confirm; deep links validated by route params and the developer menu is gated; minimal permissions. |
 | MASVS-CODE | Pinned deps, lockfile, audits, input validation at every boundary (documents, bridge, templates, search, synced text), parameterized SQL, no dynamic code in the WebView. |
 | MASVS-RESILIENCE | P7 (release hardening). |

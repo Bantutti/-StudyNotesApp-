@@ -3,8 +3,9 @@
 This guide is for testing on real devices from a **Windows PC with no Mac**. Follow it top to bottom
 the first time. Commands go in **PowerShell** or **Command Prompt** opened in the project folder.
 
-> Phase covered: **P1 core app** (the real offline app), plus the **P0 spike lab** (now in the hidden
-> developer menu), the **P2a backend** rules tests and the **P3a AI engine** tests. Updated every phase.
+> Phase covered: **P2b sign-in and sync** (against the local Firebase emulators), the **P3b AI screens**,
+> the **P1 core app**, plus the **P0 spike lab** (now in the hidden developer menu), the **P2a backend**
+> rules tests and the **P3a AI engine** tests. Updated every phase.
 > Nothing in this guide publishes anything: no store uploads, no public website.
 
 ---
@@ -21,7 +22,8 @@ the first time. Commands go in **PowerShell** or **Command Prompt** opened in th
 | **Mistral account** at https://console.mistral.ai | Optional second AI provider (section 7) | Free mode, no card |
 | **Java JDK 21+**: `winget install EclipseAdoptium.Temurin.21.JDK` | Only to run the backend (Firebase rules) tests on your PC (section 6) | Free |
 | Apple Developer Program | Only for an iPhone development build. **Not needed for P1** (everything in P1 runs in Expo Go). | Paid (99 USD/year) |
-| Firebase project | **Not needed.** The backend tests use local emulators (section 6). A real project comes later, only with your approval (Storage needs the paid Blaze plan). | Not needed |
+| Firebase project | **Not needed.** Sign-in and sync (P2b) run against the local emulators on your PC (section 6). A real project comes later, only with your approval (Storage needs the paid Blaze plan). | Not needed |
+| Google or Apple sign-in | **Not in P2b builds** (the buttons are hidden). Google needs a real Firebase project and a development build; Apple also needs the paid Apple Developer account. Email sign-in works everywhere. | Later decision |
 
 Upgrading Groq or Mistral to a paid plan costs money; the app never needs that.
 
@@ -183,24 +185,34 @@ PC. Free Expo account; the build runs on Expo's servers; no Android Studio neede
 ## 5. Tablet and stylus testing
 
 Use an Android tablet with a stylus if you have one (Samsung Tab with S Pen, Lenovo with pen,
-or an iPad with Apple Pencil in Expo Go).
+or an iPad with Apple Pencil in Expo Go). A phone with a finger works for everything except
+pen-only checks. **Everything in this section is UNVERIFIED until you run it.**
 
-1. Open **6. Ink latency**.
-2. **Palm rejection = Auto:** write 3 lines of real notes with the pen while resting your palm on
-   the screen as you normally would.
-   - Watch for: stray marks under your palm, missing pen strokes, lines starting late.
-   - Expected: palm makes no marks once the pen has touched the screen. "Rejected" counts palm touches.
-   - Known P0 limit: if your palm touches **before** the pen, the pen stroke may not start. Note how
-     often this happens; it decides how much work P4b needs.
-3. Switch to **Stylus only** and repeat: fingers must never draw.
-4. Switch to **Off** and draw with a finger: it should draw.
-5. Watch the numbers: **Frame p50/p95** (lower is smoother; about 8 ms on 120 Hz screens, 16 ms on
-   60 Hz), **Dropped** (aim for under 5%), **Samples/s** (how often the pen reports; 120+ is good).
-6. **Real touch-to-ink latency (optional, most accurate):** record the screen with another phone in
-   **slow motion (240 fps)** while drawing fast. Count frames between the pen tip moving and ink
-   appearing; frames ÷ 240 = latency in seconds (8 frames ≈ 33 ms). Note it in your report.
-7. Rotate the tablet: the canvas should resize and keep working.
-8. Tap **Save result**.
+**A. Drawing in a note (P4b)**
+
+1. Open any note and tap **Draw** (next to Type and Style). The keyboard closes and the drawing
+   toolbar appears: at the **bottom** on a phone, as a **floating bar on the side** on a tablet.
+2. Write a few words with the pen. Expected: the ink follows the pen with no visible lag and
+   doesn't jump or change shape when you lift the pen.
+3. **Palm test:** write 10 lines with your palm resting on the screen as you normally would.
+   Count marks you didn't mean to make. Once the pen has touched the screen, a finger or palm
+   should scroll instead of drawing.
+4. **Scroll and zoom:** two fingers scroll the page (it keeps moving a little after a flick);
+   pinch zooms up to 3x. Tap **Done**: the zoom resets.
+5. Rotate the tablet: the page is a fixed-width column, so your drawing stays over the same words.
+
+**B. Ink diagnostics (developer menu, dev builds only)**
+
+1. Developer menu > **6. Ink diagnostics**.
+2. **Live drawing:** choose Palm rejection = Auto and write 3 lines with your palm resting.
+   Watch the numbers: **Frame p50/p95** (about 8 ms on 120 Hz screens, 16 ms on 60 Hz),
+   **Dropped** (aim under 5%), **Samples/s** (120+ is good), **Palm rejected**.
+3. **Latency clock:** tap Start clock, film the screen with another phone in **slow motion
+   (240 fps)** while drawing a fast line. Count frames between the pen tip moving and ink
+   appearing: frames × 4.2 ms = latency.
+4. **Engine bench:** tap Run bench (it uses 5,000 **generated** strokes, not your notes).
+   Note Open, Render, Eraser and Lasso times.
+5. Tap **Save result**, then Results > Copy and paste it back to me.
 
 **Editor on a tablet (P1):** open a note in portrait and landscape. The page and the keyboard toolbar
 should use the full width; the slash menu and block picker should stay inside the page.
@@ -210,7 +222,7 @@ and buttons should stay at least finger-sized.
 
 ## 6. Safe test backend
 
-**The app has no online backend yet** (accounts and sync come in P2b). P1 stores everything on the phone:
+**There is no online backend.** Sign-in and sync (P2b) use the local emulators on your PC (section 6b). Without that setup the app stores everything on the phone:
 - notes, subjects, folders, versions and settings in a SQLite database in the app's private storage,
 - (developer menu) P0 results log, recordings and the Groq test key.
 
@@ -230,9 +242,50 @@ npm test
 Expected: about 600 tests pass (601 at the P2a merge). Full guide, including a visual demo with the
 emulator UI at http://127.0.0.1:4000: `docs/backend/TESTING_BACKEND.md`.
 
-To connect a **phone** to the emulators later (P2b), the emulators must listen on your PC's Wi-Fi address
-instead of 127.0.0.1. Only do that on a private home Wi-Fi, allow Java through Windows Firewall for
-**Private** networks only, and never on public Wi-Fi. P2b adds those steps with the sync module.
+### 6b. Sign-in and sync on your phone (P2b, emulators only)
+
+Sync talks to the **Firebase emulators on your PC**, not to the internet. Nothing is uploaded anywhere
+else, and the emulators forget everything when you stop them.
+
+**Safety first.** Do this only on your **private home Wi-Fi**. When Windows asks, allow Java for
+**Private networks only** (never Public). Never do it on school, café or other public Wi-Fi: anyone on
+that network could read the test notes.
+
+1. Find your PC's Wi-Fi address. In PowerShell: `ipconfig`. Look under **Wireless LAN adapter Wi-Fi** for
+   **IPv4 Address**, for example `192.168.1.20`.
+2. Copy `.env.example` to `.env` (if you haven't), then remove the `#` in front of these two lines and put
+   your address in the second one:
+   ```
+   EXPO_PUBLIC_FIREBASE_PROJECT_ID=demo-studynotes
+   EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=192.168.1.20
+   ```
+   (The app refuses an emulator address unless the project id starts with `demo-`.)
+3. Window 1 (needs `cd firebase && npm ci` once, and Java 21):
+   ```powershell
+   npm run emulators:lan
+   ```
+   Wait for "All emulators ready". The emulator UI (http://127.0.0.1:4000) shows users and notes.
+4. Window 2: `npm run start:go -- --clear` and open the app in Expo Go as in section 3 or 4.
+   (`--clear` makes Metro read the new `.env`.)
+5. In the app: **Me > Turn on sync > Create an account**. The emulator sends no real email. To "click"
+   the verification link, in a third window run:
+   ```powershell
+   npm run emu:verify -- you@example.com
+   ```
+   then tap **I opened the link** in the app.
+6. Use any made-up email (for example `rey.test1@example.com`) and a password of 8+ characters.
+   Test accounts exist only in the emulator.
+
+**Second device:** a second phone (or a tablet) on the same Wi-Fi with the same `.env`; sign in with the
+same email. An Android emulator on the PC can use `10.0.2.2` as the address.
+
+**Android APK against the emulators:** `npm run build:android:emulator` (free EAS account). First open
+`eas.json` and replace `SET-YOUR-PC-WIFI-IP` under `"emulator"` with your PC's address. This build allows
+plain http **only** to that one address; the normal APK (section 4c) has no sync at all. If your PC's
+address changes, rebuild.
+
+**What needs more than the emulator:** Google and Apple sign-in (hidden in P2b), App Check, and syncing
+with a real Firebase project. They are marked UNVERIFIED in the checklist.
 
 ## 7. AI features
 
@@ -294,6 +347,65 @@ Center, Sep 3, 2026).
 
 Write PASS / FAIL and any numbers next to each step. Then open **Results log** > **Copy all as
 Markdown** and paste it back to me with your notes.
+
+### P4b: drawing and ink
+
+All steps UNVERIFIED until your device run. Expo Go works for all of them.
+
+1. Open a note, tap **Draw**. Expected: keyboard closes, drawing toolbar shows (bottom on phones,
+   floating on tablets), a one-time tip says two fingers scroll.
+2. Draw with **Pen 1**, then **Pen 2** and **Pen 3**. Expected: the pack's three pen colours.
+3. Tap the width button: thin → medium → thick.
+4. **Highlighter** over a line of text. Expected: the colour sits **behind** the words, which stay readable.
+5. With a stylus, press lightly then hard. Expected: the line gets thinner and thicker (pressure).
+6. **Eraser** over a stroke: the whole stroke goes. Tap the eraser again (partial mode) and erase
+   the middle of a long stroke: it splits in two.
+7. **Undo** three times, **Redo** once. Expected: each gesture undoes as one step.
+8. **Lasso:** circle two strokes. Drag inside the dashed box to move them; tap Recolour, then Delete.
+9. Tap **Done**, then type a new line **above** your drawing. Expected: the drawing moves down with
+   its text.
+10. Put the cursor at the start of a drawn-on line and press Backspace (joins it with the line above).
+    Expected: the drawing stays where it was.
+11. Delete a drawn-on line, then Undo. Expected: the drawing disappears with the line and comes back
+    with it. ⋯ > "Delete N hidden drawings" appears while it's hidden.
+12. Slash menu > **Sketch**: a dashed drawing area appears. Draw inside it; strokes past the edge are cut off.
+    Select the sketch and use ⋯ > "Make the selected sketch taller".
+13. Change the note's style pack (Style). Expected: pens and highlighter switch to the new pack's colours.
+14. Leave the note and open it again. Expected: the drawing is still there.
+15. Draw, then swipe the app away from recent apps **without leaving the note**; reopen the app and the note.
+    Expected: the drawing is still there (crash recovery).
+16. Delete the note and wait 10 seconds. Expected: nothing left (Me > Delete all data also removes drawings).
+17. ⋯ menu: switch **Pen input** (automatic / stylus only / finger draws), **Draw with finger**, and
+    **Toolbar on the left/right** (tablet). Drag the floating toolbar by its handle; it snaps to a side.
+18. Developer menu > **6. Ink diagnostics** (section 5B). Save and send the results.
+19. Security: the drawing never appears in any log you send me (Results hold numbers only).
+### P2b: sign-in and sync (emulators, section 6b)
+
+Do these with two devices (A and B) where it says so. Write PASS/FAIL. Everything here is **UNVERIFIED on
+real phones** until you run it.
+
+| # | Do this | Expected |
+|---|---|---|
+| 1 | No `.env` Firebase lines: open Me | "Sync isn't set up in this version of the app." Everything else works as in P1. |
+| 2 | With the `.env` lines and `npm run emulators:lan`: on A, write 2 notes and a subject as a guest | Me shows **Turn on sync** |
+| 3 | A: Me > Turn on sync > Create an account (made-up email, 8+ character password) | "Check your email" screen. Me shows "Confirm your email to turn on sync". |
+| 4 | Security: on the emulator UI (Firestore tab) | Nothing of yours is there yet (unverified accounts can't sync) |
+| 5 | Run `npm run emu:verify -- <email>`, tap **I opened the link** | "Upload your notes?" shows exactly **2 notes, 1 subject** and a masked email like `r•••@example.com` |
+| 6 | Tap **Turn on sync** | Progress "Uploading 0 of 4…" to done; Me shows **Synced**; the note's chip says **Synced** |
+| 7 | B: Me > Turn on sync > Sign in with the same account > Turn on sync | B shows both notes and the subject; search on B finds a word from them |
+| 8 | Edit a note on A, wait about 30 s (or Me > Sync now on both) | B shows the change; if the note is open on B: "Updated from your other device." |
+| 9 | Airplane mode on A and B. Edit the SAME note differently on both. Turn airplane mode off. Sync A, then B | B: Home banner "A note changed on two devices"; the chip says **Needs attention** |
+| 10 | B: open the banner > the note | Two versions ("This phone" / "Other device"), changed lines marked. Try **Keep both** | 
+| 11 | After Keep both, sync A | A and B both have the original (A's text) and "… (copy from this phone)" (B's text). History on B shows two "Before sync merge" versions |
+| 12 | Delete a note on A, wait 10 s, sync A then B | Gone on B too; on the emulator UI the note doc has an empty title and document (erased) |
+| 13 | Delete a note on A and tap **Undo** within 8 s, then sync | Note is back on A and was never deleted on B |
+| 14 | Security: in the emulator UI, Authentication tab: the account shows no name or photo | Only the email |
+| 15 | Me > Sign out on B | B keeps its notes; Me shows Turn on sync. Signing in with ANOTHER new account on B says the phone holds another account's notes |
+| 16 | App lock: Me > App lock > turn on (asks for fingerprint/face/PIN) > Immediately. Switch apps and back | The app asks to unlock; in the app switcher NotedPo shows no note (Android: blank; iPhone: blurred). On Android, a screenshot inside the app is blocked |
+| 17 | Me > Privacy Policy, Terms of Use, How to delete your account | Each opens inside the app, starts with the **Draft** line, links between them work, works in airplane mode |
+| 18 | A: Me > Delete account > password > Delete my account | Steps with counts, then "Your account is deleted". The emulator UI shows **no** documents, files or users left. Choose **Keep my notes on this phone**: A's notes are still there |
+| 19 | B (still signed in): Me > Sync now | B says the account was deleted on another device; B keeps its notes and uploads nothing |
+| 20 | Logs: in the Metro terminal while doing 3 to 18 | No email, password, note text or token is ever printed |
 
 ### P1: core app
 
@@ -620,6 +732,16 @@ notes picture you like also works. Write PASS / FAIL for each step.
 | Backend tests: `npm : running scripts is disabled on this system` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `npm.cmd`. |
 | Backend tests: `firebase-tools no longer supports Java version before 21` / `Could not spawn java -version` | Install Java 21 (section 1), reopen PowerShell, check `java -version`. |
 | Backend tests: port already in use / tests time out on the first run | Close other emulator windows; run `npm test` again (the first emulator download can be slow). More rows: `docs/backend/TESTING_BACKEND.md` section 6. |
+| Drawing: my palm makes marks | Draw once with the pen first (the app then knows you have a stylus), or ⋯ > Pen input > stylus only. Send me the Ink diagnostics "Palm rejected" number. |
+| Drawing: the page won't scroll in Draw mode | Use two fingers. One finger scrolls only after a stylus has been seen (or with Pen input = stylus only). |
+| Drawing: "The page is still loading" | Wait a second after opening the note and draw again. If it keeps happening, tell me your device. |
+| Drawing: a banner says part of the drawing is damaged | Your last good copy is shown. Send me the steps; don't delete the app. |
+| Sync: "Sync isn't set up" with the `.env` lines in place | Restart Metro with `npm run start:go -- --clear`. Check there's no `#` in front of both lines and the project id starts with `demo-`. |
+| Sync: Offline / stuck on "Uploading…" | Is `npm run emulators:lan` running? Phone and PC on the same Wi-Fi? Allow Java on **Private** networks in Windows Firewall. Did your PC's address change (`ipconfig`)? |
+| Sign-up works but Turn on sync keeps saying "Confirm your email" | Run `npm run emu:verify -- <email>` (same email, lower case), then tap **I opened the link**. |
+| APK built with the emulator profile fails: "must be your PC's private Wi-Fi IPv4 address" | Put your real address into `eas.json` > `emulator` > `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST`. |
+| App lock can't be turned on | Set up a screen lock (PIN, pattern, fingerprint or face) in the phone's settings first. |
+| E2E sync tests on the PC | `cd firebase && npm ci` once, then from the project root `npm run test:sync-e2e` (Java 21). |
 | AI panel: "This key was rejected by Groq." | Copy the key again from https://console.groq.com/keys (all of it, no spaces), then Me > AI > Replace key. |
 | AI panel: "Your free Groq limit is used up for now" | You hit the free daily limit. Wait the time shown, or add a Mistral key and tap "Use Mistral instead". |
 | AI panel: "…answer didn't make sense twice" | Try again; if it keeps happening, tap Report this AI result and send me the report details (Me > AI). |

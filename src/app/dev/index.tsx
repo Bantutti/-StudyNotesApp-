@@ -12,7 +12,7 @@ const SPIKE_CARDS: { id: SpikeId; route: Href; title: string; what: string; need
   { id: 'review', route: '/dev/review', title: '3. FSRS on Hermes', what: 'Scheduler matches Node golden values; logs merge.', needs: 'Expo Go' },
   { id: 'voice', route: '/dev/voice', title: '4. 90-minute background recording', what: 'Recording survives screen lock; size and battery.', needs: 'Dev build (Android)' },
   { id: 'timestamps', route: '/dev/timestamps', title: '5. Audio timestamps (Groq Whisper)', what: 'Word timestamps, accuracy (WER), tap-to-seek drift.', needs: 'Expo Go + Groq key' },
-  { id: 'ink', route: '/dev/ink', title: '6. Ink latency', what: 'Frame smoothness, sample rate, palm rejection.', needs: 'Expo Go (tablet ideal)' },
+  { id: 'ink', route: '/dev/ink', title: '6. Ink diagnostics', what: 'Frame smoothness, sample rate, palm rejection, latency clock, engine bench (P4b).', needs: 'Expo Go (tablet ideal)' },
 ];
 
 export default function Home() {

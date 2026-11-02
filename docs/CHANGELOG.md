@@ -28,6 +28,59 @@ All notable changes, one section per phase.
 - 14 `@expo-google-fonts` packages, `expo-image-picker` 58.0.10 and `expo-image-manipulator` 58.0.16 (SDK 58
   versions, in Expo Go); dev: `subset-font` 2.9.0 and 4 CJK font packages (subset inputs only).
 
+## P4b: drawing and ink (2026-11-01)
+
+### Added
+- **Draw mode** in the note editor: pen (three pack pens plus custom colours, three widths, pressure),
+  highlighter (behind the text), eraser (whole strokes or partial), lasso (move, recolour, delete),
+  undo/redo, two-finger scroll and fling, pinch zoom 1x to 3x. Phone toolbar at the bottom; tablet
+  floating toolbar that docks left or right.
+- **Stylus-aware input** with palm guards; preferences (input mode, finger drawing, toolbar side, tools)
+  stored on the device.
+- **Finished ink inside the editor page** (SVG per block, highlighter under the text, pens over it): it moves
+  with its text, restyles with the pack, hides with deleted lines and returns with Undo.
+- **Sketch block** (slash menu > Sketch), with "Make the selected sketch taller".
+- **Ink file format v1** (one JSON file per note, block units, delta-coded points, tombstones), saved locally
+  while drawing and published once per visit for sync; crash recovery; ink of deleted notes cleaned up.
+- **Sync hand-off** for P2b: union merger (`registerInkMerger`) and download on open.
+- **Developer menu > Ink diagnostics:** live metrics, palm test, latency clock, engine bench on synthetic strokes.
+- Docs: `docs/modules/ink.md`, `docs/modules/INK_MATH.md` (formulas §1 to §10), store assets, editor ink
+  messages; TESTING_ON_DEVICE §5 and §8 P4b; SECURITY §2 P4b controls and §4d findings.
+
+### Changed
+- Editor bridge: ink messages and the `sketch` / `sketchTaller` commands; tablets get a fixed 760 px page width.
+- Store: `store.assets` (incl. `createInkLayer`, `setLocalPath`).
+- Jest: stubs for Skia, Reanimated and Worklets; Gesture Handler's `jestSetup`.
+
+## P2b: sign-in and sync, app side (2026-11-01)
+
+### Added
+- Sign-in and sync against the local Firebase emulators (project `demo-studynotes`): email sign-up,
+  verification, sign-in, reset and re-sign-in; Google and Apple Firebase half (hidden; scopes pinned to
+  `openid email` / email only).
+- Sync engine: SQLite trigger outbox, rev conflict detection with batch splitting and lost-ack detection,
+  incremental pulls with exact cursors, zod validation of every downloaded doc (quarantine), erased
+  tombstones, review-log union, asset files with `registerAssetMerger` (for P4b), scheduler.
+- Screens: Me (account and sync, app lock, privacy, terms, deletion page), sign-in set, Turn on sync with
+  counts and progress, Needs attention, Conflict resolver (Keep mine / other / both), Delete account, App
+  lock, in-app legal pages (C1 drafts, pinned to `phase/c1-compliance` @ e78a01a); sync chip; Home banner.
+- In-app account deletion (P2a `deleteAccount`, Apple token revoke), "deletion leaves nothing" e2e test.
+- App lock (Face ID / fingerprint / device PIN), FLAG_SECURE on Android, app-switcher blur on iOS.
+- `npm run test:sync-e2e` (two simulated devices on the real SDK and rules), `npm run emulators:lan`,
+  `npm run emu:verify`, `npm run check:legal`, `npm run build:android:emulator`; EAS `emulator` profile with a
+  config plugin that allows cleartext to one private LAN address only.
+
+### Changed
+- Store migration 2 (sync bookkeeping). Delete all data also clears sync tables and signs out.
+- Tombstones are never written during P1's 8-second undo window (P1 r2's undo rule).
+- `jest.config.js`: `firebase/*` resolves to the app's SDK (one instance for P2a's deletion module).
+
+### Dependencies
+- `firebase` 13.1.0 (same pin as P2a) with the `@grpc/grpc-js` 1.14.7 override (P2a MERGE_NOTES §6.3),
+  `expo-local-authentication` 58.0.2, `expo-screen-capture` 58.0.6 (both Expo SDK 58 bundled versions).
+
+### Security
+- See SECURITY.md section 4d (P2b-S1 to P2b-S12). No open high-severity findings.
 ## P3b: AI screens (2026-11-01)
 
 ### Added

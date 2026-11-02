@@ -24,6 +24,15 @@
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_APP_VARIANT": "preview"
       }
+    },
+    "emulator": {
+      "extends": "preview",
+      "env": {
+        "APP_VARIANT": "emulator",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "demo-studynotes",
+        "EXPO_PUBLIC_FIREBASE_EMULATOR_HOST": "SET-YOUR-PC-WIFI-IP",
+        "EXPO_PUBLIC_APP_VARIANT": "emulator"
+      }
     }
   }
 }

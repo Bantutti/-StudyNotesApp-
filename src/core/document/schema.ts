@@ -54,12 +54,15 @@ export const BLOCK_TYPES = [
   'tableRow',
   'tableHeader',
   'tableCell',
+  'sketch',
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 export const COLUMN_LAYOUTS = ['even', 'cornell'] as const;
 export type ColumnLayout = (typeof COLUMN_LAYOUTS)[number];
 
+/** Sketch block (P4b, decision Q2): a framed drawing area in the note flow, height in CSS px. */
+export const SKETCH_HEIGHT = { min: 120, max: 2400, default: 400 } as const;
 /** Links a block to a moment in a recording (P2a audioAnchorSchema, plan F11). */
 // Type aliases (not interfaces) on purpose: aliases stay assignable to
 // Record<string, unknown>, which code walking attrs generically relies on.
@@ -138,7 +141,8 @@ export type DocNode =
   | { type: 'table'; attrs?: BlockAttrs; content: DocNode[] }
   | { type: 'tableRow'; attrs?: BlockAttrs; content: DocNode[] }
   | { type: 'tableHeader'; attrs?: TableCellAttrs; content: DocNode[] }
-  | { type: 'tableCell'; attrs?: TableCellAttrs; content: DocNode[] };
+  | { type: 'tableCell'; attrs?: TableCellAttrs; content: DocNode[] }
+  | { type: 'sketch'; attrs: BlockAttrs & { height: number } };
 
 export interface NoteDoc {
   type: 'doc';
@@ -196,6 +200,11 @@ const nodeSchema: z.ZodType<DocNode> = z.lazy(() =>
     z.object({ type: z.literal('tableRow'), attrs: attrs().optional(), content: children() }),
     z.object({ type: z.literal('tableHeader'), attrs: cellAttrs.optional(), content: children() }),
     z.object({ type: z.literal('tableCell'), attrs: cellAttrs.optional(), content: children() }),
+    // P4b sketch block: a leaf (no content); its drawing lives in the note's ink layer.
+    z.object({
+      type: z.literal('sketch'),
+      attrs: attrs({ height: z.number().int().min(SKETCH_HEIGHT.min).max(SKETCH_HEIGHT.max) }),
+    }),
   ]),
 ) as z.ZodType<DocNode>;
 
@@ -214,7 +223,7 @@ const INLINE = new Set(['text', 'hardBreak']);
 /** Blocks allowed directly in the doc, a column, a callout and similar containers. */
 const FLOW = new Set([
   'paragraph', 'heading', 'bulletList', 'orderedList', 'callout', 'definition', 'horizontalRule',
-  'blockquote', 'summary', 'qa', 'columns', 'table',
+  'blockquote', 'summary', 'qa', 'columns', 'table', 'sketch',
 ]);
 const without = (s: Set<string>, ...drop: string[]) => new Set([...s].filter((x) => !drop.includes(x)));
 /** Inside a column: no nested columns. */
@@ -235,6 +244,7 @@ const RULES: Record<string, Rule> = {
   heading: { kind: 'inline' },
   qaQuestion: { kind: 'inline' },
   horizontalRule: { kind: 'leaf' },
+  sketch: { kind: 'leaf' },
   bulletList: { kind: 'blocks', allowed: new Set(['listItem']), min: 1 },
   orderedList: { kind: 'blocks', allowed: new Set(['listItem']), min: 1 },
   listItem: { kind: 'blocks', allowed: SIMPLE, min: 1 },

@@ -5,7 +5,7 @@
  * links survive; the page carries a CSP that blocks scripts and network,
  * so even a bug here cannot run code or fetch anything during printing.
  */
-import { escapeHtml, safeHref, type DocNode, type Mark, type NoteDoc } from '@/core';
+import { escapeHtml, safeHref, SKETCH_HEIGHT, type DocNode, type Mark, type NoteDoc } from '@/core';
 import { cornerSvg, doodleSvg, fontFaceCss, packAttrs, packCss } from '@/modules/stylepacks';
 
 import type { ExportInput } from './types';
@@ -96,6 +96,12 @@ function renderNode(n: DocNode, doodle: string): string {
       return `<th>${renderNodes(n.content)}</th>`;
     case 'tableCell':
       return `<td>${renderNodes(n.content)}</td>`;
+    case 'sketch': {
+      // P4b sketch block: an empty frame of the stored height (an integer the schema clamped).
+      // Its ink is added by P6's export (ink module inkSvgForBlock / renderLayer).
+      const h = Math.max(SKETCH_HEIGHT.min, Math.min(SKETCH_HEIGHT.max, Math.round(n.attrs.height)));
+      return `<div class="pk-sketch" style="height:${h}px"></div>`;
+    }
   }
 }
 
