@@ -157,6 +157,22 @@ export function runCommand(editor: Editor, name: EditorCommand, arg?: string): b
       return c.wrapIn('summary').run();
     case 'hr':
       return c.setHorizontalRule().run();
+    case 'sketch':
+      return insertBlock(editor, { type: 'sketch', attrs: { height: 400 } });
+    case 'sketchTaller': {
+      // The selected sketch block grows by 200 px (max 2400).
+      const node = (editor.state.selection as { node?: PMNode }).node;
+      const at = editor.state.selection.from;
+      if (!node || node.type.name !== 'sketch') return false;
+      const h = Math.min(2400, Number(node.attrs.height ?? 400) + 200);
+      return editor
+        .chain()
+        .command(({ tr }) => {
+          tr.setNodeMarkup(at, undefined, { ...node.attrs, height: h });
+          return true;
+        })
+        .run();
+    }
     case 'qa':
       return insertBlock(editor, BLOCK_TEMPLATES.qa);
     case 'columns':

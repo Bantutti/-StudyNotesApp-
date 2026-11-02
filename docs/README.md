@@ -122,7 +122,7 @@ src/modules/        feature modules, each with a public index.ts and its own tes
   beautify/         Beautify Lite (on-device rules)
   editor/           TipTap WebView host, bridge protocol, hardening, links, previews, action hook
   export/           PDF / DOCX / print exporters behind adapters
-  ink/              Skia drawing surface, palm rejection, smoothness stats
+  ink/              drawing (P4b): ink format, anchors, tools, Draw-mode overlay and toolbars, sync hand-off
   review/           FSRS scheduler, append-only review logs, on-device self-test
   store/            SQLite tables (mirror the cloud docs), migrations, search, versions, settings
   stylepacks/       13 validated style packs (2 offered in P1), pack -> CSS, bundled OFL fonts

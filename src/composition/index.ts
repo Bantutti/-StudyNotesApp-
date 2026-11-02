@@ -19,3 +19,5 @@ export { countsText, maskEmail } from './syncText';
 export { bumpLockRevision, useLockRevision } from './lockRevision';
 export { AppLockGate } from './AppLockGate';
 export { AiWiring, useAiScreenPorts, subjectAiAllowed, storedNoteHasText, expoClipboard } from './aiWiring';
+export { inkServiceFor, inkStorePort } from './ink';
+export { createNoteInk, KV_INK, KEY_INK_PREFS, LIVE_CLEAR_FALLBACK_MS, RENDER_BATCH, type NoteInk, type NoteInkState, type InkPrefs } from './noteInk';

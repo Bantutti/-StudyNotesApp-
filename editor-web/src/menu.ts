@@ -45,6 +45,7 @@ export const MENU_ITEMS: Item[] = [
   { id: 'cornell', label: 'Cornell', words: 'cornell cue columns notes', preview: () => cols('cornell'), run: (e) => void insertBlock(e, BLOCK_TEMPLATES.cornell) },
   { id: 'table', label: 'Table', words: 'table grid rows columns', preview: () => { const t = el('table', 'pk-table'); const b = el('tbody'); const r = el('tr'); r.appendChild(el('th', undefined, 'A')); r.appendChild(el('th', undefined, 'B')); b.appendChild(r); t.appendChild(b); return t; }, run: (e) => void runCommand(e, 'table') },
   { id: 'divider', label: 'Divider', words: 'divider line hr rule', preview: () => el('hr'), run: (e) => void runCommand(e, 'hr') },
+  { id: 'sketch', label: 'Sketch', words: 'sketch drawing draw diagram picture ink', preview: () => wrap('pk-sketch', ''), run: (e) => void runCommand(e, 'sketch') },
 ];
 
 function cols(layout: 'even' | 'cornell') {

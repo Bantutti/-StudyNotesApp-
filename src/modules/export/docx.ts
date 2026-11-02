@@ -269,6 +269,10 @@ function blockParagraphs(nodes: readonly DocNode[], ctx: Ctx, extra: Partial<IPa
         );
         break;
       }
+      case 'sketch':
+        // P4b sketch block: blank space of the same height (P6 adds the drawing as an image).
+        out.push(new Paragraph({ ...extra, spacing: { before: 0, after: Math.round(n.attrs.height * 0.75 * TWIPS_PER_POINT) }, children: [] }));
+        break;
       default:
         break;
     }

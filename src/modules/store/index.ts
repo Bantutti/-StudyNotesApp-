@@ -24,4 +24,5 @@ export { cleanTags, cleanTitle, type CreateNoteInput, type NotePatch, type SaveR
 export { toHex6, WIPED_NAME, type CreateSubjectInput, type SubjectPatch } from './subjects';
 export { VERSIONS_KEPT, hash53 } from './versions';
 export { userSettingsSchema, LOCAL_USER_ID, KV_MAX_CHARS, type UserSettings } from './settings';
+export { ASSET_TYPES, ASSET_MAX_BYTES, LOCAL_PATH, type Asset, type AssetType } from './assets';
 export * from './types';

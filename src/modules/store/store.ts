@@ -8,6 +8,7 @@ import type { ZodType } from 'zod';
 
 import { AppError, type IdGenerator, type Logger, type NoteDoc } from '@/core';
 
+import { createAssetsRepo, type Asset, type AssetType } from './assets';
 import { migrate } from './migrations';
 import { createNotesRepo, type CreateNoteInput, type NotePatch, type SaveResult } from './notes';
 import { inList, str } from './rows';
@@ -97,6 +98,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
   const folders = createFoldersRepo(rd);
   const notes = createNotesRepo(rd);
   const versions = createVersionsRepo(rd);
+  const assets = createAssetsRepo(rd);
   const kv = createKvRepo({ now, logger: log });
   const profile = createProfileRepo({ now, logger: log });
   const syncRepo = createSyncRepo({ now });
@@ -225,6 +227,36 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
     },
 
     search: (text: string): Promise<SearchHit[]> => searchNotes(db, text),
+
+    /** Files tracked for sync (P4b ink now, P4 audio later). */
+    assets: {
+      get: (id: string): Promise<Asset | null> => assets.get(db, id),
+      list: (type: AssetType): Promise<Asset[]> => assets.listByType(db, type),
+      update: (id: string, patch: { size?: number; localPath?: string | null }) => db.transaction((tx) => assets.update(tx, id, patch)),
+      remove: (id: string) => db.transaction((tx) => assets.markDeleted(tx, id)),
+      /** Local-only: where a downloaded file lives (does not bump `updated`, so it never syncs). */
+      setLocalPath: (id: string, localPath: string | null) => db.transaction((tx) => assets.setLocalPath(tx, id, localPath)),
+      /** Ink assets that no note points at any more (deleted notes after the undo window). */
+      inkOrphans: (): Promise<Asset[]> => assets.inkOrphans(db),
+      /**
+       * Creates a note's ink asset and links it (notes.inkLayerRef) in ONE
+       * transaction. Returns the asset and the note's new `updated`, which the
+       * editor session must mark as seen (otherwise it would reload the note).
+       */
+      createInkLayer: (noteId: string, input: { id: string; localPath: string; size: number }): Promise<{ asset: Asset; noteUpdated: number }> =>
+        db.transaction(async (tx) => {
+          const n = await tx.get<{ owner: string | null; deleted: number; inkLayerRef: string | null; updated: number }>(
+            'SELECT owner, deleted, inkLayerRef, updated FROM notes WHERE id = ?',
+            [noteId],
+          );
+          if (!n || n.deleted) throw new AppError('not_found', 'This note no longer exists.');
+          if (n.inkLayerRef) throw new AppError('validation_failed', 'This note already has a drawing.');
+          const asset = await assets.create(tx, { type: 'ink', id: input.id, localPath: input.localPath, size: input.size, owner: n.owner ?? null });
+          const noteUpdated = Math.max(now(), Number(n.updated));
+          await tx.run('UPDATE notes SET inkLayerRef = ?, updated = ? WHERE id = ?', [asset.id, noteUpdated, noteId]);
+          return { asset, noteUpdated };
+        }),
+    },
 
     kv: {
       get: <T>(ns: string, key: string, schema: ZodType<T>) => kv.get(db, ns, key, schema),
