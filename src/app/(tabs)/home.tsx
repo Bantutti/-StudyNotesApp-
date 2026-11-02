@@ -9,6 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { createNoteIn, examLabel, homeSummary, useAppData, useDataVersion, type HomeSummary } from '@/composition';
 import { t, userMessage } from '@/core';
 import { AppButton, AppScreen, BodyText, Icon, ListRow, SectionHeader, Surface, Title, useTheme } from '@/core/ui';
+import { NeedsAttentionBanner } from '@/screens/SyncChip';
 import { NoteCard } from '@/screens/NoteCard';
 
 export default function Home() {
@@ -53,6 +54,7 @@ export default function Home() {
       </Pressable>
 
       {error ? <BodyText>{error}</BodyText> : null}
+      <NeedsAttentionBanner />
 
       {data?.exams.length ? (
         <View style={styles.gap}>

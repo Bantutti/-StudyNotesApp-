@@ -45,7 +45,8 @@
       "expo-font",
       "expo-asset",
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      "./plugins/withEmulatorCleartext"
     ]
   }
 }
