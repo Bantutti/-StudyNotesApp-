@@ -18,7 +18,7 @@ and the rules every later phase follows.
 | Audio | expo-audio 58 | Recording with a background mode (dev build) |
 | Export | expo-print (PDF, print), docx 9.15 (DOCX) | PDF from the same HTML/CSS as the editor; DOCX in pure JS |
 | Secrets | expo-secure-store (Keychain / Keystore) | User AI keys never leave secure storage except to call the provider |
-| Fonts | @expo-google-fonts (SIL OFL): Gaegu, Nunito, Cinzel, Crimson Pro, Atkinson Hyperlegible | Bundled, licence allows embedding in PDF/DOCX. Gaegu (Pastel Highlight's header, ~3 MB per weight, full Korean set) is why `MAX_FONT_BASE64` is 4.5 M and fonts cross the bridge one face per message; P5 replaces it with a Latin subset |
+| Fonts | @expo-google-fonts (SIL OFL): the 22 families of the 13 v1 packs (P5) | Bundled, licence allows embedding in PDF/DOCX. The four large Korean/Japanese families without Reserved Font Names (Gaegu, Gowun Dodum, Mochiy Pop One, Zen Maru Gothic) ship as generated Latin subsets (`npm run build:fonts`), so `MAX_FONT_BASE64` is back to 3 M (largest face: Nanum Gothic Bold, 2.76 M). Fonts still cross the bridge one face per message (P1 PR #9) |
 
 ## Modules
 
@@ -29,7 +29,7 @@ and the rules every later phase follows.
           src/composition ── the ONLY place adapters are chosen; app use cases live here
    ┌──────┬────────┬──────────┬────────┬───────────┬─────────┬────────┬──────┬──────┬──────┬────┐
    ▼      ▼        ▼          ▼        ▼           ▼         ▼        ▼      ▼      ▼      ▼
- store  editor  templates  beautify  stylepacks  export   review   voice   ink   aiui ─► ai
+ store  editor  templates  beautify  stylepacks◄─lookmatch  export   review   voice   ink   aiui ─► ai
    │      │                                                                       │      │
  SQLite  editor-web (TipTap page inside the WebView)                  AI screens  provider HTTPS
    │
@@ -43,12 +43,13 @@ and the rules every later phase follows.
 | `editor` | WebView host, bridge protocol, WebView hardening, links opened outside the app, page previews, the **editor action hook** for P3b, generated CSP-pinned page | [modules/editor.md](modules/editor.md) |
 | `templates` | Template schema v1 (validated data), 7 built-ins, instantiate/apply with fresh block ids | [modules/templates.md](modules/templates.md) |
 | `beautify` | Beautify Lite: on-device rules that never change words and keep block ids | [modules/beautify.md](modules/beautify.md) |
-| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts; P1 packs Pastel Highlight + Clear Read v2 | [modules/stylepacks.md](modules/stylepacks.md) |
+| `stylepacks` | Pack schema v3, contrast rules, pack -> CSS variables, decor, bundled fonts (22 OFL families, 4 as generated Latin subsets); the 13 v1 packs plus validated custom packs (registry), PackPicker | [modules/stylepacks.md](modules/stylepacks.md) |
 | `export` | PDF / DOCX / print exporters behind `Exporter` + ports (P1 blocks render; P6 polishes) | [modules/export.md](modules/export.md) |
 | `review` | FSRS scheduler wrapper, append-only logs, rebuild, on-device self-test (P4c builds on it) | [modules/review.md](modules/review.md) |
 | `voice` | Recording presets, session monitor, recordings folder, transcription port + Groq adapter (P4 builds on it) | [modules/voice.md](modules/voice.md) |
 | `ink` | Drawing (P4b): ink file format v1 with a zod trust boundary, block-unit anchors and reconcile, geometry (smoothing, pressure outlines, RDP, eraser and lasso hit tests, safe SVG paths), immutable layer ops with tombstones, undo, union merge, the Draw-mode controller, live Skia overlay with stylus-aware routing, toolbars, local save/publish service, sync hand-off ports, diagnostics bench. Maths in [INK_MATH.md](modules/INK_MATH.md) | [modules/ink.md](modules/ink.md) |
 | `ai` | AI engine (P3a): BYOK keys (Groq, Mistral), provider port with an OpenAI-compatible adapter, fixed-host transport (timeouts, retries, TPM pacing), 11 actions with versioned prompts and zod output schemas, alias-based block-id preservation, proposals with apply/rebase/exact undo, card and quiz drafts in P2a fields, local usage meter. No screens yet (P3b). | [modules/ai.md](modules/ai.md) |
+| `lookmatch` | Match a look (P5): reference photo intake (caps, metadata strip), on-device analysis (OKLab palette, paper pattern, roles, multi-photo), nearest pack, contrast repair, blend slider, chips, optional Groq vision pass (enum-only). Maths in `MATCH_MATH.md` | [modules/lookmatch.md](modules/lookmatch.md) |
 | `store` (P2b) | Migration 2: `syncOutbox` filled by SQLite triggers (every local insert/update; nothing for deletes), `syncState` (bound account, applying flag), exact pull cursors, `syncConflicts`, `syncQuarantine`, `syncFiles`; the `store.sync` API keeps all SQL in the store | [modules/sync.md](modules/sync.md) |
 | `sync` (P2b) | Engine: push (profile first, batches split on refusal, lost-ack detection), pull (cursor + 60 s overlap, zod on every doc, quarantine), conflicts (resolver for notes, cards, recordings; automatic for the rest), tombstones erased, review-log union, asset pass with `registerAssetMerger`, scheduler; a rules-faithful fake cloud for tests | [modules/sync.md](modules/sync.md) |
 | `cloud` (P2b) | Firebase JS SDK setup (config with emulator-only-for-demo rule, memory cache, long polling, SDK logs silenced), Firestore `RemoteBackend`, Storage `BlobStorePort`, React Native session persistence | [modules/cloud.md](modules/cloud.md) |

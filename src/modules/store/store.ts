@@ -14,7 +14,10 @@ import { createNotesRepo, type CreateNoteInput, type NotePatch, type SaveResult 
 import { inList, str } from './rows';
 import { searchNotes } from './search';
 import { createKvRepo, createProfileRepo, type UserSettings } from './settings';
+
 import { createSqlDb, type SqlDriver, type SqlExecutor } from './sql';
+import { createStylePacksRepo, type StoredPack } from './stylePacks';
+
 import { createFoldersRepo, createSubjectsRepo, WIPED_NAME, type CreateSubjectInput, type SubjectPatch } from './subjects';
 import {
   UNDO_WINDOW_MS,
@@ -97,6 +100,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
   const subjects = createSubjectsRepo(rd);
   const folders = createFoldersRepo(rd);
   const notes = createNotesRepo(rd);
+  const stylePacks = createStylePacksRepo(rd);
   const versions = createVersionsRepo(rd);
   const assets = createAssetsRepo(rd);
   const kv = createKvRepo({ now, logger: log });
@@ -135,6 +139,13 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
   const store = {
     info: { schemaVersion: to, ftsSecureDelete } as StoreInfo,
 
+    /** Custom style packs (P5). Definitions are validated by the caller (validatePack) before use. */
+    stylePacks: {
+      list: (): Promise<StoredPack[]> => stylePacks.list(db),
+      get: (id: string) => stylePacks.get(db, id),
+      save: (input: { id: string; definition: unknown; createdFromReference: boolean }) => db.transaction((tx) => stylePacks.save(tx, input)),
+      remove: (id: string, fallbackPackId: string) => db.transaction((tx) => stylePacks.remove(tx, id, fallbackPackId)),
+    },
     subjects: {
       list: (): Promise<Subject[]> => subjects.list(db),
       get: (id: string) => subjects.get(db, id),

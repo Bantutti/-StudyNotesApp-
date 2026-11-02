@@ -52,6 +52,14 @@ user's data, sync integrity, account deletion, cost and abuse, Storage, secrets)
 injection through note content; AI output tampering with block ids; key leakage via logs or error bodies;
 free-tier training on notes (Mistral opt-out, Gemini not used).
 
+### Additions in P5 (style packs, Match a look)
+| Area | Threat | Controls |
+|---|---|---|
+| Reference photos | Location or camera data leaking; decompression bombs; hostile files; photos kept or uploaded | System picker (no photo permission), at most 3 images, 25 MiB and 50 MP checked from metadata before decoding, decoder downsamples while reading, re-encode, then a pure-TS JPEG strip of APP1-APP15 and COM anywhere in the file plus a re-check; decoded size checked; temp files and the picker's cache copies deleted in `finally`; errors carry no decoder text |
+| Custom packs (local and synced) | Tampered sync data injecting CSS or URLs, unreadable contrast, replacing other packs, flooding | Packs are data only (schema v3: enums, hex, bundled fonts, clamped numbers, text without markup/CSS/URLs). `validatePack` on save AND on every load; definition id must equal the row id; only `ref-` ids; never shadows a built-in; at most 200 loaded; 50,000-char cap; delete erases the definition (tombstone) |
+| Vision pass (Groq) | Photos sent without permission; minors; prompt injection written in a photo; hostile model output | Explicit tap only; 18+ birth-year gate; a separate, versioned photo consent for Groq (text consent never counts; Mistral can never receive photos); engine re-checks before sending; enum-only strict schema (zod + strict JSON schema), one re-ask; the AI changes design options only, never colours or text; final pack repaired and validated; nothing photo-related logged |
+| Fonts | Tampered font files; licence breaches | Subset sources pinned by SHA-256; `check:fonts` in `verify`; Reserved Font Name families never subset; OFL notices in Me > Font licences; `MAX_FONT_BASE64` back to 3 M |
+
 ## 2. Controls in place
 
 ### Editor WebView (MASVS-PLATFORM)
@@ -223,7 +231,7 @@ test that fails on the code before it (checked by running the new tests against 
 | P1-S20 | L3 | Low | A keyboard that splits a block itself (skipping our Enter shortcut) left the id on the new empty line. | **Fixed:** fallback in the id pass moves the id with the text (also when the DOM copies the id into both halves). |
 | P1-S21 | L4 | Low | editor-web's relative imports of app code were an undocumented exception to the module rules. | **Fixed:** ARCHITECTURE module rule 6 and an ESLint rule allow only `src/core/document`, `src/modules/editor/protocol` and `src/modules/stylepacks/web`; a test runs ESLint on probe imports. |
 | P1-S22 | L5 | Low | Purged note text could stay readable in the `-wal` file until SQLite's next automatic checkpoint. | **Fixed:** a purge that wiped anything runs `PRAGMA wal_checkpoint(TRUNCATE)`; test reads the database and WAL files. |
-| P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **TODO(P5):** Latin subsets, then lower the cap. |
+| P1-S24 | P5 report | Low | Pastel Highlight (the default pack) never showed its Gaegu header font: both Gaegu faces (4,219,900 and 3,949,040 base64 chars) exceeded `MAX_FONT_BASE64` = 3,000,000 and `loadFaces` skipped them silently; together with Nunito they would also have exceeded the 6 M-char bridge limit in one `setFonts` message. | **Fixed:** cap raised to 4,500,000 (validated on both sides of the bridge), fonts sent one face per message (`append`), skipped faces logged (`fonts.face_skipped`: family, weight, reason, size; never data) and listed in `services.fontSkips()` and the Export developer screen. Test loads every face of the shipped packs from the real TTFs. **Trade-off:** a larger single string is accepted and the page holds ~8.5 MB of font CSS for Pastel (still schema-checked, base64-only, `data:` fonts with no network). **P5 follow-up (done):** Gaegu, Gowun Dodum, Mochiy Pop One and Zen Maru Gothic ship as Latin subsets (52-98 KB as base64) and the cap is back to 3,000,000 (largest face: Nanum Gothic Bold, 2,763,184 chars; a test fails if any face exceeds the cap). |
 | P1-S23 | L6 | Low | Undo after deleting a note stored as the empty document did nothing (the empty doc doubled as the "wiped" marker), and an empty note with a title was never wiped. | **Fixed:** Undo needs the note untouched since its deletion time; a purge bumps `updated`, so a wiped note never comes back. Purge wipes anything left (text, title, tags, ink, versions). |
 
 ## 4d. Findings and fixes (P4b)
@@ -306,6 +314,20 @@ P2a F-4 (no rate limits in the rules) stays **accepted** on the free plan. No Hi
 
 No high-severity findings are open.
 
+## 4e. Findings and fixes (P5)
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| P5-S1 | Low | A tampered stylePacks row could carry a definition naming ANOTHER custom pack's id and replace it in the registry (both are the user's own data, but a synced row should never redirect another). | **Fixed:** `loadCustomPacks` skips rows whose pack id differs from the row id, and `renameCustomPack` refuses them; test. |
+| P5-S2 | Low | No cap on custom packs: a sync flood (thousands of rows) would make the picker and every registry lookup slow. | **Fixed:** at most `MAX_CUSTOM_PACKS` = 200 (newest) load; test. |
+| P5-S3 | Info | The pre-decode pixel check trusts the picker's width and height. | **Accepted:** the decoder still downsamples while reading (`maxWidth`/`maxHeight`), the decoded size is checked, and the analysis copy is at most 384 px. |
+| P5-S4 | Info | expo-image-picker adds the Android CAMERA permission (asked only when "Take a photo" is tapped). | **Accepted:** listed for C1's store forms and P7 (MERGE_NOTES). No photo or media-library permission is requested. |
+| P5-S5 | Info | Deleting a custom pack moves its notes to the default pack without a "before style change" version. | **Accepted:** content and block ids are unchanged; only the look moves. |
+| P5-S7 | Low | Gate check: the export rules drop any folder named `build` (build output), so `src/modules/lookmatch/build/` (source code) was missing from the phase zip. | **Fixed:** renamed to `lookmatch/pack`; new test `exportRules.test.ts` asserts every file under `src/`, `editor-web/src` and `scripts/` is exported. |
+| P5-S6 | Low | P1 PR #9 had raised `MAX_FONT_BASE64` to 4.5 M for the full Gaegu files. | **Fixed:** Latin subsets; cap back to 3 M (largest face 2,763,184 chars); test pins it. |
+
+No high-severity findings are open.
+
 ## 5. OWASP MASVS check
 
 | Group | Status (P1) |
@@ -317,7 +339,7 @@ No high-severity findings are open.
 | MASVS-PLATFORM | WebViews hardened (section 2), previews with JavaScript off; links open only in the OS browser after a confirm; deep links validated by route params and the developer menu is gated; minimal permissions. |
 | MASVS-CODE | Pinned deps, lockfile, audits, input validation at every boundary (documents, bridge, templates, search, synced text), parameterized SQL, no dynamic code in the WebView. |
 | MASVS-RESILIENCE | P7 (release hardening). |
-| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. P3b: explicit per-provider, versioned consent before any note is sent; 18+ result-only storage; per-subject "Never send to AI"; local-only reports. |
+| MASVS-PRIVACY | Guest mode (no account, no key), redacting logger, metadata-only diagnostics, Delete all data, consent before third-party upload, no analytics. P3b: explicit per-provider, versioned consent before any note is sent; 18+ result-only storage; per-subject "Never send to AI"; local-only reports. P5: reference photos stripped of Exif/GPS and never kept; photos to Groq only after a tap, 18+ and a separate photo consent. |
 
 ## 6. Per-phase security gate
 

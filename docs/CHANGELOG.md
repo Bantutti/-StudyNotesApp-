@@ -2,6 +2,32 @@
 
 All notable changes, one section per phase.
 
+## P5: style packs and Match a look (2026-11-01)
+
+### Added
+- M1: all 13 v1 packs in the app (Pick your look, Style sheet, subject default), a native PackPicker with
+  one live preview, custom pack support in the registry (validated on load), Latin font subsets
+  (`npm run build:fonts` / `check:fonts`), 14 more OFL font packages, Me > Font licences.
+- M2-M5: **Match a look** (+ sheet, Style sheet). Reference photos are cleaned (caps, re-encode, Exif/GPS
+  strip) and analysed on the phone (OKLab palette, paper pattern, colour roles, up to 3 photos), turned
+  into a validated custom pack (nearest built-in pack, contrast repair), and tweaked with chips and an
+  11-step slider. Saved locally (`store.stylePacks`, synced by P2b) and re-validated on load. Your looks:
+  rename or delete. `MATCH_MATH.md` documents the maths.
+- M6: optional **Improve with AI (sends your photo to Groq)** on the result screen: Groq `qwen/qwen3.8-27b`,
+  18+ and a separate photo consent (P3b), enum-only answer that changes design options only.
+  `engine.describeImages` and `ChatRequest.images` in the ai module.
+
+### Security
+- P5-S1 (a synced pack can't replace another), P5-S2 (at most 200 custom packs load); see SECURITY §4e.
+
+### Fixed
+- The default pack's Gaegu header font was never loaded (its files exceeded the 3M-character base64 cap);
+  it now ships as a 52 KB / 98 KB Latin subset, and `MAX_FONT_BASE64` is back to 3 M (P1 PR #9 had raised it).
+
+### Dependencies
+- 14 `@expo-google-fonts` packages, `expo-image-picker` 58.0.10 and `expo-image-manipulator` 58.0.16 (SDK 58
+  versions, in Expo Go); dev: `subset-font` 2.9.0 and 4 CJK font packages (subset inputs only).
+
 ## P4b: drawing and ink (2026-11-01)
 
 ### Added

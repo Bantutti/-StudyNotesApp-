@@ -1,6 +1,6 @@
 export { ServicesProvider, useServices } from './ServicesContext';
 export { createServices, createServicesWith, APP_FOLDERS, type Services, type Adapters } from './services';
-export { usePackFaces, useTemplateDeps } from './hooks';
+export { usePackFaces, usePackList, usePackRegistryRevision, useTemplateDeps } from './hooks';
 export type { NoteStore } from './noteStore';
 export { AppDataProvider, useAppData, useStore, useDataVersion } from './AppDataContext';
 export { createTapUnlock, devMenuUnlocked, devToolsAllowed, isOnboarded, KV_APP, KEY_ONBOARDED, KEY_DEV_MENU, KEY_LAST_NOTE, type AppDataDeps } from './appData';
@@ -10,6 +10,8 @@ export { checkpointOnLeave, checkpointWhileEditing, versionLabel, EDIT_CHECKPOIN
 export { createSearchController, SEARCH_DEBOUNCE_MS, type SearchController, type SearchState } from './search';
 export { createAutosave, AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_MAX_WAIT_MS, type Autosave } from './autosave';
 export { createNoteSession, type NoteSession } from './noteSession';
+export { cleanPackName, loadCustomPacks, saveCustomPack, renameCustomPack, deleteCustomPack, packIsAvailable, PACK_NAME_MAX, MAX_CUSTOM_PACKS } from './customPacks';
+export { CustomPackLoader } from './CustomPackLoader';
 export { createSyncController, type SyncController, type SyncView, type UploadCounts } from './syncController';
 export { createCloudRuntime, type CloudRuntime, type CloudParts } from './cloudRuntime';
 export { SyncBridge } from './SyncBridge';

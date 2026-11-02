@@ -72,8 +72,18 @@ describe('fonts', () => {
     const pack = createPackRegistry().getOrDefault(DEFAULT_PACK_ID);
     let n = 0;
     const faces = await loadFaces(pack, async () => (n++ === 0 ? "');}body{x" : 'AAAA'));
-    expect(faces.every((f) => f.base64 === 'AAAA')).toBe(true);
-    expect(faces.length).toBeGreaterThan(0);
+    // Nunito comes from assets (first read is the bad one, skipped); Gaegu is an inline subset (P5).
+    const nunito = faces.filter((f) => f.family === 'Nunito');
+    expect(nunito).toHaveLength(2);
+    expect(nunito.every((f) => f.base64 === 'AAAA')).toBe(true);
     expect(fontFaceCss(faces)).toContain("font-family:'Gaegu'");
+  });
+
+  it('loads the default pack\'s Gaegu headers (P5 fix: the full files exceeded the base64 cap)', async () => {
+    const pack = createPackRegistry().getOrDefault(DEFAULT_PACK_ID);
+    const faces = await loadFaces(pack, async () => 'AAAA');
+    const gaegu = faces.filter((f) => f.family === 'Gaegu');
+    expect(gaegu.map((f) => f.weight).sort()).toEqual([400, 700]);
+    expect(gaegu.every((f) => f.base64.length > 10_000 && f.base64.length < 3_000_000)).toBe(true);
   });
 });

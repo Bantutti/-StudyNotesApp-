@@ -37,7 +37,7 @@ import {
   type NewChange,
 } from './proposal/build';
 import type { CardDraft, Proposal, QuizDraft } from './proposal/types';
-import { modelTpm, PROVIDER_CATALOG, providerModels, type ConsentKind, type ProviderInfo } from './providers/catalog';
+import { consentBlock, modelTpm, PROVIDER_CATALOG, providerModels, type ConsentKind, type ProviderInfo } from './providers/catalog';
 import { createOpenAiCompatibleProvider, GROQ_CONFIG, MISTRAL_CONFIG } from './providers/openaiCompatible';
 import type { ChatProvider, ChatResult, KeyTestResult } from './providers/types';
 import { createTokenPacer, MAX_PACE_WAIT_MS, type TokenPacer } from './transport/pacer';
@@ -109,8 +109,32 @@ export interface AiEngine {
    * replaces a working one; without it, the stored key is tested.
    */
   testKey(provider: Provider, signal?: AbortSignal, candidateKey?: string): Promise<KeyTestResult>;
+  /**
+   * P5 vision pass: ask a vision model about 1-3 photos and get an answer
+   * validated by `schema` (one re-ask on an invalid answer). Gates, in order:
+   * the provider reads images (catalog vision model + image consent block),
+   * 18+, the IMAGE consent for this provider at the catalog's current
+   * version (a text consent never counts), a key, online. Images must already
+   * be cleaned and downsized (lookmatch). Nothing is logged but counts.
+   */
+  describeImages<T>(req: ImageTaskRequest<T>, opts?: { signal?: AbortSignal }): Promise<T>;
   readonly usage: UsageMeter;
   readonly providers: readonly ProviderInfo[];
+}
+
+export interface ImageTaskRequest<T> {
+  provider: Provider;
+  /** Clean JPEG base64 strings, 1 to 3. */
+  images: readonly string[];
+  /** Trusted, versioned instructions. */
+  system: string;
+  user: string;
+  schemaName: string;
+  jsonSchema: Record<string, unknown>;
+  /** zod schema the answer must pass; anything else is rejected. */
+  schema: z.ZodType<T>;
+  maxOutputTokens: number;
+  temperature?: number;
 }
 
 const scopeSchema = z.union([
@@ -390,8 +414,77 @@ export function createAiEngine(deps: AiEngineDeps): AiEngine {
     return proposal;
   }
 
+  async function describeImages<T>(req: ImageTaskRequest<T>, opts: { signal?: AbortSignal } = {}): Promise<T> {
+    const { signal } = opts;
+    if (!isProvider(req.provider)) throw new AiError('invalid_input', { reason: 'unknown_provider' });
+    const info = PROVIDER_CATALOG[req.provider];
+    const label = { providerLabel: info.label };
+    const model = info.models.vision;
+    const block = consentBlock(req.provider, 'image');
+    // A provider without a vision model or an image consent block is never sent photos (Groq only).
+    if (!model || !block || !info.capabilities.vision) throw new AiError('invalid_input', { ...label, reason: 'kind_not_supported' });
+    if (req.images.length < 1 || req.images.length > 3) throw new AiError('invalid_input', { ...label, reason: 'bad_images' });
+    if (!(await deps.gate.isAdultConfirmed())) throw new AiError('age_required', label);
+    if (!(await deps.gate.hasConsent(req.provider, block.version, 'image'))) throw new AiError('consent_required', label);
+    if (!(await deps.keyVault.has(req.provider))) throw new AiError('missing_key', label);
+    if (deps.isOnline && !(await deps.isOnline())) throw new AiError('offline', label);
+
+    const chat = adapterFor(req.provider);
+    for (const reask of [false, true]) {
+      if (signal?.aborted) throw new AiError('cancelled');
+      const user = reask ? `${req.user}\nYour previous answer did not match the JSON schema. Answer again with JSON that matches it exactly.` : req.user;
+      let result: ChatResult;
+      try {
+        result = await withRetry(
+          () =>
+            chat.complete(
+              { model, system: req.system, user, schemaName: req.schemaName, jsonSchema: req.jsonSchema, maxOutputTokens: req.maxOutputTokens, temperature: req.temperature ?? 0.2, images: req.images },
+              signal,
+            ),
+          { sleep, random, signal },
+        );
+      } catch (e) {
+        if (isAiError(e) && e.kind !== 'cancelled') {
+          await usage.record({ provider: req.provider, model, ok: false, failure: e.kind, inputTokens: 0, outputTokens: 0, estimated: false, remainingRequests: null });
+        }
+        throw e;
+      }
+      // Images count 2,048 input tokens each on Groq; use the provider's numbers when it sends them.
+      const inTok = result.usage?.inputTokens ?? estimateTokens(req.system) + estimateTokens(user) + 2_048 * req.images.length;
+      const outTok = result.usage?.outputTokens ?? estimateTokens(result.content);
+      let value: T | undefined;
+      let ok = false;
+      try {
+        const r = req.schema.safeParse(parseModelJson(result.content));
+        if (r.success) {
+          value = r.data;
+          ok = true;
+        }
+      } catch {
+        ok = false; // not JSON at all
+      }
+      await usage.record({
+        provider: req.provider,
+        model,
+        ok,
+        failure: ok ? undefined : 'invalid_output',
+        inputTokens: inTok,
+        outputTokens: outTok,
+        estimated: result.usage === null,
+        remainingRequests: result.rate.remainingRequests,
+      });
+      if (ok) {
+        log.info('vision_done', { images: req.images.length, reask });
+        return value as T;
+      }
+      log.warn('vision_output_invalid', { reask });
+    }
+    throw new AiError('invalid_output', { ...label, reason: 'schema' });
+  }
+
   return {
     run,
+    describeImages,
     testKey: async (provider, signal, candidateKey) => {
       if (!isProvider(provider)) throw new AiError('invalid_input', { reason: 'unknown_provider' });
       if (candidateKey === undefined) return adapterFor(provider).testKey(signal);

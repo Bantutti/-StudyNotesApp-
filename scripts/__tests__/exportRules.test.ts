@@ -51,3 +51,20 @@ describe('export content scan', () => {
     expect(rules.findSecrets('font.ttf', groq)).toEqual([]);
   });
 });
+
+describe('every source file is exported (P5 gate finding)', () => {
+  // A folder named like build output (for example "build") inside src/ was silently dropped from the
+  // phase zip once (src/modules/lookmatch/build, renamed to pack). Every tracked source file must pass.
+  it('includes every file under src/, editor-web/src and scripts/', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readdirSync, statSync } = require('node:fs') as typeof import('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { join, relative } = require('node:path') as typeof import('node:path');
+    const root = join(__dirname, '..', '..');
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [relative(root, join(d, f)).split('\\').join('/')]));
+    const files = ['src', 'editor-web/src', 'scripts'].flatMap((d) => walk(join(root, d)));
+    expect(files.length).toBeGreaterThan(300);
+    expect(files.filter((f) => !rules.isIncluded(f))).toEqual([]);
+  });
+});

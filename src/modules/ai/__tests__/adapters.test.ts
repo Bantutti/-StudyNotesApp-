@@ -100,7 +100,9 @@ describe('keys', () => {
       url: 'https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training',
       dated: '2026-09-03',
     });
-    expect(PROVIDER_CATALOG.groq.models).toEqual({ primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'] });
+    // P5: Groq's vision model for Match a look (photos are Groq only; Mistral has none).
+    expect(PROVIDER_CATALOG.groq.models).toEqual({ primary: 'openai/gpt-oss-120b', fallbacks: ['openai/gpt-oss-20b'], vision: 'qwen/qwen3.8-27b' });
+    expect(PROVIDER_CATALOG.mistral.models.vision).toBeNull();
     for (const p of Object.values(PROVIDER_CATALOG)) {
       expect(p.apiBase.startsWith('https://')).toBe(true);
       // Apple 5.1.2(i): every provider needs an explicit, versioned, per-provider "yes" with full disclosure.

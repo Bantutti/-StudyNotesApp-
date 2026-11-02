@@ -153,3 +153,15 @@ Remove-Item Env:GROQ_API_KEY, Env:MISTRAL_API_KEY, Env:AI_LIVE
 You can skip one provider by not setting its key; its tests show as "skipped". Expected
 result: every live test shows a green check (✓). One full run uses about 8 requests per provider,
 well inside the free limits. Never paste a key into chat, a file or a commit.
+
+## P5 additions (Match a look photos, Groq only)
+- `engine.describeImages<T>(req, { signal })`: 1-3 clean JPEGs to a vision model, with the answer
+  validated by the caller's zod schema (one re-ask). Gates: vision model plus image consent block for
+  the provider (Groq only), 18+, the **image** consent at the catalog's current version, key, online.
+  Usage is recorded like any other request (images count 2,048 input tokens each).
+- `ChatRequest.images`: base64 JPEGs, sent as OpenAI-compatible `image_url` data URLs. The adapter
+  refuses more than 3, non-base64 data, or more than 1.5 M characters each (`MAX_REQUEST_IMAGES`,
+  `MAX_IMAGE_BASE64`).
+- Catalog: Groq `capabilities.vision = true` and `models.vision = 'qwen/qwen3.8-27b'` (same free plan
+  limits). Mistral has `models.vision = null`. `GROQ_CONFIG.extraBody` sends `reasoning_effort: 'none'`
+  and `reasoning_format: 'hidden'` for `qwen/` models.

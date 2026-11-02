@@ -23,6 +23,7 @@ export { parseSearchQuery, splitSnippet, SEARCH_LIMITS, MARK_OPEN, MARK_CLOSE } 
 export { cleanTags, cleanTitle, type CreateNoteInput, type NotePatch, type SaveResult } from './notes';
 export { toHex6, WIPED_NAME, type CreateSubjectInput, type SubjectPatch } from './subjects';
 export { VERSIONS_KEPT, hash53 } from './versions';
+export { PACK_DEFINITION_MAX_CHARS, ERASED_DEFINITION, type StoredPack } from './stylePacks';
 export { userSettingsSchema, LOCAL_USER_ID, KV_MAX_CHARS, type UserSettings } from './settings';
 export { ASSET_TYPES, ASSET_MAX_BYTES, LOCAL_PATH, type Asset, type AssetType } from './assets';
 export * from './types';

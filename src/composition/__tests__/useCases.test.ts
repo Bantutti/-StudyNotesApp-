@@ -170,7 +170,9 @@ describe('style (M9)', () => {
     expect(after).toMatchObject({ stylePackId: 'clear-read' });
     expect(after!.document).toEqual(n.document);
     expect((await s.versions.list(n.id)).map((v) => v.reason)).toEqual(['before_pack']);
-    await expect(applyPackToNote(s, n.id, 'dark-academia')).rejects.toMatchObject({ code: 'validation_failed' });
+    // P5: all 13 v1 packs are offered; unknown ids are still refused.
+    await expect(applyPackToNote(s, n.id, 'dark-academia')).resolves.toBe(true);
+    await expect(applyPackToNote(s, n.id, 'no-such-pack')).rejects.toMatchObject({ code: 'validation_failed' });
   });
 
   it('can set the look for a subject', async () => {

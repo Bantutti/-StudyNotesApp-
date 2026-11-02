@@ -1,4 +1,4 @@
-/** The centre + sheet: New note, From template, New subject. */
+/** The centre + sheet: New note, From template, Match a look (P5), New subject. */
 import { router } from 'expo-router';
 
 import { createNoteIn, useStore } from '@/composition';
@@ -16,6 +16,7 @@ export default function NewSheet() {
     <AppScreen>
       <ListRow icon="document-text-outline" title={t('notes.new')} subtitle="A blank page in your default look" onPress={newNote} testID="new-note" />
       <ListRow icon="copy-outline" title={t('notes.fromTemplate')} subtitle="Lecture, Cornell, Outline and more" onPress={() => router.replace('/templates?mode=new')} testID="new-from-template" />
+      <ListRow icon="color-palette-outline" title="Match a look" subtitle="Make a look from a photo of notes you like" onPress={() => router.replace('/match')} testID="new-match" />
       <ListRow icon="albums-outline" title={t('subjects.new')} onPress={() => router.replace('/subject-form')} />
     </AppScreen>
   );

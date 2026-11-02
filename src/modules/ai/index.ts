@@ -25,6 +25,7 @@ export {
   type RunRequest,
   type RunOptions,
   type RunProgress,
+  type ImageTaskRequest,
 } from './engine';
 export { AI_ACTIONS, ACTION_DEFS, isActionId, type AiActionId, type ActionDef, type ActionKind } from './actions/registry';
 export {
