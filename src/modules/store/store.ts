@@ -14,7 +14,7 @@ import { createNotesRepo, type CreateNoteInput, type NotePatch, type SaveResult 
 import { inList, str } from './rows';
 import { searchNotes } from './search';
 import { createKvRepo, createProfileRepo, type UserSettings } from './settings';
-import { createSqlDb, type SqlDriver } from './sql';
+import { createSqlDb, type SqlDriver, type SqlExecutor } from './sql';
 import { createFoldersRepo, createSubjectsRepo, WIPED_NAME, type CreateSubjectInput, type SubjectPatch } from './subjects';
 import {
   UNDO_WINDOW_MS,
@@ -30,7 +30,27 @@ import {
   type VersionMeta,
   type VersionReason,
 } from './types';
+import { createSyncRepo, type SyncRepo } from './sync';
 import { createVersionsRepo } from './versions';
+
+/**
+ * The sync repo with every method bound to its own transaction (or, inside
+ * store.sync.run, to the shared one). Sync writes must always run inside a
+ * transaction: the "applying" flag pauses the outbox triggers, and a user
+ * edit must never slip in while it is set.
+ */
+type BoundSync = {
+  [K in Exclude<keyof SyncRepo, 'applying'>]: SyncRepo[K] extends (ex: SqlExecutor, ...a: infer A) => infer R ? (...a: A) => R : never;
+};
+
+function bindSync(repo: SyncRepo, run: <T>(fn: (ex: SqlExecutor) => Promise<T>) => Promise<T>): BoundSync {
+  const out: Record<string, unknown> = {};
+  for (const [k, f] of Object.entries(repo)) {
+    if (k === 'applying' || typeof f !== 'function') continue;
+    out[k] = (...a: unknown[]) => run((ex) => (f as (ex: SqlExecutor, ...rest: unknown[]) => Promise<unknown>)(ex, ...a));
+  }
+  return out as BoundSync;
+}
 
 export interface StoreDeps {
   ids: IdGenerator;
@@ -48,6 +68,8 @@ export interface StoreInfo {
 const ALL_TABLES = [
   'noteVersions', 'searchMap', 'search', 'kv', 'reviewLogs', 'cards', 'recordings', 'notes', 'folders',
   'subjects', 'assets', 'stylePacks', 'templates', 'users',
+  // P2b sync bookkeeping (syncState is reset, not deleted: the triggers read it).
+  'syncOutbox', 'syncCursors', 'syncConflicts', 'syncQuarantine', 'syncFiles',
 ] as const;
 
 export async function openStore(driver: SqlDriver, deps: StoreDeps) {
@@ -79,6 +101,7 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
   const assets = createAssetsRepo(rd);
   const kv = createKvRepo({ now, logger: log });
   const profile = createProfileRepo({ now, logger: log });
+  const syncRepo = createSyncRepo({ now });
 
   await profile.ensure(db);
 
@@ -279,6 +302,16 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
         }
       }),
 
+    /**
+     * Sync bookkeeping for the P2b sync engine (docs/modules/sync.md). Each
+     * call is its own transaction; run() groups several into one.
+     */
+    sync: {
+      ...bindSync(syncRepo, (fn) => db.transaction(fn)),
+      run: <T>(fn: (s: BoundSync) => Promise<T>): Promise<T> =>
+        db.transaction((tx) => fn(bindSync(syncRepo, (f) => f(tx)))),
+    },
+
     /** Wipes the text of everything deleted more than UNDO_WINDOW_MS ago. */
     purge,
 
@@ -290,6 +323,9 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
     wipeAll: async (): Promise<void> => {
       await db.transaction(async (tx) => {
         for (const t of ALL_TABLES) await tx.exec(`DELETE FROM ${t}`); // fixed table names
+        await tx.exec(
+          'UPDATE syncState SET uid = NULL, enabled = 0, applying = 0, initialSyncDone = 0, lastPushAt = NULL, lastPullAt = NULL, lastError = NULL',
+        );
       });
       await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
       await db.exec('VACUUM');
@@ -302,3 +338,5 @@ export async function openStore(driver: SqlDriver, deps: StoreDeps) {
 }
 
 export type Store = Awaited<ReturnType<typeof openStore>>;
+export type StoreSync = Store['sync'];
+export type { BoundSync as SyncOps };

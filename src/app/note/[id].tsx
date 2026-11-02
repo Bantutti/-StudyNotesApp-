@@ -21,12 +21,14 @@ import {
   useAppData,
   usePackFaces,
   useServices,
+  useNoteSync,
 } from '@/composition';
 import { AppError, countWords, errorCode, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
 import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
 import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
 import { EditorToolbar } from '@/screens/EditorToolbar';
+import { SyncChip } from '@/screens/SyncChip';
 import { useEditorActionRunner } from '@/screens/editorActionHooks';
 import { BlockMenuSheet, InfoSheet, LinkSheet } from '@/screens/EditorSheets';
 import { NoteInkBar, NoteInkOverlay, useIsTablet, useNoteInk } from '@/screens/NoteInk';
@@ -54,6 +56,21 @@ export default function NoteScreen() {
   useEffect(() => {
     session.setLiveSource(() => editor.current?.requestDoc() ?? Promise.resolve(null));
   }, [session]);
+
+  // P2b: sync around this note. A pull that changed it reloads the page the
+  // same way a change from History or Style does (only if the stored note
+  // differs from what this screen last saved or showed).
+  const noteSync = useNoteSync(id, () => {
+    void store.notes.get(id).then((n) => {
+      if (!n || n.deleted || !session.changedElsewhere(n.updated)) return;
+      session.shown(n.document);
+      editor.current?.load(n.document);
+      session.seen(n.updated);
+      setNote(n);
+      setTitle(n.title);
+      setBanner('Updated from your other device.');
+    });
+  });
 
   const { pack, faces } = usePackFaces(note?.stylePackId ?? '');
   // P4b: ink (Draw mode, finished ink on the page, publish on leave).
@@ -207,6 +224,7 @@ export default function NoteScreen() {
           title: displayTitle({ ...note, title }),
           headerRight: () => (
             <View style={styles.headerButtons}>
+              <SyncChip />
               <IconButton icon="time-outline" label="History" onPress={() => void go('/history/[id]')} testID="note-history" />
               <IconButton icon="information-circle-outline" label="Note info and outline" onPress={() => void openInfo()} />
             </View>
@@ -256,13 +274,16 @@ export default function NoteScreen() {
           faces={faces}
           getDoc={() => session.readyDoc(note.document)}
           onReady={onReady}
+          
           onChange={(d) => {
             session.edited(d);
+            noteSync.edited();
             ink.onDocChange(d); // P4b: keep ink on joined blocks
           }}
           onInkLayout={(l) => ink.onInkLayout(l)}
           onInkAck={() => ink.onInkAck()}
           onState={setEdState}
+          
           onOpenLink={(href) => void links(href)}
           onBridgeError={(code) => {
             if (code === 'invalid_doc') setBanner('Your last change could not be checked, so it was not saved. Try undo, or copy the text to a new note.');

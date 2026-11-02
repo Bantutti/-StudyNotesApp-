@@ -47,6 +47,7 @@ import { createGroqTranscriber, fileSizeOf, type TranscriptionProvider } from '@
 import { Directory, Paths } from 'expo-file-system';
 
 import { devToolsAllowed, type AppDataDeps } from './appData';
+import { createCloudRuntime, deviceCloudParts, SYNC_FILES_FOLDER, type CloudParts, type CloudRuntime } from './cloudRuntime';
 import { beautifyLiteAction } from './editorActions';
 
 import { createNoteStore, type NoteStore } from './noteStore';
@@ -77,6 +78,8 @@ export interface Services {
   getFaces(pack: StylePack): Promise<FontFaceData[]>;
   /** Font faces that could not be loaded so far (diagnostics; family, weight, reason, size only). */
   fontSkips(): readonly FaceSkip[];
+  /** P2b sign-in and sync; null when this build has no Firebase config (local-only app). */
+  cloud: CloudRuntime | null;
 }
 
 export interface Adapters {
@@ -97,6 +100,8 @@ export interface Adapters {
   appVariant?: string | null;
   linkPorts: LinkPorts;
   database: Pick<AppDataDeps, 'openDriver' | 'deleteDatabase' | 'wipeFiles'>;
+  /** P2b: Firebase pieces for this build (null = no cloud). */
+  cloud?: (logger: Logger) => CloudParts | null;
 }
 
 export function createServicesWith(a: Adapters): Services {
@@ -162,6 +167,10 @@ export function createServicesWith(a: Adapters): Services {
       return p;
     },
     fontSkips: () => [...skips],
+    cloud: (() => {
+      const parts = a.cloud?.(logger) ?? null;
+      return parts ? createCloudRuntime(parts, { logger, ids }) : null;
+    })(),
   };
 }
 
@@ -194,16 +203,17 @@ export function createServices(): Services {
     appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? null,
     linkPorts: expoLinkPorts,
     database: { openDriver: () => openExpoDriver(), deleteDatabase: () => deleteExpoDatabase(), wipeFiles: wipeAppFiles },
+    cloud: deviceCloudParts,
   });
 }
 
 /**
  * App-made folders outside the database. Fixed names only, never user input.
  * P3b fix: 'ai' (usage meter, gate answers, reports) was missing, so
- * Delete all data left ai/usage.json behind.
+ * Delete all data left ai/usage.json behind. P2b: synced files.
  * P4b: 'ink' (drawings: working and published copies).
  */
-export const APP_FOLDERS = ['p0', 'recordings', 'ai', 'ink'] as const;
+export const APP_FOLDERS = ['p0', 'recordings', 'ai', SYNC_FILES_FOLDER, 'ink'] as const;
 
 async function wipeAppFiles(): Promise<void> {
   for (const name of APP_FOLDERS) {
