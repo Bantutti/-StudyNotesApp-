@@ -17,10 +17,15 @@ if (!existsSync(join(fb, 'node_modules', 'firebase-tools'))) {
   process.exit(1);
 }
 const extra = process.argv.slice(2).map((a) => JSON.stringify(a)).join(' ');
-const inner = `node ${JSON.stringify(join(root, 'node_modules', 'jest', 'bin', 'jest.js'))} -c ${JSON.stringify(join(root, 'jest.e2e.config.js'))} --rootDir ${JSON.stringify(root)} --ci ${extra}`;
-const r = spawnSync('npx', ['firebase', 'emulators:exec', '--project', 'demo-studynotes', '--only', 'auth,firestore,storage', inner], {
+const inner = `node ${JSON.stringify(join(root, 'node_modules', 'jest', 'bin', 'jest.js'))} -c ${JSON.stringify(join(root, 'jest.e2e.config.js'))} --ci ${extra}`;
+const firebaseCli = join(fb, 'node_modules', 'firebase-tools', 'lib', 'bin', 'firebase.js');
+if (!existsSync(firebaseCli)) {
+  console.error('Run "cd firebase && npm ci" first (installs the emulators).');
+  process.exit(1);
+}
+const r = spawnSync(process.execPath, [firebaseCli, 'emulators:exec', '--project', 'demo-studynotes', '--only', 'auth,firestore,storage', '--', inner], {
   cwd: fb,
   stdio: 'inherit',
-  shell: process.platform === 'win32',
 });
 process.exit(r.status ?? 1);
+
