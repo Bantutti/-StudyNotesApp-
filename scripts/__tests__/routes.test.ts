@@ -4,7 +4,7 @@
  * tree here from the real files in src/app.
  */
 import { readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- internal module, no public types
 const { getRoutes } = require('expo-router/build/getRoutes') as {
@@ -30,7 +30,8 @@ function routesOf(files: string[]) {
   return out;
 }
 
-const appFiles = () => walk(APP).filter((f) => /\.tsx?$/.test(f)).map((f) => `./${relative(APP, f)}`);
+const appFiles = () => walk(APP).filter((f) => /\.tsx?$/.test(f)).map((f) => `./${relative(APP, f).split(sep).join('/')}`);
+
 
 describe('app routes', () => {
   it('has the P1 screens and no test files inside src/app', () => {
