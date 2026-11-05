@@ -49,6 +49,25 @@ describe('autosave', () => {
     expect(saved).toEqual([JSON.stringify(doc('ab'))]);
   });
 
+  it('honors max wait even when the clock starts at zero', async () => {
+    let time = 0;
+    let due: { fn: () => void; at: number } | null = null;
+    const save = jest.fn(async () => ok);
+    const a = createAutosave({
+      save,
+      checkpoint: async () => undefined,
+      now: () => time,
+      setTimer: (fn, ms) => { due = { fn, at: time + ms }; return due; },
+      clearTimer: () => { due = null; },
+    });
+    for (let i = 0; i < 10; i++) {
+      a.change(doc(`${i}`));
+      time += 500;
+    }
+    expect((due as { fn: () => void; at: number } | null)?.at).toBe(5_000);
+    a.dispose();
+  });
+
   it('saves at least every 5 s while typing continuously', async () => {
     const c = clock();
     let saves = 0;
@@ -78,12 +97,43 @@ describe('autosave', () => {
     a.change(doc('two')); // arrives while "one" is saving
     await new Promise((r) => setTimeout(r, 0)); // let the save of "one" start
     release();
-    await f;
-    await c.advance(1_000);
     await new Promise((r) => setTimeout(r, 0));
-    release();
-    await a.flush();
     expect(saved).toEqual([JSON.stringify(doc('one')), JSON.stringify(doc('two'))]);
+    release();
+    await f;
+    expect(a.hasPending).toBe(false);
+    await c.advance(1_000);
+    expect(saved).toHaveLength(2);
+  });
+
+  it('overlapping flushes both wait for the newer in-flight save', async () => {
+    const c = clock();
+    const releases: (() => void)[] = [];
+    const saved: NoteDoc[] = [];
+    const a = createAutosave({
+      save: (d) => new Promise((resolve) => {
+        saved.push(d);
+        releases.push(() => resolve(ok));
+      }),
+      checkpoint: async () => undefined,
+      ...c,
+    });
+    a.change(doc('first'));
+    let firstFinished = false;
+    const first = a.flush().then(() => { firstFinished = true; });
+    a.change(doc('newer'));
+    let secondFinished = false;
+    const second = a.flush().then(() => { secondFinished = true; });
+    await new Promise((r) => setTimeout(r, 0));
+    releases[0]!();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(saved).toEqual([doc('first'), doc('newer')]);
+    expect(firstFinished).toBe(false);
+    expect(secondFinished).toBe(false);
+    releases[1]!();
+    await Promise.all([first, second]);
+    expect(a.hasPending).toBe(false);
+    a.dispose();
   });
 
   it('keeps a failed change and retries it', async () => {
@@ -109,6 +159,182 @@ describe('autosave', () => {
     await a.flush();
     expect(saved).toEqual([JSON.stringify(doc('keep me'))]);
     expect(a.hasPending).toBe(false);
+  });
+
+  it('pauses after persistent save failures until a new edit, then pauses again', async () => {
+    const c = clock();
+    const attempted: NoteDoc[] = [];
+    const errors: unknown[] = [];
+    const a = createAutosave({
+      save: async (d) => { attempted.push(d); throw new Error('disk full'); },
+      checkpoint: async () => undefined,
+      onError: (e) => errors.push(e),
+      ...c,
+    });
+    a.change(doc('first'));
+    await c.advance(1_000);
+    await c.advance(20_000);
+    expect(attempted).toEqual([doc('first')]);
+    expect(a.hasPending).toBe(true);
+    a.change(doc('newest'));
+    await c.advance(999);
+    expect(attempted).toHaveLength(1); // the old failed timestamp must not bypass debounce
+    await c.advance(1);
+    await c.advance(20_000);
+    expect(attempted).toEqual([doc('first'), doc('newest')]);
+    expect(errors).toHaveLength(2);
+    expect(a.hasPending).toBe(true);
+    a.dispose();
+  });
+
+  it('a new edit after failure retries and saves the newest document', async () => {
+    const c = clock();
+    let fail = true;
+    const save = jest.fn(async (_doc: NoteDoc) => { if (fail) throw new Error('disk full'); return ok; });
+    const a = createAutosave({ save, checkpoint: async () => undefined, ...c });
+    a.change(doc('old'));
+    await c.advance(1_000);
+    expect(a.hasPending).toBe(true);
+    fail = false;
+    a.change(doc('new'));
+    await c.advance(1_000);
+    expect(save.mock.calls.map(([d]) => d)).toEqual([doc('old'), doc('new')]);
+    expect(a.hasPending).toBe(false);
+    a.dispose();
+  });
+
+  it('can retry after a dependency throws synchronously', async () => {
+    const c = clock();
+    let fail = true;
+    const save = jest.fn(async () => ok);
+    const a = createAutosave({
+      save,
+      checkpoint: () => { if (fail) throw new Error('synchronous failure'); return Promise.resolve(); },
+      ...c,
+    });
+    a.change(doc('pending'));
+    await a.flush();
+    expect(a.hasPending).toBe(true);
+    fail = false;
+    await a.flush();
+    expect(save).toHaveBeenCalledWith(doc('pending'));
+    expect(a.hasPending).toBe(false);
+    a.dispose();
+  });
+
+  it('an explicit flush retries a failed checkpoint and saves the pending document', async () => {
+    const c = clock();
+    let fail = true;
+    const save = jest.fn(async () => ok);
+    const errors: unknown[] = [];
+    const a = createAutosave({
+      save,
+      checkpoint: async () => { if (fail) throw new Error('checkpoint failed'); },
+      onError: (e) => errors.push(e),
+      ...c,
+    });
+    a.change(doc('pending'));
+    await a.flush();
+    await c.advance(20_000);
+    expect(errors).toHaveLength(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(a.hasPending).toBe(true);
+    fail = false;
+    await a.flush();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith(doc('pending'));
+    expect(a.hasPending).toBe(false);
+    a.dispose();
+  });
+
+  it('retains a newer in-flight edit and tries it once even if its timer fired before the old save failed', async () => {
+    const c = clock();
+    const attempted: NoteDoc[] = [];
+    let rejectOld: (e: Error) => void = () => undefined;
+    const a = createAutosave({
+      save: (d) => {
+        attempted.push(d);
+        if (attempted.length === 1) return new Promise<SaveResult>((_, reject) => { rejectOld = reject; });
+        return Promise.reject(new Error('still full'));
+      },
+      checkpoint: async () => undefined,
+      ...c,
+    });
+    a.change(doc('old'));
+    await c.advance(1_000);
+    a.change(doc('new'));
+    await c.advance(1_000); // the new edit's timer waits for the old save
+    rejectOld(new Error('full'));
+    await new Promise((r) => setTimeout(r, 0));
+    await c.advance(0);
+    await c.advance(20_000);
+    expect(attempted).toEqual([doc('old'), doc('new')]);
+    expect(a.hasPending).toBe(true);
+    a.dispose();
+  });
+
+  it('flush called during a failed in-flight save retries the latest edit without concurrent writes', async () => {
+    const c = clock();
+    const attempted: NoteDoc[] = [];
+    let rejectOld: (e: Error) => void = () => undefined;
+    const a = createAutosave({
+      save: (d) => {
+        attempted.push(d);
+        if (attempted.length === 1) return new Promise<SaveResult>((_, reject) => { rejectOld = reject; });
+        return Promise.resolve(ok);
+      },
+      checkpoint: async () => undefined,
+      ...c,
+    });
+    a.change(doc('old'));
+    await c.advance(1_000);
+    a.change(doc('new'));
+    const flushing = a.flush();
+    expect(attempted).toEqual([doc('old')]);
+    rejectOld(new Error('full'));
+    await flushing;
+    expect(attempted).toEqual([doc('old'), doc('new')]);
+    expect(a.hasPending).toBe(false);
+    await c.advance(10_000);
+    expect(attempted).toHaveLength(2);
+    a.dispose();
+  });
+
+  it('an explicit flush joining a failing save retries once and then pauses', async () => {
+    const c = clock();
+    let rejectFirst: (e: Error) => void = () => undefined;
+    const save = jest.fn(() => {
+      if (save.mock.calls.length === 1) return new Promise<SaveResult>((_, reject) => { rejectFirst = reject; });
+      return Promise.reject(new Error('still full'));
+    });
+    const a = createAutosave({ save, checkpoint: async () => undefined, ...c });
+    a.change(doc('pending'));
+    await c.advance(1_000);
+    const flushing = a.flush();
+    rejectFirst(new Error('full'));
+    await flushing;
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(a.hasPending).toBe(true);
+    await c.advance(20_000);
+    expect(save).toHaveBeenCalledTimes(2);
+    a.dispose();
+  });
+
+  it('reset during a failed save does not resurrect the already-replaced document', async () => {
+    const c = clock();
+    let rejectOld: (e: Error) => void = () => undefined;
+    const a = createAutosave({
+      save: () => new Promise<SaveResult>((_, reject) => { rejectOld = reject; }),
+      checkpoint: async () => undefined,
+      ...c,
+    });
+    a.change(doc('old'));
+    await c.advance(1_000);
+    a.reset();
+    rejectOld(new Error('full'));
+    await c.advance(0);
+    expect(a.hasPending).toBe(false);
+    a.dispose();
   });
 
   it('reset drops pending changes (a document an action already stored)', async () => {

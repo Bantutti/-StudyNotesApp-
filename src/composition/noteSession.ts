@@ -30,8 +30,9 @@ export function createNoteSession(deps: {
   const liveTimeoutMs = deps.liveTimeoutMs ?? 1_500;
   let lastUpdated = 0;
   let latestDoc: NoteDoc | null = null;
+  let docRevision = 0;
   let live: LiveDocSource | null = null;
-  let leaving: Promise<void> | null = null;
+  let activeOperations = 0;
   let disposeRequested = false;
   const autosave = createAutosave({
     save: (doc) => deps.store.notes.save(deps.noteId, { document: doc }),
@@ -40,18 +41,24 @@ export function createNoteSession(deps: {
       lastUpdated = Math.max(lastUpdated, r.note.updated);
       deps.onBanner(r.usage > DOCUMENT_LIMITS.warnRatio ? t('notes.tooLarge', { percent: Math.round(r.usage * 100) }) : null);
     },
-    onError: (e) => deps.onBanner(`Not saved yet: ${userMessage(e)} Your text is kept on screen; it saves with your next change.`),
+    onError: (e) => deps.onBanner(`Not saved yet: ${userMessage(e)} Keep this note open and try another edit or retry saving before leaving.`),
     now,
   });
   const edited = (doc: NoteDoc) => {
     latestDoc = doc;
+    docRevision++;
     autosave.change(doc);
+  };
+  const finishOperation = () => {
+    activeOperations--;
+    if (disposeRequested && activeOperations === 0) autosave.dispose();
   };
 
   /** Asks the editor for its live document; a newer one goes to autosave. */
   const pullLive = async (): Promise<void> => {
     const source = live;
     if (!source) return;
+    const revisionAtPull = docRevision;
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
       const doc = await Promise.race([
@@ -60,7 +67,8 @@ export function createNoteSession(deps: {
           timer = setTimeout(() => resolve(null), liveTimeoutMs);
         }),
       ]);
-      if (doc && JSON.stringify(doc) !== JSON.stringify(latestDoc)) edited(doc);
+      // A delayed pull must not replace an edit or restore received since it began.
+      if (doc && docRevision === revisionAtPull && JSON.stringify(doc) !== JSON.stringify(latestDoc)) edited(doc);
     } catch {
       // Invalid live document or editor gone: keep the last good document (the screen shows a banner).
     } finally {
@@ -69,8 +77,13 @@ export function createNoteSession(deps: {
   };
 
   const flush = async () => {
-    await pullLive();
-    await autosave.flush();
+    activeOperations++;
+    try {
+      await pullLive();
+      await autosave.flush();
+    } finally {
+      finishOperation();
+    }
   };
 
   return {
@@ -91,6 +104,7 @@ export function createNoteSession(deps: {
     edited,
     shown(doc: NoteDoc) {
       latestDoc = doc;
+      docRevision++;
       autosave.reset();
     },
     get latestDoc() {
@@ -98,20 +112,35 @@ export function createNoteSession(deps: {
     },
     /** Leaving the note: save now, then the "when you left" version. */
     leave(): Promise<void> {
+      activeOperations++;
       const run = (async () => {
         await flush();
-        await checkpointOnLeave(deps.store, deps.noteId, autosave.changedThisSession);
+        // Do not write a misleading leave version of an older stored document
+        // if the attempted save failed. Edits during a checkpoint need another
+        // flush before leaving, and a checkpoint of the resulting document.
+        while (!autosave.hasPending) {
+          const checkpointRevision = docRevision;
+          try {
+            await checkpointOnLeave(deps.store, deps.noteId, autosave.changedThisSession);
+          } catch (e) {
+            // Even when history fails, do not discard an edit made while the
+            // checkpoint was in progress and disposal was requested.
+            if (docRevision !== checkpointRevision) await autosave.flush();
+            deps.onBanner(`Could not save the leave history version: ${userMessage(e)} The note may already be saved.`);
+            throw e;
+          }
+          if (docRevision === checkpointRevision) break;
+          await autosave.flush();
+        }
       })();
-      leaving = run.finally(() => {
-        leaving = null;
-        if (disposeRequested) autosave.dispose();
-      });
-      return run;
+      // Return the finalized promise itself so catching leave() also handles
+      // failures from its cleanup chain.
+      return run.finally(finishOperation);
     },
-    /** Stops autosave; a leave in progress still finishes its save first. */
+    /** Stops autosave after any flushes and leaves in progress finish. */
     dispose() {
       disposeRequested = true;
-      if (!leaving) autosave.dispose();
+      if (activeOperations === 0) autosave.dispose();
     },
   };
 }

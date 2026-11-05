@@ -24,7 +24,7 @@ import {
   useNoteSync,
 } from '@/composition';
 import { AppError, countWords, errorCode, outline, t, tCount, userMessage, type OutlineItem } from '@/core';
-import { Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
+import { AppButton, AppScreen, Banner, Caption, IconButton, Spinner, useTheme } from '@/core/ui';
 import { EditorView, type EditorCommand, type EditorHandle, type EditorHost, type EditorState } from '@/modules/editor';
 import type { Note } from '@/modules/store';
 import { EditorToolbar } from '@/screens/EditorToolbar';
@@ -43,6 +43,9 @@ export default function NoteScreen() {
   const { editorActions, ids, links, logger } = useServices();
 
   const [note, setNote] = useState<Note | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const hasLoadedNote = useRef(false);
+  const retryLoad = useRef<(remote?: boolean) => void>(() => {});
   const [title, setTitle] = useState('');
   const [edState, setEdState] = useState<EditorState | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
@@ -60,17 +63,7 @@ export default function NoteScreen() {
   // P2b: sync around this note. A pull that changed it reloads the page the
   // same way a change from History or Style does (only if the stored note
   // differs from what this screen last saved or showed).
-  const noteSync = useNoteSync(id, () => {
-    void store.notes.get(id).then((n) => {
-      if (!n || n.deleted || !session.changedElsewhere(n.updated)) return;
-      session.shown(n.document);
-      editor.current?.load(n.document);
-      session.seen(n.updated);
-      setNote(n);
-      setTitle(n.title);
-      setBanner('Updated from your other device.');
-    });
-  });
+  const noteSync = useNoteSync(id, () => retryLoad.current(true));
 
   const { pack, faces } = usePackFaces(note?.stylePackId ?? '');
   // P4b: ink (Draw mode, finished ink on the page, publish on leave).
@@ -83,24 +76,49 @@ export default function NoteScreen() {
     onNoteUpdated: (u) => session.seen(u),
   });
 
-  // Load on focus. Coming back from History, Style or Template, reload when the stored note changed.
+  // Load on focus. Failed reads are not "missing"; keep any existing editor intact.
   useFocusEffect(
     useCallback(() => {
       let alive = true;
-      store.notes.get(id).then((n) => {
+      let request = 0;
+      const load = (remote = false) => {
         if (!alive) return;
-        if (!n || n.deleted) return setNote(null);
-        if (session.changedElsewhere(n.updated)) {
-          session.shown(n.document);
-          editor.current?.load(n.document);
-        } else if (!session.latestDoc) session.shown(n.document);
-        session.seen(n.updated);
-        setNote(n);
-        setTitle(n.title);
-        void rememberOpenedNote(store, n.id);
-      });
+        const current = ++request;
+        setLoadError(null);
+        // A prior missing result must not be shown as the outcome of this new read.
+        setNote((previous) => previous === null ? undefined : previous);
+        void Promise.resolve().then(() => store.notes.get(id)).then((n) => {
+          if (!alive || request !== current) return;
+          if (!n || n.deleted) {
+            // Preserve an open editor on a remote refresh, as before.
+            if (remote && hasLoadedNote.current) return;
+            hasLoadedNote.current = false;
+            setNote(null);
+            return;
+          }
+          const hadNote = hasLoadedNote.current;
+          const changed = session.changedElsewhere(n.updated);
+          if (remote && hadNote && !changed) return;
+          if (changed) {
+            session.shown(n.document);
+            editor.current?.load(n.document);
+          } else if (!session.latestDoc) session.shown(n.document);
+          session.seen(n.updated);
+          hasLoadedNote.current = true;
+          setNote(n);
+          setTitle(n.title);
+          if (remote && changed) setBanner('Updated from your other device.');
+          if (!remote || !hadNote) void Promise.resolve().then(() => rememberOpenedNote(store, n.id))
+            .catch(() => logger.warn('note.remember_opened_failed'));
+        }).catch((e: unknown) => {
+          if (alive && request === current) setLoadError(userMessage(e));
+        });
+      };
+      retryLoad.current = load;
+      load();
       return () => {
         alive = false;
+        retryLoad.current = () => {};
         void session
           .leave()
           .catch(() => logger.warn('note.leave_save_failed'))
@@ -160,8 +178,15 @@ export default function NoteScreen() {
     [note],
   );
 
-  if (note === undefined) return <Spinner />;
-  if (note === null) return <Caption>This note no longer exists.</Caption>;
+  if (note === undefined || note === null) {
+    if (loadError) return (
+      <AppScreen>
+        <Banner>Could not load this note. {loadError}</Banner>
+        <AppButton label="Try again" onPress={() => retryLoad.current()} testID="note-load-retry" />
+      </AppScreen>
+    );
+    return note === undefined ? <Spinner /> : <Caption>This note no longer exists.</Caption>;
+  }
 
   // EditorView sends pack, fonts and readyDoc on every 'ready' (also after a WebView restart).
   const onReady = () => {
@@ -256,6 +281,12 @@ export default function NoteScreen() {
           </View>
         </>
       )}
+      {loadError ? (
+        <View style={styles.banner}>
+          <Banner>Could not refresh this note. {loadError}</Banner>
+          <AppButton label="Try again" onPress={() => retryLoad.current()} testID="note-load-retry" />
+        </View>
+      ) : null}
       {banner ? (
         <View style={styles.banner}>
           <Banner>{banner}</Banner>

@@ -37,47 +37,68 @@ export function createAutosave(deps: AutosaveDeps) {
   const maxWait = deps.maxWaitMs ?? AUTOSAVE_MAX_WAIT_MS;
 
   let pending: NoteDoc | null = null;
-  let firstPendingAt = 0;
+  let firstPendingAt: number | null = null;
   let timer: unknown = null;
   let inFlight: Promise<void> | null = null;
   let changed = false;
   let disposed = false;
+  let editRevision = 0;
+  let resetRevision = 0;
+  let retryPaused = false;
+  const currentInFlight = () => inFlight;
 
-  const run = async (): Promise<void> => {
+  const run = async (explicit = false): Promise<void> => {
     if (timer !== null) clearT(timer);
     timer = null;
     if (inFlight) {
       await inFlight;
-      if (pending) return run();
+      // A timer waiting on a failed attempt must not silently retry it. A
+      // fresh edit or an explicit flush may still request another attempt.
+      // Another waiter may already have moved the pending edit into a new
+      // in-flight save. A flush must wait for that save as well.
+      if (currentInFlight() || (pending && (explicit || !retryPaused))) return run(explicit);
       return;
     }
-    if (!pending || disposed) return;
+    if (!pending || disposed || (retryPaused && !explicit)) return;
     const doc = pending;
+    const attemptedEdit = editRevision;
+    const attemptedReset = resetRevision;
     pending = null;
-    firstPendingAt = 0;
-    inFlight = (async () => {
+    firstPendingAt = null;
+    retryPaused = false;
+    // Start in a microtask so inFlight is assigned before even a synchronous
+    // exception from a dependency can reach the cleanup below.
+    inFlight = Promise.resolve().then(async () => {
       try {
         await deps.checkpoint();
         const r = await deps.save(doc);
         changed = true;
         deps.onSaved?.(r);
       } catch (e) {
-        if (!pending) {
-          pending = doc; // keep it for the retry
+        // Prefer a newer edit, and do not resurrect a document that reset()
+        // explicitly replaced while this attempt was in flight.
+        if (!pending && attemptedReset === resetRevision) {
+          pending = doc;
           firstPendingAt = now();
         }
+        // A new edit during the attempt permits one more automatic save;
+        // otherwise retain the document without scheduling a retry loop.
+        retryPaused = pending !== null && editRevision === attemptedEdit;
         deps.onError?.(e);
       } finally {
         inFlight = null;
       }
-    })();
+    });
     await inFlight;
-    if (pending && timer === null && !disposed) schedule();
+    // A flush/leave must include edits that arrived during its save; otherwise
+    // disposal immediately after flush could cancel their scheduled timer.
+    if (explicit && pending && !retryPaused && !disposed) return run(true);
+    if (pending && !retryPaused && timer === null && !disposed) schedule();
   };
 
   const schedule = () => {
     if (timer !== null) clearT(timer);
-    const waited = now() - firstPendingAt;
+    const waited = now() - (firstPendingAt ?? now());
     timer = setT(() => {
       timer = null;
       void run();
@@ -89,17 +110,22 @@ export function createAutosave(deps: AutosaveDeps) {
     change(doc: NoteDoc) {
       if (disposed) return;
       pending = doc;
-      if (!firstPendingAt) firstPendingAt = now();
+      editRevision++;
+      // A paused failure may be arbitrarily old; debounce from this new edit.
+      if (retryPaused || firstPendingAt === null) firstPendingAt = now();
+      retryPaused = false;
       schedule();
     },
     /** Saves now (and waits for any save in flight). */
-    flush: (): Promise<void> => run(),
+    flush: (): Promise<void> => run(true),
     /** A document shown by an action, undo or restore is already stored: drop pending changes. */
     reset() {
+      resetRevision++;
+      retryPaused = false;
       if (timer !== null) clearT(timer);
       timer = null;
       pending = null;
-      firstPendingAt = 0;
+      firstPendingAt = null;
     },
     get hasPending() {
       return pending !== null;
