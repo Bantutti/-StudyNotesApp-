@@ -1,5 +1,13 @@
 # Testing on your own phone or tablet
 
+> **Fix-branch test (November 2026):** The branch `fix/expo-go-action-stability` contains changes for note creation, saving, Draw mode, and the editor build. These changes still need your real-phone test; passing automated tests does not prove the Expo Go exit is fixed. Do not delete Expo Go or clear its app data, since that may erase local notes.
+>
+> In PowerShell inside your project folder, first run `git status --short --branch` and `git rev-parse --short HEAD`. If you have uncommitted changes, stop and save them before switching branches. Run `git fetch origin`, then `git switch --track origin/fix/expo-go-action-stability` if you do not already have a local branch by that name. If the local branch already exists, use `git switch fix/expo-go-action-stability`; do not reset or overwrite local changes. Run `npm.cmd ci`, then `npm.cmd run start:go -- --clear`, and open the QR code in Expo Go. Check the actual commit with `git rev-parse --short HEAD` and report it with the results.
+>
+> The original P0 icons are not yet committed to this branch if the GitHub upload tool cannot write binary files. If you receive the verified icon ZIP, extract its `assets` folder into the project before running Expo Doctor or an Android build. Do not replace the icons with invented images.
+>
+> With disposable test notes, try the Home and + New note actions, rapidly tap New twice, type and leave/reopen, open Style and History, then enter Draw, draw and undo one stroke and open the ink menu. If an action exits, record the first failing action, phone model and Android version, Expo Go version, and the terminal error. A short redacted ADB logcat capture can distinguish JavaScript, native and reload failures. Never include API keys, tokens or private note contents.
+
 This guide is for testing on real devices from a **Windows PC with no Mac**. Follow it top to bottom
 the first time. Commands go in **PowerShell** or **Command Prompt** opened in the project folder.
 

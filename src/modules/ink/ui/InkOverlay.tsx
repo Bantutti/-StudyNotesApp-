@@ -29,7 +29,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { routePointer, pastScrollSlop, type InkInputMode } from '../input/routing';
 import { POINTER } from '../policy';
 import type { InkPoint } from '../model/codec';
-import { smoothStep } from '../geometry/smooth';
+import { PRESSURE_SMOOTHING, SMOOTHING, smoothStep } from '../geometry/smooth';
 import { strokeOutline } from '../geometry/outline';
 import { centerlinePath, polygonPath } from '../geometry/svg';
 
@@ -62,7 +62,12 @@ export interface InkOverlayProps {
   onPalmRejected?(): void;
 }
 
-const EMPTY = () => Skia.Path.Make();
+// Used by derived values and gesture callbacks on the UI runtime as well as on JS.
+// The directive makes the factory transferable without changing the Skia path it creates.
+const EMPTY = () => {
+  'worklet';
+  return Skia.Path.Make();
+};
 
 export function InkOverlay(p: InkOverlayProps) {
   // Mirrors of props the worklets read (shared values are visible on the UI thread).
@@ -179,7 +184,9 @@ export function InkOverlay(p: InkOverlayProps) {
         return;
       }
       const prev = last.get() ?? pt;
-      const s = smoothStep(prev, pt);
+      // Explicit defaults avoid resolving captured constants from the worklet's
+      // parameter scope before its closure has been unpacked on the UI runtime.
+      const s = smoothStep(prev, pt, SMOOTHING, PRESSURE_SMOOTHING);
       last.set(s);
       smooth.modify((a) => {
         'worklet';

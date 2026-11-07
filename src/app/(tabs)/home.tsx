@@ -6,11 +6,12 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { createNoteIn, examLabel, homeSummary, useAppData, useDataVersion, type HomeSummary } from '@/composition';
+import { examLabel, homeSummary, useAppData, useDataVersion, type HomeSummary } from '@/composition';
 import { t, userMessage } from '@/core';
-import { AppButton, AppScreen, BodyText, Icon, ListRow, SectionHeader, Surface, Title, useTheme } from '@/core/ui';
+import { AppButton, AppScreen, Banner, BodyText, Icon, ListRow, SectionHeader, Surface, Title, useTheme } from '@/core/ui';
 import { NeedsAttentionBanner } from '@/screens/SyncChip';
 import { NoteCard } from '@/screens/NoteCard';
+import { useCreateBlankNote } from '@/screens/useCreateBlankNote';
 
 export default function Home() {
   const th = useTheme();
@@ -37,8 +38,8 @@ export default function Home() {
     }, [store, version]), // eslint-disable-line react-hooks/exhaustive-deps -- version triggers reloads
   );
 
-  const open = (id: string) => router.push({ pathname: '/note/[id]', params: { id } });
-  const newNote = async () => open((await createNoteIn(store, { subject: null })).id);
+  const open = useCallback((id: string) => router.push({ pathname: '/note/[id]', params: { id } }), []);
+  const { busy: creating, create: newNote, error: creationError } = useCreateBlankNote(store, open);
 
   return (
     <AppScreen>
@@ -54,6 +55,7 @@ export default function Home() {
       </Pressable>
 
       {error ? <BodyText>{error}</BodyText> : null}
+      {creationError ? <Banner>{creationError}</Banner> : null}
       <NeedsAttentionBanner />
 
       {data?.exams.length ? (
@@ -74,7 +76,7 @@ export default function Home() {
         <Surface>
           <Title>{t('home.firstNote')}</Title>
           <BodyText muted>A blank page in your favourite look. No account needed.</BodyText>
-          <AppButton label={t('notes.new')} icon="add" onPress={newNote} testID="home-first-note" />
+          <AppButton label={t('notes.new')} icon="add" onPress={() => void newNote()} busy={creating} testID="home-first-note" />
         </Surface>
       ) : null}
 
@@ -97,7 +99,7 @@ export default function Home() {
       {data?.hasAnyNote ? (
         <View style={styles.row}>
           <View style={styles.flex}>
-            <AppButton kind="secondary" icon="add" label={t('notes.new')} onPress={newNote} />
+            <AppButton kind="secondary" icon="add" label={t('notes.new')} onPress={() => void newNote()} busy={creating} testID="home-new-note" />
           </View>
           <View style={styles.flex}>
             <AppButton kind="secondary" icon="albums-outline" label={t('subjects.new')} onPress={() => router.push('/subject-form')} />

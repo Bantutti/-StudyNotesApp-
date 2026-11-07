@@ -2,6 +2,17 @@
 
 All notable changes, one section per phase.
 
+## Expo Go action-stability fix branch (2026-11-06)
+
+This section describes a draft branch, not a merged release. Device behavior is still unverified; the broader Expo Go exits remain under investigation.
+
+- Normalize editor template and generated-module line endings so the freshness check works consistently on Windows and Linux without changing the bundled editor script or its CSP hash.
+- Fix the Draw overlay's UI-runtime worklet boundary and make the ink menu reachable on Android, whose native alerts support at most three buttons.
+- Guard repeated New-note actions and surface storage/load errors rather than treating them as missing notes.
+- Handle note-leave promise failures and pause repeated autosave retries after persistent storage errors while retaining the latest unsaved edit in memory. If storage remains unavailable, leaving the editor or closing the app may still lose that unsaved edit; keep the note open and resolve the error.
+- Align selected Expo SDK 58 patch versions and Safe Area Context with the SDK's published compatibility map; the lockfile remains the source of truth.
+- Original P0 PNG icon files remain a separate upload if GitHub's connected integration cannot write binary files; do not invent replacements.
+
 ## P5: style packs and Match a look (2026-11-01)
 
 ### Added

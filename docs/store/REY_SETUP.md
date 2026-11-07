@@ -20,9 +20,9 @@
 
 ## §1 Public website repo and GitHub Pages (FREE)
 
-> **ON HOLD.** Rey decided on Nov 1, 2026 (2:45 PM): **no publishing for now.** No public repo, no GitHub Pages, no public pages. Everything stays as drafts in the private repo and Drive. Keep these steps for later: Play's closed test can't start until the privacy policy URL is public (`PLAY_APP_CONTENT.md`), so publishing has to happen before P7.
+> **ON HOLD.** Rey's Nov 1, 2026 decision keeps store uploads, GitHub Pages and public legal pages on hold. On Nov 6, after being informed that the app's code repository was already public, Rey explicitly chose to keep that repository public and continue development. That decision does not authorize publishing the legal site or an app release. Keep these website steps for later: Play's closed test can't start until the privacy policy URL is public (`PLAY_APP_CONTENT.md`), so publishing has to happen before P7.
 
-GitHub Free includes Pages for **public** repositories only, so the site needs its own public repo; the main app repo stays private. Note: GitHub logs the IP addresses of visitors to Pages sites (stated in our privacy policy §5).
+The planned legal site uses its own public repository; the app code repository is public by Rey's Nov 6 decision. Note: GitHub logs the IP addresses of visitors to Pages sites (stated in our privacy policy §5).
 
 1. On github.com (signed in as **Bantutti**), click **+ → New repository**.
 2. Name: **studynotes-site**. Visibility: **Public**. Leave "Add a README" **unticked** (empty repo).
